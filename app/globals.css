@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  /* surfaces */
+  --bg-950: #020617;
+  --bg-900: #0f172a;
+  --bg-800: #1e293b;
+  --bg-700: #334155;
+  --bg-600: #475569;
+
+  /* text */
+  --text-100: #f8fafc;
+  --text-400: #94a3b8;
+  --text-600: #64748b;
+
+  /* semantic */
+  --success: #22c55e;
+  --success-bg: #22c55e14;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* dataviz — serie única (azul) validada contra bg-800 */
+  --series-1: #3987e5;
+  --grid: #334155;
+}
+
+:root.light {
+  --bg-950: #ffffff;
+  --bg-900: #f8fafc;
+  --bg-800: #eef2f7;
+  --bg-700: #e2e8f0;
+  --bg-600: #cbd5e1;
+
+  --text-100: #0f172a;
+  --text-400: #475569;
+  --text-600: #94a3b8;
+
+  --series-1: #2a78d6;
+  --grid: #e2e8f0;
+}
+
+@theme inline {
+  --color-bg-950: var(--bg-950);
+  --color-bg-900: var(--bg-900);
+  --color-bg-800: var(--bg-800);
+  --color-bg-700: var(--bg-700);
+  --color-bg-600: var(--bg-600);
+
+  --color-text-100: var(--text-100);
+  --color-text-400: var(--text-400);
+  --color-text-600: var(--text-600);
+
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --color-series-1: var(--series-1);
+  --color-grid: var(--grid);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg-950);
+  color: var(--text-100);
+  transition: background-color 150ms, color 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -142,6 +142,90 @@ export function estadoVentanaMeta(minutosRestantes: number | null): EstadoVentan
   };
 }
 
+// ------------------------------------------------------------
+// Embudo de venta (módulo de vendedores)
+// ------------------------------------------------------------
+/** Mismo orden que pipeline_estados.py del backend: es el orden del embudo. */
+export const ESTADOS_PIPELINE = [
+  "nuevo",
+  "contactado",
+  "en_seguimiento",
+  "cotizado",
+  "negociacion",
+  "ganado",
+  "perdido",
+] as const;
+
+/** Estados que ya no ocupan al vendedor. */
+export const ESTADOS_CERRADOS: ReadonlySet<string> = new Set(["ganado", "perdido"]);
+
+export const ESTADO_PIPELINE_INFO: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warning" | "danger" | "info" }
+> = {
+  nuevo: { label: "Nuevo", tone: "info" },
+  contactado: { label: "Contactado", tone: "neutral" },
+  en_seguimiento: { label: "En seguimiento", tone: "neutral" },
+  cotizado: { label: "Cotizado", tone: "warning" },
+  negociacion: { label: "Negociación", tone: "warning" },
+  ganado: { label: "Ganado", tone: "success" },
+  perdido: { label: "Perdido", tone: "danger" },
+};
+
+export function infoEstadoPipeline(estado: string) {
+  return ESTADO_PIPELINE_INFO[estado] ?? { label: estado, tone: "neutral" as const };
+}
+
+export const ESTRATEGIA_INFO: Record<
+  "carga" | "round_robin" | "manual",
+  { label: string; descripcion: string }
+> = {
+  carga: {
+    label: "Por carga",
+    descripcion:
+      "Cada lead nuevo va al vendedor con menos clientes abiertos. Si empatan, al que lleva más tiempo sin recibir uno.",
+  },
+  round_robin: {
+    label: "Por turnos",
+    descripcion:
+      "Los leads se reparten uno a uno en orden, dando la vuelta al equipo completo antes de repetir.",
+  },
+  manual: {
+    label: "Manual",
+    descripcion:
+      "Nadie recibe leads en automático. Cada cliente queda pendiente hasta que gerencia le asigna un vendedor desde aquí.",
+  },
+};
+
+/** Montos del embudo. El backend manda Decimal como string. */
+const fmtMonto = new Intl.NumberFormat(LOCALE, {
+  style: "currency",
+  currency: "MXN",
+  currencyDisplay: "narrowSymbol",
+  maximumFractionDigits: 2,
+});
+
+export function formatoMonto(valor: string | number | null | undefined): string {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const n = typeof valor === "number" ? valor : Number(valor);
+  if (Number.isNaN(n)) return "—";
+  return fmtMonto.format(n);
+}
+
+/** "3 h", "1.5 d", "20 min": para el tiempo promedio por etapa. */
+export function formatoHoras(horas: number | null | undefined): string {
+  if (horas === null || horas === undefined) return "—";
+  if (horas < 1) return `${Math.max(1, Math.round(horas * 60))} min`;
+  if (horas < 48) return `${horas < 10 ? horas.toFixed(1) : Math.round(horas)} h`;
+  const dias = horas / 24;
+  return `${dias < 10 ? dias.toFixed(1) : Math.round(dias)} d`;
+}
+
+export function formatoPorcentaje(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined) return "—";
+  return `${Math.round(valor)}%`;
+}
+
 /** Iniciales para avatar; cae al handle o "?" si no hay nombre. */
 export function iniciales(nombre: string | null, handle: string | null): string {
   const base = (nombre ?? "").trim();

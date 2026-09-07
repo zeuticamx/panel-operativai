@@ -153,6 +153,47 @@ export function Cargando({ texto = "cargando…" }: { texto?: string }) {
 }
 
 // ------------------------------------------------------------
+// Interruptor (misma pieza visual que el tema en el sidebar)
+// ------------------------------------------------------------
+export function Interruptor({
+  checked,
+  onChange,
+  disabled = false,
+  label,
+  className,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  /** Texto accesible; el visible va fuera. */
+  label: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-5 w-9 shrink-0 cursor-pointer rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        checked ? "border-success/60 bg-success" : "border-bg-600 bg-bg-800",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 left-0.5 h-3.5 w-3.5 rounded-full transition-transform",
+          checked ? "translate-x-4 bg-bg-950" : "bg-text-100",
+        )}
+      />
+    </button>
+  );
+}
+
+// ------------------------------------------------------------
 // Diálogo de confirmación
 // ------------------------------------------------------------
 export function ConfirmDialog({

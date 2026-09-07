@@ -16,6 +16,7 @@ import {
   Plug,
   Settings,
   Sun,
+  Users,
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { icon: Plug, label: "Canales", href: "/canales" },
   { icon: Bot, label: "Agente", href: "/agente" },
   { icon: Wrench, label: "Herramientas", href: "/herramientas" },
+  { icon: Users, label: "Vendedores", href: "/vendedores" },
 ];
 
 export function Sidebar() {

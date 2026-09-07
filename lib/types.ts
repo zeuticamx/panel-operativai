@@ -195,3 +195,136 @@ export interface MetricasOut {
   conversaciones_7d: number;
   por_canal: Record<string, number>;
 }
+
+// ---- Servicios del tenant ----
+export interface ServiciosOut {
+  tenant_id: string;
+  agente_ia_activo: boolean;
+  gestion_vendedores_activo: boolean;
+}
+
+/** Parcial: lo que no venga se deja como está. */
+export interface ServiciosIn {
+  agente_ia_activo?: boolean;
+  gestion_vendedores_activo?: boolean;
+}
+
+// ---- Vendedores ----
+export interface VendedorOut {
+  id: string;
+  tenant_id: string;
+  portal_user_id: string | null;
+  nombre: string;
+  telefono: string | null;
+  activo: boolean;
+  creado_en: string;
+  /** Leads en estados no cerrados: la carga que mira la asignación. */
+  clientes_activos: number;
+}
+
+export interface VendedorCrearIn {
+  nombre: string;
+  telefono?: string | null;
+  portal_user_id?: string | null;
+}
+
+export interface VendedorActualizarIn {
+  nombre?: string;
+  telefono?: string | null;
+  activo?: boolean;
+}
+
+/** Respuesta de POST /api/vendedores/{id}/reasignar-pendientes */
+export interface ReasignacionOut {
+  vendedor_id: string;
+  estrategia: EstrategiaAsignacion;
+  reasignados: number;
+  /** Leads que se quedaron con el vendedor original por falta de destino. */
+  sin_destino: number;
+  destinos: Record<string, number>;
+}
+
+// ---- Pipeline ----
+export type EstadoPipeline =
+  | "nuevo"
+  | "contactado"
+  | "en_seguimiento"
+  | "cotizado"
+  | "negociacion"
+  | "ganado"
+  | "perdido";
+
+export interface AsignarClienteIn {
+  /** null = que decida la estrategia del tenant. */
+  vendedor_id: string | null;
+  nota?: string | null;
+}
+
+export interface PipelineOut {
+  id: string;
+  user_id: string;
+  cliente_nombre: string | null;
+  cliente_handle: string | null;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  /** En la práctica `EstadoPipeline`; el backend lo manda como texto. */
+  estado: string;
+  /** Pydantic serializa Decimal como string en JSON. */
+  monto_estimado: string | null;
+  motivo_perdida: string | null;
+  actualizado_en: string;
+  transiciones_posibles: string[];
+}
+
+export interface HistorialOut {
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  nota: string | null;
+  creado_en: string;
+}
+
+// ---- Config de asignación ----
+export type EstrategiaAsignacion = "carga" | "round_robin" | "manual";
+
+export interface ConfigAsignacionOut {
+  tenant_id: string;
+  estrategia_asignacion: EstrategiaAsignacion;
+  ultimo_vendedor_asignado_id: string | null;
+}
+
+export interface ConfigAsignacionIn {
+  estrategia_asignacion: EstrategiaAsignacion;
+}
+
+// ---- Métricas del embudo ----
+export interface MetricaEtapaOut {
+  estado: string;
+  total: number;
+  /** Sobre el total de leads del tenant, 0–100. */
+  porcentaje: number;
+  /** null si ningún lead atravesó la etapa entera todavía. */
+  horas_promedio: number | null;
+}
+
+export interface RankingVendedorOut {
+  vendedor_id: string;
+  nombre: string;
+  activo: boolean;
+  abiertos: number;
+  ganados: number;
+  perdidos: number;
+  /** Decimal serializado como string. */
+  monto_ganado: string;
+  /** 0–100. null si no cerró nada todavía. */
+  tasa_cierre: number | null;
+}
+
+export interface MetricasPipelineOut {
+  total_clientes: number;
+  etapas: MetricaEtapaOut[];
+  /** 0–100. null si no hay leads cerrados. */
+  tasa_conversion_global: number | null;
+  ranking: RankingVendedorOut[];
+}

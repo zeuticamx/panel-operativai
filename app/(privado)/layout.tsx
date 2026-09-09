@@ -38,13 +38,13 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
+  // para iframes, el widget de chat se renderiza en el layout privado para que pueda recibir mensajes de postMessage y sincronizar la sesión con el portal.
   return (
     <UsuarioProvider>
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
-        <ChatWidget />
+        <ChatWidget /> 
       </div>
     </UsuarioProvider>
   );

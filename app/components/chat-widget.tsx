@@ -38,7 +38,7 @@ export function ChatWidget() {
         ? {
             id: usuario.id,
             email: usuario.email,
-            tenant_id: usuario.tenant_id,
+            tenant_id: process.env.NEXT_PUBLIC_TENANT_ID ?? "",
             nombre_negocio: usuario.nombre_negocio,
           }
         : null,

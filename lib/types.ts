@@ -328,3 +328,115 @@ export interface MetricasPipelineOut {
   tasa_conversion_global: number | null;
   ranking: RankingVendedorOut[];
 }
+
+// ============================================================
+// CRM DE CAMPO
+// ============================================================
+// Ojo con el nombre: `ClienteOut` es un negocio físico que el vendedor
+// visita (tabla `clientes`), NO el contacto de chat del embudo — ese es
+// `PipelineOut` y su id es un `users.id`. Por eso los endpoints están
+// separados: /api/clientes vs /api/pipeline.
+
+export type EstadoCliente = "prospecto" | "activo" | "inactivo" | "perdido";
+export type PrioridadCliente = "alta" | "media" | "baja";
+
+export interface ClienteOut {
+  id: string;
+  tenant_id: string;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  nombre_negocio: string;
+  contacto_nombre: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  latitud: number;
+  longitud: number;
+  /** Radio de la geocerca en metros. Por cliente, no global. */
+  radio_tolerancia_metros: number;
+  estado: string;
+  prioridad: string;
+  notas: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+export interface ClienteCrearIn {
+  nombre_negocio: string;
+  latitud: number;
+  longitud: number;
+  vendedor_id?: string | null;
+  contacto_nombre?: string | null;
+  telefono?: string | null;
+  direccion?: string | null;
+  radio_tolerancia_metros?: number;
+  estado?: EstadoCliente;
+  prioridad?: PrioridadCliente;
+  notas?: string | null;
+}
+
+/** PUT parcial: lo que no se manda se conserva. */
+export type ClienteActualizarIn = Partial<ClienteCrearIn>;
+
+export interface VisitaOut {
+  id: string;
+  tenant_id: string;
+  vendedor_id: string;
+  vendedor_nombre: string | null;
+  cliente_id: string;
+  cliente_nombre_negocio: string | null;
+  latitud: number;
+  longitud: number;
+  /** Precisión que reportó el GPS. Se guarda, no decide nada. */
+  accuracy_metros: number | null;
+  distancia_calculada_metros: number;
+  /** Lo calcula el servidor; el teléfono no puede mandarlo. */
+  dentro_de_geocerca: boolean;
+  foto_url: string | null;
+  comentario: string | null;
+  timestamp_dispositivo: string | null;
+  timestamp_servidor: string;
+  /** Presente solo si la visita llegó por la cola offline. */
+  cliente_uuid_offline: string | null;
+  creado_en: string;
+}
+
+export type EstadoTarea = "pendiente" | "completada" | "vencida";
+
+export interface TareaOut {
+  id: string;
+  tenant_id: string;
+  vendedor_id: string;
+  vendedor_nombre: string | null;
+  cliente_id: string;
+  cliente_nombre_negocio: string | null;
+  titulo: string;
+  descripcion: string | null;
+  fecha_programada: string;
+  estado: string;
+  completado_en: string | null;
+  creado_en: string;
+}
+
+export interface ActividadVendedorOut {
+  vendedor_id: string;
+  nombre: string;
+  activo: boolean;
+  visitas: number;
+  visitas_validadas: number;
+  visitas_fuera_geocerca: number;
+  /** Clientes distintos, no visitas totales. */
+  clientes_visitados: number;
+  tareas_completadas: number;
+  /** Foto del momento, no del rango. */
+  tareas_pendientes: number;
+  /** 0–100. null si no hubo visitas. */
+  porcentaje_validadas: number | null;
+}
+
+export interface ReporteActividadOut {
+  desde: string;
+  hasta: string;
+  total_visitas: number;
+  total_tareas_completadas: number;
+  vendedores: ActividadVendedorOut[];
+}

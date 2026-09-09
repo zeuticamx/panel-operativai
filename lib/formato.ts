@@ -226,6 +226,65 @@ export function formatoPorcentaje(valor: number | null | undefined): string {
   return `${Math.round(valor)}%`;
 }
 
+// ------------------------------------------------------------
+// CRM de campo
+// ------------------------------------------------------------
+export const ESTADOS_CLIENTE = ["prospecto", "activo", "inactivo", "perdido"] as const;
+export const PRIORIDADES_CLIENTE = ["alta", "media", "baja"] as const;
+
+export const ESTADO_CLIENTE_INFO: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warning" | "danger" | "info" }
+> = {
+  prospecto: { label: "Prospecto", tone: "info" },
+  activo: { label: "Activo", tone: "success" },
+  inactivo: { label: "Inactivo", tone: "neutral" },
+  perdido: { label: "Perdido", tone: "danger" },
+};
+
+export const PRIORIDAD_INFO: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warning" | "danger" }
+> = {
+  alta: { label: "Alta", tone: "danger" },
+  media: { label: "Media", tone: "warning" },
+  baja: { label: "Baja", tone: "neutral" },
+};
+
+export function infoEstadoCliente(estado: string) {
+  return ESTADO_CLIENTE_INFO[estado] ?? { label: estado, tone: "neutral" as const };
+}
+
+export function infoPrioridad(prioridad: string) {
+  return PRIORIDAD_INFO[prioridad] ?? { label: prioridad, tone: "neutral" as const };
+}
+
+export const ESTADO_TAREA_INFO: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warning" | "danger" }
+> = {
+  pendiente: { label: "Pendiente", tone: "warning" },
+  completada: { label: "Completada", tone: "success" },
+  vencida: { label: "Vencida", tone: "danger" },
+};
+
+export function infoEstadoTarea(estado: string) {
+  return ESTADO_TAREA_INFO[estado] ?? { label: estado, tone: "neutral" as const };
+}
+
+/** Distancias de geocerca: metros por debajo del km, km por encima. */
+export function formatoDistancia(metros: number | null | undefined): string {
+  if (metros === null || metros === undefined) return "—";
+  if (metros < 1000) return `${Math.round(metros)} m`;
+  const km = metros / 1000;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+}
+
+/** Enlace a Google Maps. El portal no carga un SDK de mapas por una coordenada. */
+export function urlMapa(latitud: number, longitud: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${latitud},${longitud}`;
+}
+
 /** Iniciales para avatar; cae al handle o "?" si no hay nombre. */
 export function iniciales(nombre: string | null, handle: string | null): string {
   const base = (nombre ?? "").trim();

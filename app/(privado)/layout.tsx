@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, onAuthChange } from "@/lib/auth";
 import { Sidebar } from "@/app/components/sidebar";
+import { ChatWidget } from "@/app/components/chat-widget";
 import { UsuarioProvider } from "@/app/components/usuario-context";
 
 const noop = () => () => {};
@@ -43,6 +44,7 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+        <ChatWidget />
       </div>
     </UsuarioProvider>
   );

@@ -33,7 +33,7 @@ export function LeadDrawer({
   /** Se llama después de una reasignación exitosa para refrescar la lista. */
   onCambio: (mensaje: string) => void;
 }) {
-  const historial = useApi<HistorialOut[]>(`/api/clientes/${lead.user_id}/historial`);
+  const historial = useApi<HistorialOut[]>(`/api/pipeline/${lead.user_id}/historial`);
 
   const [destino, setDestino] = useState<string>(lead.vendedor_id ?? AUTO);
   const [guardando, setGuardando] = useState(false);
@@ -47,7 +47,7 @@ export function LeadDrawer({
     setGuardando(true);
     setError(null);
     try {
-      const r = await apiFetch<PipelineOut>(`/api/clientes/${lead.user_id}/asignar`, {
+      const r = await apiFetch<PipelineOut>(`/api/pipeline/${lead.user_id}/asignar`, {
         method: "POST",
         json: { vendedor_id: destino === AUTO ? null : destino },
       });

@@ -31,8 +31,13 @@ export function useServicios(): UseApiState<ServiciosOut> & { tenantId: string |
 // Pestañas de la sección
 // ------------------------------------------------------------
 const TABS = [
+  // "Embudo" es el chat (contactos de WhatsApp/IG); "Cartera" es el CRM de
+  // campo (negocios que se visitan). Son dos módulos distintos sobre el
+  // mismo equipo, y las etiquetas tienen que dejarlo claro.
   { href: "/vendedores", label: "Embudo", exacto: true },
-  { href: "/vendedores/equipo", label: "Equipo y reparto", exacto: false },
+  { href: "/vendedores/cartera", label: "Cartera", exacto: false },
+  { href: "/vendedores/actividad", label: "Actividad", exacto: false },
+  { href: "/vendedores/equipo", label: "Equipo", exacto: false },
 ];
 
 export function VendedoresTabs() {

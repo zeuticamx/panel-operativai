@@ -135,7 +135,7 @@ function Cartera() {
           {clientes.error && <Aviso tipo="error">{clientes.error}</Aviso>}
           {aviso && <Aviso tipo="exito">{aviso}</Aviso>}
 
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard
               label="Clientes en cartera"
               value={clientes.data ? fmtInt.format(todos.length) : "—"}

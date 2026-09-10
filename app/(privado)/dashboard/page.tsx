@@ -73,7 +73,7 @@ export default function DashboardPage() {
           {metricas.error && <Aviso tipo="error">{metricas.error}</Aviso>}
 
           {/* KPIs */}
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard
               label="Conversaciones activas"
               value={m ? fmtInt.format(m.conversaciones_activas) : "—"}
@@ -106,8 +106,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            {/* Por canal */}
-            <section className="flex flex-col rounded-md border border-bg-700 bg-bg-800 p-4">
+            {/* Por canal: en mobile/tablet va después de las conversaciones
+                recientes (order-2) — es un indicador secundario, no debe
+                competir por el primer scroll con la lista de chats. */}
+            <section className="order-2 flex flex-col rounded-md border border-bg-700 bg-bg-800 p-4 lg:order-1">
               <header className="mb-3">
                 <h2 className="text-sm font-medium text-text-100">Conversaciones por canal</h2>
                 <p className="font-mono text-[11px] text-text-600">
@@ -156,8 +158,10 @@ export default function DashboardPage() {
               )}
             </section>
 
-            {/* Recientes */}
-            <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900 lg:col-span-2">
+            {/* Recientes: prioridad sobre el indicador "Por canal" en
+                mobile/tablet (order-1), vuelve al orden visual original
+                desde lg. */}
+            <section className="order-1 flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900 lg:order-2 lg:col-span-2">
               <header className="flex items-center justify-between border-b border-bg-700 px-4 py-3">
                 <div>
                   <h2 className="text-sm font-medium text-text-100">Conversaciones recientes</h2>

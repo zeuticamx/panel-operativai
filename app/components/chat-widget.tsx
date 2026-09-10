@@ -53,7 +53,7 @@ export function ChatWidget() {
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
       <div
         className={cn(
-          "h-[560px] w-80 overflow-hidden rounded-lg border border-bg-700 bg-bg-900 shadow-xl transition-opacity duration-150 sm:w-96",
+          "h-[min(70vh,560px)] w-[min(90vw,20rem)] overflow-hidden rounded-lg border border-bg-700 bg-bg-900 shadow-xl transition-opacity duration-150 sm:w-80 md:w-96",
           open ? "opacity-100" : "pointer-events-none absolute opacity-0",
         )}
         aria-hidden={!open}

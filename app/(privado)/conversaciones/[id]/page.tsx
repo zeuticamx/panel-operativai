@@ -8,6 +8,7 @@ import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type { ContactoOut, ConversacionDetalleOut } from "@/lib/types";
 import { estadoVentanaMeta, etiquetaIdentificador, formatoFechaHora, iniciales } from "@/lib/formato";
+import { CentroNotificaciones } from "@/app/components/centro-notificaciones";
 import { ThreadViewer } from "@/app/components/thread-viewer";
 import { Badge } from "@/app/components/badge";
 import { CanalBadge, StatusBadge } from "@/app/components/status";
@@ -148,6 +149,10 @@ export default function ConversacionDetallePage() {
         >
           <RefreshCw size={13} aria-hidden />
         </Boton>
+
+        {/* Única pantalla privada con header propio en vez de PageHeader,
+            así que la campana se agrega a mano. */}
+        <CentroNotificaciones />
       </header>
 
       {errorPerfil && (

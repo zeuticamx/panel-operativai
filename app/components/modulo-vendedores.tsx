@@ -38,6 +38,7 @@ const TABS = [
   { href: "/vendedores/cartera", label: "Cartera", exacto: false },
   { href: "/vendedores/actividad", label: "Actividad", exacto: false },
   { href: "/vendedores/equipo", label: "Equipo", exacto: false },
+  { href: "/vendedores/configuracion", label: "Configuración", exacto: false },
 ];
 
 export function VendedoresTabs() {

@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, Trophy } from "lucide-react";
+import { Edit, FileSpreadsheet, FileText, RefreshCw, Search, Trophy, UserPlus } from "lucide-react";
 import { useApi } from "@/lib/use-api";
-import type { MetricasPipelineOut, PipelineOut, VendedorOut } from "@/lib/types";
+import type {
+  MetricasPipelineOut,
+  PipelineOut,
+  VendedorOut,
+} from "@/lib/types";
 import {
   ESTADOS_CERRADOS,
   ESTADOS_PIPELINE,
@@ -14,9 +18,15 @@ import {
   tiempoRelativo,
 } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { AlertasStats } from "@/app/components/alertas-stats";
+import { CambiarEstadoLead } from "@/app/components/cambiar-estado-lead";
+import { CrearClienteForm } from "@/app/components/crear-cliente-form";
 import { EmbudoEtapas } from "@/app/components/embudo-etapas";
 import { EstadoLead } from "@/app/components/estado-lead";
 import { LeadDrawer } from "@/app/components/lead-drawer";
+import { exportarEmbudoExcel } from "@/lib/exportar-embudo";
+import { exportarEmbudoPDF } from "@/lib/exportar-embudo-pdf";
+import { mensajeDeError } from "@/lib/auth";
 import {
   ModuloApagado,
   VendedoresTabs,
@@ -44,18 +54,31 @@ export default function VendedoresPage() {
   const gerencia = esGerencia(usuario);
 
   const activo = servicios.data?.gestion_vendedores_activo ?? false;
-  const base = activo && servicios.tenantId ? `/api/tenants/${servicios.tenantId}` : null;
+  const base =
+    activo && servicios.tenantId ? `/api/tenants/${servicios.tenantId}` : null;
 
-  const metricas = useApi<MetricasPipelineOut>(base ? `${base}/metricas` : null);
-  const leads = useApi<PipelineOut[]>(base ? `${base}/pipeline?limite=${LIMITE}` : null);
-  const vendedores = useApi<VendedorOut[]>(base ? `${base}/vendedores?activo=true` : null);
+  const metricas = useApi<MetricasPipelineOut>(
+    base ? `${base}/metricas` : null,
+  );
+  const leads = useApi<PipelineOut[]>(
+    base ? `${base}/pipeline?limite=${LIMITE}` : null,
+  );
+  const vendedores = useApi<VendedorOut[]>(
+    base ? `${base}/vendedores?activo=true` : null,
+  );
 
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroVendedor, setFiltroVendedor] = useState("");
   const [buscar, setBuscar] = useState("");
   const [seleccionado, setSeleccionado] = useState<PipelineOut | null>(null);
+  const [editandoEstado, setEditandoEstado] = useState<PipelineOut | null>(
+    null,
+  );
   const [aviso, setAviso] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [exportando, setExportando] = useState<"excel" | "pdf" | null>(null);
+  const [errorExportar, setErrorExportar] = useState<string | null>(null);
+  const [crearClienteOpen, setCrearClienteOpen] = useState(false);
 
   // Refresco suave cada 60 s, igual que el dashboard.
   const recargarMetricas = metricas.recargar;
@@ -81,6 +104,32 @@ export default function VendedoresPage() {
   const m = metricas.data;
   const todos = useMemo(() => leads.data ?? [], [leads.data]);
 
+  const exportar = async (formato: "excel" | "pdf") => {
+    setErrorExportar(null);
+    setExportando(formato);
+    try {
+      if (formato === "excel") await exportarEmbudoExcel(todos, m ?? undefined);
+      else await exportarEmbudoPDF(todos, m ?? undefined);
+    } catch (e) {
+      setErrorExportar(mensajeDeError(e, "No se pudo exportar el embudo."));
+    } finally {
+      setExportando(null);
+    }
+  };
+
+  const clienteCreado = (cliente: PipelineOut, mensaje: string) => {
+    setSeleccionado(null);
+    setAviso(mensaje);
+    leads.recargar(true);
+    metricas.recargar(true);
+  };
+
+  const metricasPorEstado = useMemo(
+    () =>
+      Object.fromEntries((m?.etapas ?? []).map((e) => [e.estado, e] as const)),
+    [m],
+  );
+
   // KPIs derivados de la lista, no de otra petición: para gerencia la lista
   // completa ya está cargada y sale gratis.
   const abiertos = todos.filter((l) => !ESTADOS_CERRADOS.has(l.estado)).length;
@@ -93,11 +142,17 @@ export default function VendedoresPage() {
     const q = buscar.trim().toLowerCase();
     return todos.filter((l) => {
       if (filtroEstado && l.estado !== filtroEstado) return false;
-      if (filtroVendedor === SIN_VENDEDOR && l.vendedor_id !== null) return false;
-      if (filtroVendedor && filtroVendedor !== SIN_VENDEDOR && l.vendedor_id !== filtroVendedor)
+      if (filtroVendedor === SIN_VENDEDOR && l.vendedor_id !== null)
+        return false;
+      if (
+        filtroVendedor &&
+        filtroVendedor !== SIN_VENDEDOR &&
+        l.vendedor_id !== filtroVendedor
+      )
         return false;
       if (q) {
-        const texto = `${l.cliente_nombre ?? ""} ${l.cliente_handle ?? ""} ${l.vendedor_nombre ?? ""}`.toLowerCase();
+        const texto =
+          `${l.cliente_nombre ?? ""} ${l.cliente_handle ?? ""} ${l.vendedor_nombre ?? ""}`.toLowerCase();
         if (!texto.includes(q)) return false;
       }
       return true;
@@ -121,15 +176,46 @@ export default function VendedoresPage() {
         sub={<VendedoresTabs />}
         acciones={
           activo && (
-            <Boton
-              variante="fantasma"
-              onClick={refrescar}
-              loading={metricas.loading || leads.loading}
-              title="Actualizar"
-            >
-              <RefreshCw size={13} aria-hidden />
-              Actualizar
-            </Boton>
+            <>
+              <Boton
+                variante="fantasma"
+                onClick={() => setCrearClienteOpen(true)}
+                disabled={exportando !== null}
+                title="Crear un cliente nuevo en el embudo"
+              >
+                <UserPlus size={13} aria-hidden />
+                Crear cliente
+              </Boton>
+              <Boton
+                variante="fantasma"
+                onClick={() => exportar("excel")}
+                loading={exportando === "excel"}
+                disabled={!leads.data || exportando !== null}
+                title="Exportar el embudo a Excel"
+              >
+                <FileSpreadsheet size={13} aria-hidden />
+                Excel
+              </Boton>
+              <Boton
+                variante="fantasma"
+                onClick={() => exportar("pdf")}
+                loading={exportando === "pdf"}
+                disabled={!leads.data || exportando !== null}
+                title="Exportar un reporte del embudo en PDF"
+              >
+                <FileText size={13} aria-hidden />
+                PDF
+              </Boton>
+              <Boton
+                variante="fantasma"
+                onClick={refrescar}
+                loading={metricas.loading || leads.loading}
+                title="Actualizar"
+              >
+                <RefreshCw size={13} aria-hidden />
+                Actualizar
+              </Boton>
+            </>
           )
         }
       />
@@ -137,6 +223,7 @@ export default function VendedoresPage() {
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mx-auto flex max-w-6xl flex-col gap-4">
           {servicios.error && <Aviso tipo="error">{servicios.error}</Aviso>}
+          {errorExportar && <Aviso tipo="error">{errorExportar}</Aviso>}
 
           {cargandoInicial ? (
             <Cargando />
@@ -159,14 +246,20 @@ export default function VendedoresPage() {
                   label="Leads abiertos"
                   value={leads.data ? fmtInt.format(abiertos) : "—"}
                   tone={abiertos > 0 ? "success" : "neutral"}
-                  hint={m ? `${fmtInt.format(m.total_clientes)} en total` : "en el embudo"}
+                  hint={
+                    m
+                      ? `${fmtInt.format(m.total_clientes)} en total`
+                      : "en el embudo"
+                  }
                   loading={leads.loading && !leads.data}
                 />
                 <StatCard
                   label="Sin vendedor"
                   value={leads.data ? fmtInt.format(sinVendedor) : "—"}
                   tone={sinVendedor > 0 ? "warning" : "neutral"}
-                  hint={sinVendedor > 0 ? "esperan asignación" : "todos atendidos"}
+                  hint={
+                    sinVendedor > 0 ? "esperan asignación" : "todos atendidos"
+                  }
                   loading={leads.loading && !leads.data}
                 />
                 <StatCard
@@ -184,110 +277,137 @@ export default function VendedoresPage() {
                 />
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-5">
-                {/* Embudo por etapa */}
-                <section className="flex flex-col rounded-md border border-bg-700 bg-bg-800 p-4 lg:col-span-2">
-                  <header className="mb-3">
-                    <h2 className="text-sm font-medium text-text-100">Embudo por etapa</h2>
-                    <p className="font-mono text-[11px] text-text-600">
-                      cuántos hay y ~cuánto tardan en salir
-                    </p>
-                  </header>
-                  {m ? (
-                    <EmbudoEtapas etapas={m.etapas} loading={metricas.loading} />
-                  ) : (
-                    <p className="py-6 text-center font-mono text-xs text-text-600">
-                      {metricas.loading ? "cargando…" : "sin datos"}
-                    </p>
-                  )}
-                </section>
+              <AlertasStats />
 
-                {/* Ranking */}
-                <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900 lg:col-span-3">
-                  <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
-                    <Trophy size={14} className="text-text-400" aria-hidden />
-                    <div>
-                      <h2 className="text-sm font-medium text-text-100">Ranking del equipo</h2>
-                      <p className="font-mono text-[11px] text-text-600">por ventas cerradas</p>
-                    </div>
-                  </header>
-                  {!m ? (
-                    <p className="p-6 text-center font-mono text-xs text-text-600">
-                      {metricas.loading ? "cargando…" : "sin datos"}
+              {/* Embudo visual */}
+              <section className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
+                <header className="mb-3">
+                  <h2 className="text-sm font-medium text-text-100">
+                    Embudo visual
+                  </h2>
+                  <p className="font-mono text-[11px] text-text-600">
+                    quién está en cada etapa y ~cuánto tarda en salir
+                  </p>
+                </header>
+                {m ? (
+                  <EmbudoEtapas
+                    leads={todos}
+                    metricas={metricasPorEstado}
+                    onSelectLead={setSeleccionado}
+                  />
+                ) : (
+                  <p className="py-6 text-center font-mono text-xs text-text-600">
+                    {metricas.loading ? "cargando…" : "sin datos"}
+                  </p>
+                )}
+              </section>
+
+              {/* Ranking */}
+              <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+                <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
+                  <Trophy size={14} className="text-text-400" aria-hidden />
+                  <div>
+                    <h2 className="text-sm font-medium text-text-100">
+                      Ranking del equipo
+                    </h2>
+                    <p className="font-mono text-[11px] text-text-600">
+                      por ventas cerradas
                     </p>
-                  ) : m.ranking.length === 0 ? (
-                    <p className="p-6 text-center font-mono text-xs text-text-600">
-                      todavía no hay vendedores
-                    </p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-bg-700 font-mono text-[11px] text-text-600">
-                            <th className="px-4 py-2 text-left font-normal">Vendedor</th>
-                            <th className="px-3 py-2 text-right font-normal">Abiertos</th>
-                            <th className="px-3 py-2 text-right font-normal">Ganados</th>
-                            <th className="px-3 py-2 text-right font-normal">Perdidos</th>
-                            <th className="px-3 py-2 text-right font-normal">Cierre</th>
-                            <th className="px-4 py-2 text-right font-normal">Monto</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {m.ranking.map((r, i) => (
-                            <tr
-                              key={r.vendedor_id}
-                              className={cn(
-                                "border-b border-bg-700 last:border-b-0",
-                                !r.activo && "opacity-50",
-                              )}
-                            >
-                              <td className="px-4 py-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-4 font-mono text-[11px] tabular-nums text-text-600">
-                                    {i + 1}
+                  </div>
+                </header>
+                {!m ? (
+                  <p className="p-6 text-center font-mono text-xs text-text-600">
+                    {metricas.loading ? "cargando…" : "sin datos"}
+                  </p>
+                ) : m.ranking.length === 0 ? (
+                  <p className="p-6 text-center font-mono text-xs text-text-600">
+                    todavía no hay vendedores
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-bg-700 font-mono text-[11px] text-text-600">
+                          <th className="px-4 py-2 text-left font-normal">
+                            Vendedor
+                          </th>
+                          <th className="px-3 py-2 text-right font-normal">
+                            Abiertos
+                          </th>
+                          <th className="px-3 py-2 text-right font-normal">
+                            Ganados
+                          </th>
+                          <th className="px-3 py-2 text-right font-normal">
+                            Perdidos
+                          </th>
+                          <th className="px-3 py-2 text-right font-normal">
+                            Cierre
+                          </th>
+                          <th className="px-4 py-2 text-right font-normal">
+                            Monto
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {m.ranking.map((r, i) => (
+                          <tr
+                            key={r.vendedor_id}
+                            className={cn(
+                              "border-b border-bg-700 last:border-b-0",
+                              !r.activo && "opacity-50",
+                            )}
+                          >
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-4 font-mono text-[11px] tabular-nums text-text-600">
+                                  {i + 1}
+                                </span>
+                                <span className="text-text-100">
+                                  {r.nombre}
+                                </span>
+                                {!r.activo && (
+                                  <span className="font-mono text-[11px] text-text-600">
+                                    inactivo
                                   </span>
-                                  <span className="text-text-100">{r.nombre}</span>
-                                  {!r.activo && (
-                                    <span className="font-mono text-[11px] text-text-600">
-                                      inactivo
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
-                                {fmtInt.format(r.abiertos)}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums text-success">
-                                {fmtInt.format(r.ganados)}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
-                                {fmtInt.format(r.perdidos)}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
-                                {formatoPorcentaje(r.tasa_cierre)}
-                              </td>
-                              <td className="px-4 py-2 text-right font-mono tabular-nums text-text-100">
-                                {formatoMonto(r.monto_ganado)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </section>
-              </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
+                              {fmtInt.format(r.abiertos)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-success">
+                              {fmtInt.format(r.ganados)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
+                              {fmtInt.format(r.perdidos)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
+                              {formatoPorcentaje(r.tasa_cierre)}
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono tabular-nums text-text-100">
+                              {formatoMonto(r.monto_ganado)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
 
               {/* Leads */}
               <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                 <header className="flex flex-wrap items-center gap-2 border-b border-bg-700 px-4 py-3">
                   <div className="mr-auto">
-                    <h2 className="text-sm font-medium text-text-100">Clientes en el embudo</h2>
+                    <h2 className="text-sm font-medium text-text-100">
+                      Clientes en el embudo
+                    </h2>
                     <p className="font-mono text-[11px] text-text-600">
                       {leads.data
                         ? `${fmtInt.format(filtrados.length)} de ${fmtInt.format(todos.length)}`
                         : "cargando…"}
-                      {todos.length >= LIMITE && " · se muestran los últimos " + LIMITE}
+                      {todos.length >= LIMITE &&
+                        " · se muestran los últimos " + LIMITE}
                     </p>
                   </div>
 
@@ -338,13 +458,19 @@ export default function VendedoresPage() {
                 </header>
 
                 {!leads.data ? (
-                  <p className="p-6 text-center font-mono text-xs text-text-600">cargando…</p>
+                  <p className="p-6 text-center font-mono text-xs text-text-600">
+                    cargando…
+                  </p>
                 ) : todos.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-                    <p className="text-sm text-text-100">Todavía no hay clientes en el embudo</p>
+                    <p className="text-sm text-text-100">
+                      Todavía no hay clientes en el embudo
+                    </p>
                     <p className="max-w-sm text-xs leading-relaxed text-text-400">
-                      Cada cliente que escriba por tus canales entra automáticamente como{" "}
-                      <span className="text-text-100">nuevo</span> y se reparte entre tu equipo.
+                      Cada cliente que escriba por tus canales entra
+                      automáticamente como{" "}
+                      <span className="text-text-100">nuevo</span> y se reparte
+                      entre tu equipo.
                     </p>
                   </div>
                 ) : filtrados.length === 0 ? (
@@ -356,14 +482,32 @@ export default function VendedoresPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-bg-700 font-mono text-[11px] text-text-600">
-                          <th className="px-4 py-2 text-left font-normal">Cliente</th>
-                          <th className="px-3 py-2 text-left font-normal">Etapa</th>
-                          <th className="px-3 py-2 text-left font-normal">Vendedor</th>
-                          <th className="px-3 py-2 text-right font-normal">Monto</th>
-                          <th className="px-4 py-2 text-right font-normal">Actividad</th>
+                          <th className="px-4 py-2 text-left font-normal">
+                            Cliente
+                          </th>
+                          <th className="px-3 py-2 text-left font-normal">
+                            Etapa
+                          </th>
+                          <th className="px-3 py-2 text-left font-normal">
+                            Vendedor
+                          </th>
+                          <th className="px-3 py-2 text-right font-normal">
+                            Monto
+                          </th>
+                          <th className="px-4 py-2 text-right font-normal">
+                            Actividad
+                          </th>
+                          <th className="px-3 py-2 text-right font-normal">
+                            <span className="sr-only">Acciones</span>
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className={cn("transition-opacity", leads.loading && "opacity-60")}>
+                      <tbody
+                        className={cn(
+                          "transition-opacity",
+                          leads.loading && "opacity-60",
+                        )}
+                      >
                         {filtrados.map((l) => (
                           <tr
                             key={l.id}
@@ -380,7 +524,9 @@ export default function VendedoresPage() {
                             <td className="px-4 py-2">
                               <div className="flex flex-col">
                                 <span className="text-text-100">
-                                  {l.cliente_nombre ?? l.cliente_handle ?? "Sin nombre"}
+                                  {l.cliente_nombre ??
+                                    l.cliente_handle ??
+                                    "Sin nombre"}
                                 </span>
                                 {l.cliente_nombre && l.cliente_handle && (
                                   <span className="font-mono text-[11px] text-text-600">
@@ -394,11 +540,15 @@ export default function VendedoresPage() {
                             </td>
                             <td className="px-3 py-2">
                               {l.vendedor_nombre ? (
-                                <span className="text-text-400">{l.vendedor_nombre}</span>
+                                <span className="text-text-400">
+                                  {l.vendedor_nombre}
+                                </span>
                               ) : ESTADOS_CERRADOS.has(l.estado) ? (
                                 <span className="text-text-600">—</span>
                               ) : (
-                                <span className="text-warning">sin asignar</span>
+                                <span className="text-warning">
+                                  sin asignar
+                                </span>
                               )}
                             </td>
                             <td className="px-3 py-2 text-right font-mono tabular-nums text-text-400">
@@ -409,6 +559,19 @@ export default function VendedoresPage() {
                               title={l.actualizado_en}
                             >
                               {tiempoRelativo(l.actualizado_en, now)}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <Boton
+                                variante="fantasma"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditandoEstado(l);
+                                }}
+                                title="Cambiar estado"
+                              >
+                                <Edit size={13} aria-hidden />
+                                Cambiar
+                              </Boton>
                             </td>
                           </tr>
                         ))}
@@ -430,6 +593,31 @@ export default function VendedoresPage() {
           puedeAsignar={gerencia}
           onClose={() => setSeleccionado(null)}
           onCambio={alReasignar}
+        />
+      )}
+
+      {editandoEstado && (
+        <CambiarEstadoLead
+          lead={editandoEstado}
+          open={editandoEstado !== null}
+          onOpenChange={(o) => {
+            if (!o) setEditandoEstado(null);
+          }}
+          onGuardado={(_lead, mensaje) => {
+            setEditandoEstado(null);
+            setAviso(mensaje);
+            leads.recargar(true);
+            metricas.recargar(true);
+          }}
+        />
+      )}
+
+      {servicios.tenantId && (
+        <CrearClienteForm
+          tenantId={servicios.tenantId}
+          open={crearClienteOpen}
+          onOpenChange={setCrearClienteOpen}
+          onCreado={clienteCreado}
         />
       )}
     </>

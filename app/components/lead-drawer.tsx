@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowRight, UserRound, X } from "lucide-react";
+import { UserRound, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type { HistorialOut, PipelineOut, VendedorOut } from "@/lib/types";
 import { formatoFechaHora, formatoMonto, iniciales, tiempoRelativo } from "@/lib/formato";
-import { cn } from "@/lib/utils";
 import { EstadoLead } from "./estado-lead";
+import { HistorialTimeline } from "./historial-timeline";
 import { Aviso, Boton, Campo, selectClass } from "./ui";
 
 const AUTO = "__auto__";
@@ -162,26 +162,12 @@ export function LeadDrawer({
             )}
 
             {/* Línea de tiempo */}
-            <section className="flex flex-col gap-2">
-              <h3 className="font-mono text-[11px] text-text-600">Línea de tiempo</h3>
-              {historial.error ? (
-                <Aviso tipo="error">{historial.error}</Aviso>
-              ) : !historial.data ? (
-                <p className="font-mono text-xs text-text-600">cargando…</p>
-              ) : historial.data.length === 0 ? (
-                <p className="font-mono text-xs text-text-600">sin movimientos todavía</p>
-              ) : (
-                <ol className="flex flex-col">
-                  {[...historial.data].reverse().map((h, i, todos) => (
-                    <Movimiento
-                      key={`${h.creado_en}-${i}`}
-                      h={h}
-                      ultimo={i === todos.length - 1}
-                    />
-                  ))}
-                </ol>
-              )}
-            </section>
+            <HistorialTimeline
+              historial={historial.data ?? []}
+              cargando={historial.loading}
+              error={historial.error}
+              vacio="sin movimientos todavía"
+            />
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -195,57 +181,5 @@ function Dato({ label, children }: { label: string; children: React.ReactNode })
       <dt className="font-mono text-[11px] text-text-600">{label}</dt>
       <dd className="text-text-100">{children}</dd>
     </div>
-  );
-}
-
-/**
- * Una fila de la bitácora. Distingue las dos cosas que guarda la tabla:
- * cambio de etapa (estado_anterior ≠ estado_nuevo) y asignación (iguales).
- */
-function Movimiento({ h, ultimo }: { h: HistorialOut; ultimo: boolean }) {
-  const esCambio = h.estado_anterior !== h.estado_nuevo;
-  const esAlta = h.estado_anterior === null;
-
-  return (
-    <li className="relative flex gap-3 pb-4">
-      {!ultimo && (
-        <span aria-hidden className="absolute top-3 left-[5px] h-full w-px bg-bg-700" />
-      )}
-      <span
-        aria-hidden
-        className={cn(
-          "relative mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-bg-900",
-          esCambio ? "bg-series-1" : "bg-bg-600",
-        )}
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-100">
-          {esAlta ? (
-            <>
-              Entró al embudo
-              <EstadoLead estado={h.estado_nuevo} />
-            </>
-          ) : esCambio ? (
-            <>
-              <EstadoLead estado={h.estado_anterior!} />
-              <ArrowRight size={11} className="text-text-600" aria-hidden />
-              <EstadoLead estado={h.estado_nuevo} />
-            </>
-          ) : (
-            <>
-              Asignado a{" "}
-              <span className="font-medium">
-                {h.vendedor_nombre ?? <span className="text-warning">nadie</span>}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-text-600">
-          <span title={formatoFechaHora(h.creado_en)}>{tiempoRelativo(h.creado_en)}</span>
-          {esCambio && h.vendedor_nombre && <span>· {h.vendedor_nombre}</span>}
-          {h.nota && <span className="text-text-400">· {h.nota}</span>}
-        </div>
-      </div>
-    </li>
   );
 }

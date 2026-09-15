@@ -2,7 +2,10 @@
 
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { Toaster } from "sonner";
 import { getAccessToken, onAuthChange } from "@/lib/auth";
+import { useStoredTheme } from "@/lib/theme";
+import { AlertasProvider } from "@/app/components/alertas-context";
 import { Sidebar } from "@/app/components/sidebar";
 import { ChatWidget } from "@/app/components/chat-widget";
 import { UsuarioProvider } from "@/app/components/usuario-context";
@@ -17,6 +20,7 @@ const noop = () => () => {};
  */
 export default function PrivadoLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const tema = useStoredTheme();
 
   // false en servidor e hidratación, true una vez montado en el cliente.
   // Sin esto, el primer render (token = null) mandaría a /login siempre.
@@ -41,11 +45,16 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
   // para iframes, el widget de chat se renderiza en el layout privado para que pueda recibir mensajes de postMessage y sincronizar la sesión con el portal.
   return (
     <UsuarioProvider>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
-        <Sidebar />
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
-        <ChatWidget />
-      </div>
+      {/* El socket de alertas vive acá y no en la campana: así sobrevive a
+          los cambios de página, que sí desmontan el header. */}
+      <AlertasProvider>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+          <Sidebar />
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+          <ChatWidget />
+        </div>
+        <Toaster position="top-right" theme={tema} richColors={false} />
+      </AlertasProvider>
     </UsuarioProvider>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Bot, Plus, RefreshCw, Shuffle, UserRound, Users, X } from "lucide-react";
+import { Bot, Edit, Plus, RefreshCw, Shuffle, UserRound, Users, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
@@ -15,6 +16,7 @@ import type {
 import { ESTRATEGIA_INFO, fmtInt, formatoFechaHora } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
+import { EditarVendedor } from "@/app/components/editar-vendedor";
 import {
   ModuloApagado,
   VendedoresTabs,
@@ -52,6 +54,7 @@ export default function EquipoPage() {
   const [nuevo, setNuevo] = useState(false);
   const [apagarModulo, setApagarModulo] = useState(false);
   const [aReasignar, setReasignar] = useState<VendedorOut | null>(null);
+  const [editando, setEditando] = useState<VendedorOut | null>(null);
 
   const lista = vendedores.data ?? [];
   const activos = lista.filter((v) => v.activo);
@@ -342,7 +345,12 @@ export default function EquipoPage() {
 
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium text-text-100">{v.nombre}</span>
+                            <Link
+                              href={`/vendedores/${v.id}`}
+                              className="text-sm font-medium text-text-100 hover:underline"
+                            >
+                              {v.nombre}
+                            </Link>
                             {v.activo ? (
                               <Badge tone="success">activo</Badge>
                             ) : (
@@ -365,6 +373,15 @@ export default function EquipoPage() {
 
                         {gerencia && (
                           <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            <Boton
+                              variante="fantasma"
+                              onClick={() => setEditando(v)}
+                              disabled={trabajando}
+                              title="Editar nombre o teléfono"
+                            >
+                              <Edit size={13} aria-hidden />
+                              Editar
+                            </Boton>
                             {v.clientes_activos > 0 && (
                               <Boton
                                 variante="fantasma"
@@ -453,6 +470,22 @@ export default function EquipoPage() {
         loading={ocupado === aReasignar?.id}
         onConfirm={confirmarReasignar}
       />
+
+      {editando && (
+        <EditarVendedor
+          vendedor={editando}
+          open={editando !== null}
+          onOpenChange={(o) => {
+            if (!o) setEditando(null);
+          }}
+          onGuardado={(v) => {
+            setEditando(null);
+            setErrorAccion(null);
+            setAviso(`${v.nombre} se actualizó.`);
+            vendedores.recargar(true);
+          }}
+        />
+      )}
     </>
   );
 }

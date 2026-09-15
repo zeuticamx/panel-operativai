@@ -285,6 +285,17 @@ export interface HistorialOut {
   creado_en: string;
 }
 
+/** Bitácora de TODOS los clientes de un vendedor (GET /vendedores/{id}/historial). */
+export interface HistorialVendedorOut {
+  user_id: string;
+  cliente_nombre: string | null;
+  cliente_handle: string | null;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  nota: string | null;
+  creado_en: string;
+}
+
 // ---- Config de asignación ----
 export type EstrategiaAsignacion = "carga" | "round_robin" | "manual";
 
@@ -296,6 +307,81 @@ export interface ConfigAsignacionOut {
 
 export interface ConfigAsignacionIn {
   estrategia_asignacion: EstrategiaAsignacion;
+}
+
+// ---- Configuración de etapas del embudo (panel del dueño) ----
+// OJO: es una capa de configuración aparte, no controla el embudo real
+// todavía. Ver comentario en backend/routers/pipeline_config.py.
+export interface PipelineEtapaOut {
+  id: string;
+  tenant_id: string;
+  nombre: string;
+  /** "#rrggbb" */
+  color: string;
+  descripcion: string | null;
+  orden: number;
+  creado_en: string;
+  /** Leads del embudo real cuyo estado coincide con `nombre`, sin contar cerrados. */
+  leads_activos: number;
+}
+
+export interface PipelineEtapaCrearIn {
+  tenant_id: string;
+  nombre: string;
+  color: string;
+  descripcion?: string | null;
+  orden?: number;
+}
+
+export type PipelineEtapaActualizarIn = Partial<
+  Omit<PipelineEtapaCrearIn, "tenant_id">
+>;
+
+export interface PipelineTransicionOut {
+  id: string;
+  tenant_id: string;
+  etapa_origen_id: string;
+  etapa_origen_nombre: string;
+  etapa_destino_id: string;
+  etapa_destino_nombre: string;
+  permitida: boolean;
+}
+
+export interface PipelineTransicionIn {
+  tenant_id: string;
+  etapa_origen_id: string;
+  etapa_destino_id: string;
+  permitida: boolean;
+}
+
+export interface PipelineConfigOut {
+  etapas: PipelineEtapaOut[];
+  transiciones: PipelineTransicionOut[];
+}
+
+// ---- Alertas (WebSocket + GET /tenants/{id}/alertas) ----
+export type TipoAlerta =
+  | "nuevo_lead"
+  | "cambio_etapa"
+  | "sin_actividad"
+  | "cuota_excedida"
+  | "cierre";
+
+export interface AlertaOut {
+  id: string;
+  tenant_id: string;
+  tipo: TipoAlerta;
+  titulo: string;
+  mensaje: string;
+  datos: Record<string, unknown>;
+  leido: boolean;
+  creado_en: string;
+}
+
+/** GET /tenants/{id}/alertas/estadisticas. `por_tipo` solo trae los tipos con alguna alerta sin leer. */
+export interface EstadisticasAlertasOut {
+  total: number;
+  por_tipo: Partial<Record<TipoAlerta, number>>;
 }
 
 // ---- Métricas del embudo ----

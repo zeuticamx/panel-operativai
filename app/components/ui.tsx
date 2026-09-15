@@ -1,9 +1,18 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Import diferido: ui.tsx también lo usan las pantallas públicas (login,
+// registro), que no dibujan PageHeader. Importándolo de forma normal, el
+// socket.io-client de la campana terminaría en el bundle de esas páginas.
+const CentroNotificaciones = dynamic(
+  () => import("./centro-notificaciones").then((m) => m.CentroNotificaciones),
+  { ssr: false },
+);
 
 // ------------------------------------------------------------
 // Clases compartidas de formularios (misma familia visual que login)
@@ -139,7 +148,10 @@ export function PageHeader({
         <h1 className="truncate text-sm font-medium text-text-100">{titulo}</h1>
         {sub && <span className="font-mono text-xs text-text-600">{sub}</span>}
       </div>
-      {acciones && <div className="flex flex-wrap items-center gap-2">{acciones}</div>}
+      <div className="flex flex-wrap items-center gap-2">
+        {acciones}
+        <CentroNotificaciones />
+      </div>
     </header>
   );
 }

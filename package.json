@@ -12,12 +12,16 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
+    "@react-pdf/renderer": "^4.9.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

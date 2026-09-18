@@ -226,6 +226,14 @@ export function formatoPorcentaje(valor: number | null | undefined): string {
   return `${Math.round(valor)}%`;
 }
 
+/** "2026-01" -> "ene 2026": etiqueta de mes para el eje de la tendencia. */
+export function formatoMes(periodo: string): string {
+  const [anio, mes] = periodo.split("-").map(Number);
+  if (!anio || !mes) return periodo;
+  const d = new Date(Date.UTC(anio, mes - 1, 1));
+  return d.toLocaleDateString(LOCALE, { month: "short", year: "numeric", timeZone: "UTC" });
+}
+
 // ------------------------------------------------------------
 // CRM de campo
 // ------------------------------------------------------------

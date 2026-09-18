@@ -19,8 +19,9 @@
   --warning: #f59e0b;
   --danger: #ef4444;
 
-  /* dataviz — serie única (azul) validada contra bg-800 */
-  --series-1: #3987e5;
+  /* dataviz — categórica, validada contra bg-800 (ver skill dataviz) */
+  --series-1: #3987e5; /* azul */
+  --series-2: #d95926; /* naranja */
   --grid: #334155;
 }
 
@@ -36,6 +37,7 @@
   --text-600: #94a3b8;
 
   --series-1: #2a78d6;
+  --series-2: #eb6834;
   --grid: #e2e8f0;
 }
 
@@ -56,6 +58,7 @@
   --color-danger: var(--danger);
 
   --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
   --color-grid: var(--grid);
 
   --font-sans: var(--font-geist-sans);

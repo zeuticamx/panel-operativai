@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Edit, FileSpreadsheet, FileText, RefreshCw, Search, Trophy, UserPlus } from "lucide-react";
+import { Edit, FileDown, FileSpreadsheet, FileText, RefreshCw, Search, Trophy, UserPlus } from "lucide-react";
 import { useApi } from "@/lib/use-api";
 import type {
   MetricasPipelineOut,
@@ -24,7 +24,7 @@ import { CrearClienteForm } from "@/app/components/crear-cliente-form";
 import { EmbudoEtapas } from "@/app/components/embudo-etapas";
 import { EstadoLead } from "@/app/components/estado-lead";
 import { LeadDrawer } from "@/app/components/lead-drawer";
-import { exportarEmbudoExcel } from "@/lib/exportar-embudo";
+import { exportarEmbudoCSV, exportarEmbudoExcel } from "@/lib/exportar-embudo";
 import { exportarEmbudoPDF } from "@/lib/exportar-embudo-pdf";
 import { mensajeDeError } from "@/lib/auth";
 import {
@@ -76,7 +76,7 @@ export default function VendedoresPage() {
   );
   const [aviso, setAviso] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [exportando, setExportando] = useState<"excel" | "pdf" | null>(null);
+  const [exportando, setExportando] = useState<"excel" | "pdf" | "csv" | null>(null);
   const [errorExportar, setErrorExportar] = useState<string | null>(null);
   const [crearClienteOpen, setCrearClienteOpen] = useState(false);
 
@@ -104,12 +104,13 @@ export default function VendedoresPage() {
   const m = metricas.data;
   const todos = useMemo(() => leads.data ?? [], [leads.data]);
 
-  const exportar = async (formato: "excel" | "pdf") => {
+  const exportar = async (formato: "excel" | "pdf" | "csv") => {
     setErrorExportar(null);
     setExportando(formato);
     try {
       if (formato === "excel") await exportarEmbudoExcel(todos, m ?? undefined);
-      else await exportarEmbudoPDF(todos, m ?? undefined);
+      else if (formato === "pdf") await exportarEmbudoPDF(todos, m ?? undefined);
+      else exportarEmbudoCSV(todos);
     } catch (e) {
       setErrorExportar(mensajeDeError(e, "No se pudo exportar el embudo."));
     } finally {
@@ -205,6 +206,16 @@ export default function VendedoresPage() {
               >
                 <FileText size={13} aria-hidden />
                 PDF
+              </Boton>
+              <Boton
+                variante="fantasma"
+                onClick={() => exportar("csv")}
+                loading={exportando === "csv"}
+                disabled={!leads.data || exportando !== null}
+                title="Descargar el embudo en CSV"
+              >
+                <FileDown size={13} aria-hidden />
+                CSV
               </Boton>
               <Boton
                 variante="fantasma"

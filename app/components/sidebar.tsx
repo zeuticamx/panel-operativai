@@ -11,6 +11,7 @@ import {
   LogOut,
   MessagesSquare,
   Menu,
+  CreditCard,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { icon: Bot, label: "Agente", href: "/agente" },
   { icon: Wrench, label: "Herramientas", href: "/herramientas" },
   { icon: Users, label: "Vendedores", href: "/vendedores" },
+  { icon: CreditCard, label: "Suscripción", href: "/suscripcion" },
 ];
 
 export function Sidebar() {

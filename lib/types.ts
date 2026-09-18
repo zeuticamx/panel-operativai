@@ -17,6 +17,8 @@ export interface UsuarioOut {
   role: string;
   tenant_id: string | null;
   nombre_negocio: string | null;
+  /** Nivel de plataforma (tabla gerencia_users), no el rol dentro de un tenant. */
+  es_gerencia_plataforma: boolean;
 }
 
 export interface RegistroIn {
@@ -415,6 +417,36 @@ export interface MetricasPipelineOut {
   ranking: RankingVendedorOut[];
 }
 
+// ---- Reportes: tendencia y conversión ----
+export interface TendenciaMesOut {
+  /** "YYYY-MM" */
+  periodo: string;
+  nuevos: number;
+  ganados: number;
+  perdidos: number;
+  /** Decimal serializado como string. */
+  monto_ganado: string;
+}
+
+export interface TendenciaPipelineOut {
+  meses: TendenciaMesOut[];
+}
+
+export interface ConversionEtapaOut {
+  estado: string;
+  /** Leads del rango que pasaron por esta etapa alguna vez. */
+  alcanzados: number;
+  /** Sobre el total de leads del rango. "nuevo" siempre es 100. */
+  porcentaje: number;
+}
+
+export interface ConversionPipelineOut {
+  desde: string | null;
+  hasta: string | null;
+  total_leads: number;
+  etapas: ConversionEtapaOut[];
+}
+
 // ============================================================
 // CRM DE CAMPO
 // ============================================================
@@ -525,4 +557,86 @@ export interface ReporteActividadOut {
   total_visitas: number;
   total_tareas_completadas: number;
   vendedores: ActividadVendedorOut[];
+}
+
+// ---- Pagos (Mercado Pago) ----
+// Los montos, precios y créditos llegan como string: el backend los manda
+// como Decimal y Pydantic los serializa así (igual que monto_ganado).
+// Formatearlos con formatoMonto(), que ya espera string.
+
+export type TipoPago = "subscription" | "credit_purchase";
+export type EstadoPago =
+  | "pendiente"
+  | "aprobado"
+  | "rechazado"
+  | "cancelado"
+  | "reembolsado";
+export type EstadoSuscripcion = "activa" | "pausada" | "cancelada";
+export type NombrePlan = "starter" | "pro" | "enterprise";
+
+export interface PlanOut {
+  nombre: string;
+  descripcion: string | null;
+  precio_monthly: string;
+  precio_annual: string | null;
+  /** null = sin tope (enterprise). */
+  max_vendedores: number | null;
+  max_leads_mensuales: number | null;
+  creditos_incluidos_mensual: string;
+  agente_ia_activo: boolean;
+  gestion_vendedores_activo: boolean;
+}
+
+export interface PaqueteCreditosOut {
+  creditos: string;
+  precio: string;
+}
+
+export interface CatalogoPagosOut {
+  planes: PlanOut[];
+  paquetes: PaqueteCreditosOut[];
+}
+
+export interface SuscripcionOut {
+  plan: NombrePlan | null;
+  estado_suscripcion: EstadoSuscripcion | null;
+  fecha_renovacion: string | null;
+  precio_monthly: string | null;
+  creditos_disponibles: string;
+  creditos_gastados: string;
+}
+
+export interface TransaccionOut {
+  id: string;
+  tipo: string;
+  concepto: string | null;
+  monto: string;
+  estado_pago: EstadoPago;
+  metodo_pago: string | null;
+  ultimos_4_digitos: string | null;
+  creado_en: string;
+}
+
+export interface PreferenciaEstadoOut {
+  id: string;
+  tipo: string;
+  monto: string;
+  estado: EstadoPago;
+  fecha: string;
+}
+
+/** El monto NO viaja: lo decide el backend leyendo planes/paquetes_creditos. */
+export interface CrearPagoIn {
+  tipo: TipoPago;
+  plan?: NombrePlan;
+  creditos?: number;
+}
+
+export interface CrearPagoOut {
+  transaccion_id: string;
+  mp_preference_id: string;
+  /** A dónde redirigir al comprador (checkout de Mercado Pago). */
+  init_point: string;
+  monto: string;
+  concepto: string;
 }

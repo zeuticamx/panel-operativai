@@ -37,6 +37,7 @@ const TABS = [
   { href: "/vendedores", label: "Embudo", exacto: true },
   { href: "/vendedores/cartera", label: "Cartera", exacto: false },
   { href: "/vendedores/actividad", label: "Actividad", exacto: false },
+  { href: "/vendedores/reportes", label: "Reportes", exacto: false },
   { href: "/vendedores/equipo", label: "Equipo", exacto: false },
   { href: "/vendedores/configuracion", label: "Configuración", exacto: false },
 ];

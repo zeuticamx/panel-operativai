@@ -10,11 +10,17 @@
  * pesada y solo hace falta cuando alguien pulsa "Exportar a PDF".
  */
 import type { ReactNode } from "react";
-import type { MetricasPipelineOut, PipelineOut } from "./types";
-import { fmtInt, formatoMonto, formatoPorcentaje, infoEstadoPipeline } from "./formato";
+import type { MetricasPipelineOut, PipelineOut, TendenciaPipelineOut } from "./types";
+import { fmtInt, formatoMes, formatoMonto, formatoPorcentaje, infoEstadoPipeline } from "./formato";
 import { cssEtapa } from "./colores-etapa";
 import { descargarArchivo, fechaArchivo } from "./descargar-archivo";
 import { ESTADOS_CERRADOS } from "./formato";
+
+/** "YYYY-MM-DD". Sin ambos, el reporte no lleva rango en la portada. */
+export interface FiltrosReporte {
+  fechaInicio?: string;
+  fechaFin?: string;
+}
 
 const LOGO = "/imagenes/LOGO_OPERATIVAI.png";
 const AZUL = "#3987E5";
@@ -59,6 +65,8 @@ function construirDocumento(
   RP: typeof import("@react-pdf/renderer"),
   leads: PipelineOut[],
   metricas: MetricasPipelineOut | undefined,
+  tendencia: TendenciaPipelineOut | undefined,
+  filtros: FiltrosReporte | undefined,
 ) {
   const { Document, Page, View, Text, Image, StyleSheet } = RP;
 
@@ -165,6 +173,14 @@ function construirDocumento(
       justifyContent: "space-between",
       alignItems: "center",
     },
+
+    leyendaFila: { flexDirection: "row", gap: 16, marginBottom: 14 },
+    leyendaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+    leyendaDot: { width: 7, height: 7, borderRadius: 3.5 },
+    leyendaTexto: { fontSize: 8, color: TEXTO_SUAVE },
+    colMes: { flex: 2, fontSize: 9 },
+    colNum: { flex: 1.2, fontSize: 9, fontFamily: "Courier", textAlign: "right" },
+    thTendencia: { fontSize: 8, fontFamily: "Helvetica-Bold", color: TEXTO_SUAVE },
   });
 
   const HEADER_TITLE = "OperativAI · Reporte del Embudo";
@@ -223,6 +239,20 @@ function construirDocumento(
   const maxTotalFunnel = Math.max(1, ...ETAPAS_FUNNEL.map((e) => etapasPorId[e]?.total ?? 0));
   const perdidos = etapasPorId["perdido"];
 
+  // Portada: si viene un rango, se rotula con él; el que llama es quien
+  // decide qué tan filtrados vienen `leads`/`metricas` para esas fechas —
+  // esta función no vuelve a filtrar nada, solo muestra el rótulo (mismo
+  // trato que `rango` en exportar-reportes-pdf.tsx).
+  // "T00:00:00" y no la fecha pelada: un string "YYYY-MM-DD" sin hora se
+  // interpreta como medianoche UTC, y toLocaleDateString lo vuelve a mostrar
+  // en la zona local — con UTC-6 (México) eso corre el día uno para atrás.
+  const subtituloPortada =
+    filtros?.fechaInicio && filtros?.fechaFin
+      ? `Del ${new Date(`${filtros.fechaInicio}T00:00:00`).toLocaleDateString("es-MX")} al ${new Date(
+          `${filtros.fechaFin}T00:00:00`,
+        ).toLocaleDateString("es-MX")}`
+      : "Vendedores · CRM de OperativAI";
+
   return (
     <Document title={`Reporte del embudo — ${fechaLarga()}`} author="OperativAI">
       {/* Portada */}
@@ -231,7 +261,7 @@ function construirDocumento(
           {/* eslint-disable-next-line jsx-a11y/alt-text -- Image de react-pdf: dibuja en el PDF, no hay `alt` en su API */}
           <Image src={LOGO} style={s.logoPortada} />
           <Text style={s.tituloPortada}>Reporte del Embudo</Text>
-          <Text style={s.subPortada}>Vendedores · CRM de OperativAI</Text>
+          <Text style={s.subPortada}>{subtituloPortada}</Text>
           <Text style={s.fechaPortada}>{fechaLarga()}</Text>
         </View>
       </Page>
@@ -408,22 +438,78 @@ function construirDocumento(
           <Pie />
         </Page>
       )}
+
+      {/* Tendencia mensual */}
+      {tendencia && (
+        <Page size="A4" style={s.page}>
+          <Encabezado />
+          <Text style={s.h1}>Tendencia mensual</Text>
+          <Text style={{ fontSize: 9, color: TEXTO_SUAVE, marginBottom: 14 }}>
+            Últimos {tendencia.meses.length} meses. Es una vista macro de siempre — no depende del rango de la
+            portada.
+          </Text>
+
+          <View style={s.leyendaFila}>
+            <View style={s.leyendaItem}>
+              <View style={[s.leyendaDot, { backgroundColor: AZUL }]} />
+              <Text style={s.leyendaTexto}>Nuevos</Text>
+            </View>
+            <View style={s.leyendaItem}>
+              <View style={[s.leyendaDot, { backgroundColor: "#22C55E" }]} />
+              <Text style={s.leyendaTexto}>Ganados</Text>
+            </View>
+            <View style={s.leyendaItem}>
+              <View style={[s.leyendaDot, { backgroundColor: "#EF4444" }]} />
+              <Text style={s.leyendaTexto}>Perdidos</Text>
+            </View>
+          </View>
+
+          <View style={s.tablaHeaderFila}>
+            <Text style={[s.thTendencia, s.colMes]}>Mes</Text>
+            <Text style={[s.thTendencia, s.colNum]}>Nuevos</Text>
+            <Text style={[s.thTendencia, s.colNum]}>Ganados</Text>
+            <Text style={[s.thTendencia, s.colNum]}>Perdidos</Text>
+            <Text style={[s.thTendencia, s.colNum]}>Monto ganado</Text>
+          </View>
+          {tendencia.meses.map((m) => (
+            <View key={m.periodo} style={s.tablaFila} wrap={false}>
+              <Text style={s.colMes}>{formatoMes(m.periodo)}</Text>
+              <Text style={s.colNum}>{fmtInt.format(m.nuevos)}</Text>
+              <Text style={s.colNum}>{fmtInt.format(m.ganados)}</Text>
+              <Text style={s.colNum}>{fmtInt.format(m.perdidos)}</Text>
+              <Text style={s.colNum}>{formatoMonto(aNumero(m.monto_ganado))}</Text>
+            </View>
+          ))}
+
+          <Pie />
+        </Page>
+      )}
     </Document>
   );
 }
 
 /**
  * Arma el reporte del embudo en PDF y dispara la descarga en el navegador.
+ *
  * `metricas` es opcional: sin ella el reporte solo trae portada y la tabla
  * de clientes (los KPIs, el ranking y el embudo por etapa se calculan a
- * partir de `metricas`, así que esas páginas se omiten).
+ * partir de `metricas`, así que esas páginas se omiten). `tendencia` es
+ * igual de opcional y agrega la página de tendencia mensual al final.
+ *
+ * `filtros` solo rotula la portada con el rango ("Del ... al ..."): esta
+ * función no vuelve a filtrar `leads`/`metricas`/`tendencia` por fecha —
+ * eso es responsabilidad de quien llama (igual que `rango` en
+ * `exportar-reportes-pdf.tsx`), porque cada uno puede salir de un fetch ya
+ * filtrado con su propio `desde`/`hasta` contra el backend.
  */
 export async function exportarEmbudoPDF(
   leads: PipelineOut[],
   metricas?: MetricasPipelineOut,
+  tendencia?: TendenciaPipelineOut,
+  filtros?: FiltrosReporte,
 ): Promise<void> {
   const RP = await import("@react-pdf/renderer");
-  const documento = construirDocumento(RP, leads, metricas) as ReactNode;
+  const documento = construirDocumento(RP, leads, metricas, tendencia, filtros) as ReactNode;
   const blob = await RP.pdf(documento as Parameters<typeof RP.pdf>[0]).toBlob();
   descargarArchivo(blob, `embudo_${fechaArchivo()}.pdf`, "application/pdf");
 }

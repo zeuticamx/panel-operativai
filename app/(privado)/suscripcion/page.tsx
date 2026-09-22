@@ -38,7 +38,7 @@ export default function SuscripcionPage() {
   const suscripcion = useApi<SuscripcionOut>("/api/pagos/suscripcion");
   const historial = useApi<TransaccionOut[]>("/api/pagos/historial");
 
-  // Qué botón está esperando a Mercado Pago. Es el id de lo que se está
+  // Qué botón está esperando a la pasarela. Es el id de lo que se está
   // comprando ("plan:pro" / "creditos:500") y no un booleano, para que solo
   // gire el spinner del botón que se pulsó.
   const [comprando, setComprando] = useState<string | null>(null);
@@ -47,10 +47,10 @@ export default function SuscripcionPage() {
   const s = suscripcion.data;
 
   /**
-   * Pide la preferencia al backend y manda el navegador al checkout.
+   * Pide el checkout al backend y manda el navegador ahí.
    *
    * No se marca nada como pagado acá: el estado real lo escribe el webhook
-   * cuando Mercado Pago confirma. Esta pantalla solo abre la puerta.
+   * cuando Stripe confirma. Esta pantalla solo abre la puerta.
    */
   const comprar = async (clave: string, cuerpo: CrearPagoIn) => {
     setError(null);
@@ -63,7 +63,7 @@ export default function SuscripcionPage() {
       // assign() y no `location.href = ...`: la regla
       // react-hooks/immutability de eslint-config-next 16 prohíbe asignarle
       // a window.location. El efecto es el mismo.
-      window.location.assign(pago.init_point);
+      window.location.assign(pago.checkout_url);
     } catch (e) {
       setError(mensajeDeError(e, "No se pudo iniciar el pago."));
       setComprando(null);
@@ -362,7 +362,7 @@ function TarjetaPlan({
         disabled={!puedeComprar || bloqueado}
         title={
           puedeComprar
-            ? "Ir al checkout de Mercado Pago"
+            ? "Ir al checkout de Stripe"
             : "Solo el dueño del negocio puede contratar"
         }
       >

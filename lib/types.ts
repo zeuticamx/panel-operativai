@@ -53,6 +53,11 @@ export interface LoginIn {
   password: string;
 }
 
+/** POST /api/auth/google — ID token que entrega el botón de Google. */
+export interface GoogleLoginIn {
+  credential: string;
+}
+
 // ---- Agente ----
 export interface AgenteConfig {
   agent_name: string;
@@ -565,12 +570,17 @@ export interface ReporteActividadOut {
   vendedores: ActividadVendedorOut[];
 }
 
-// ---- Pagos (Mercado Pago) ----
+// ---- Pagos (Stripe) ----
 // Los montos, precios y créditos llegan como string: el backend los manda
 // como Decimal y Pydantic los serializa así (igual que monto_ganado).
 // Formatearlos con formatoMonto(), que ya espera string.
+//
+// La pasarela la decide el backend (PAYMENT_PROVIDER). Hoy es Stripe, con
+// Mercado Pago inhabilitado pero sin borrar, así que estos tipos no
+// nombran a ninguna de las dos: el portal solo redirige a checkout_url.
 
 export type TipoPago = "subscription" | "credit_purchase";
+export type ProveedorPago = "stripe" | "mercadopago";
 export type EstadoPago =
   | "pendiente"
   | "aprobado"
@@ -623,7 +633,7 @@ export interface TransaccionOut {
   creado_en: string;
 }
 
-export interface PreferenciaEstadoOut {
+export interface CheckoutEstadoOut {
   id: string;
   tipo: string;
   monto: string;
@@ -640,9 +650,142 @@ export interface CrearPagoIn {
 
 export interface CrearPagoOut {
   transaccion_id: string;
-  mp_preference_id: string;
-  /** A dónde redirigir al comprador (checkout de Mercado Pago). */
-  init_point: string;
+  proveedor: ProveedorPago;
+  /** Checkout Session de Stripe (cs_...); con MP, la preferencia. */
+  referencia: string;
+  /** A dónde redirigir al comprador. */
+  checkout_url: string;
   monto: string;
   concepto: string;
+}
+
+// ============================================================
+// GERENCIA DE PLATAFORMA
+// ============================================================
+// Espejo de la sección GERENCIA de backend/schemas.py. Solo lo ve el nivel
+// gerencia (UsuarioOut.es_gerencia_plataforma), que no es lo mismo que el
+// rol owner/superadmin de un negocio.
+
+export type EstadoTenantPlataforma = "activo" | "prueba" | "suspendido" | "baja";
+
+export interface ConsumoTenantOut {
+  tokens_entrada: number;
+  tokens_salida: number;
+  tokens_total: number;
+  /** Decimal serializado como string, igual que los montos de pagos. */
+  costo_usd: string;
+  llamadas: number;
+}
+
+export interface TenantGerenciaOut {
+  tenant_id: string;
+  nombre: string;
+  alta: string | null;
+
+  estado: EstadoTenantPlataforma;
+  estado_motivo: string | null;
+  estado_actualizado_en: string | null;
+  estado_actualizado_por: string | null;
+
+  agente_ia_activo: boolean;
+  gestion_vendedores_activo: boolean;
+  /** El efectivo, ya cruzado con pagos y suspensión: lo que responde n8n. */
+  agente_operando: boolean;
+
+  plan: NombrePlan | null;
+  estado_suscripcion: EstadoSuscripcion | null;
+  fecha_renovacion: string | null;
+  precio_monthly: string | null;
+  creditos_disponibles: string;
+  creditos_gastados: string;
+
+  usuarios_portal: number;
+  vendedores_activos: number;
+  canales_activos: number;
+  ultimo_mensaje: string | null;
+
+  consumo: ConsumoTenantOut;
+}
+
+export interface TenantsGerenciaOut {
+  total: number;
+  dias: number;
+  items: TenantGerenciaOut[];
+}
+
+export interface PuntoConsumoOut {
+  /** YYYY-MM-DD en UTC. */
+  dia: string;
+  tokens_total: number;
+  costo_usd: string;
+  llamadas: number;
+}
+
+export interface ConsumoModeloOut {
+  modelo: string;
+  tokens_total: number;
+  costo_usd: string;
+  llamadas: number;
+}
+
+export interface ConsumoOut {
+  desde: string;
+  hasta: string;
+  total: ConsumoTenantOut;
+  por_dia: PuntoConsumoOut[];
+  por_modelo: ConsumoModeloOut[];
+}
+
+export interface ResumenGerenciaOut {
+  dias: number;
+
+  tenants_total: number;
+  tenants_activos: number;
+  tenants_prueba: number;
+  tenants_suspendidos: number;
+  tenants_baja: number;
+  tenants_nuevos: number;
+  tenants_con_actividad: number;
+  /** Suscripción activa y cero mensajes en la ventana: pagan y no usan. */
+  tenants_en_riesgo: number;
+
+  suscripciones_activas: number;
+  mrr: string;
+
+  mensajes: number;
+  consumo: ConsumoTenantOut;
+  ingresos_periodo: string;
+}
+
+export interface CambiarEstadoTenantIn {
+  estado: EstadoTenantPlataforma;
+  /** Obligatorio si el estado no es "activo"; el backend devuelve 400 si falta. */
+  motivo?: string | null;
+  notas?: string | null;
+}
+
+export interface CambiarServiciosTenantIn {
+  agente_ia_activo?: boolean;
+  gestion_vendedores_activo?: boolean;
+  motivo?: string | null;
+}
+
+/** Positivo suma, negativo resta. */
+export interface AjusteCreditosIn {
+  cantidad: string;
+  motivo: string;
+}
+
+export interface AjusteCreditosOut {
+  creditos_disponibles: string;
+}
+
+export interface EntradaAuditoriaOut {
+  id: string;
+  actor_email: string;
+  accion: string;
+  tenant_id: string | null;
+  tenant_nombre: string | null;
+  detalle: Record<string, unknown>;
+  creado_en: string;
 }

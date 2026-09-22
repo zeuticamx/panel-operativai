@@ -7,10 +7,15 @@ import { XCircle } from "lucide-react";
 import { Cargando, PageHeader } from "@/app/components/ui";
 
 /**
- * Retorno de un pago que no prosperó (back_urls.failure).
+ * Retorno de un pago que no prosperó (cancel_url de Stripe).
+ *
+ * Con Stripe se llega acá cuando el comprador sale del checkout sin pagar:
+ * un rechazo del banco no redirige, se muestra dentro del propio checkout y
+ * deja reintentar ahí mismo. Por eso el texto habla de "no se completó" y
+ * no de "lo rechazaron".
  *
  * No hay nada que deshacer acá: la transacción quedó como 'pendiente' o
- * 'rechazado' del lado del backend según lo que diga el webhook, y reintentar
+ * 'cancelado' del lado del backend según lo que diga el webhook, y reintentar
  * es simplemente crear un pago nuevo desde la pantalla de suscripción.
  */
 export default function PagoErrorPage() {
@@ -28,7 +33,13 @@ export default function PagoErrorPage() {
   );
 }
 
-/** Los motivos que manda Mercado Pago, traducidos a algo accionable. */
+/**
+ * Los motivos que manda Mercado Pago, traducidos a algo accionable.
+ *
+ * Stripe no manda `status_detail` en el cancel_url, así que con la pasarela
+ * actual este mapa no se usa. Se conserva porque Mercado Pago sigue siendo
+ * un proveedor válido (PAYMENT_PROVIDER) y ahí sí llega.
+ */
 const MOTIVOS: Record<string, string> = {
   cc_rejected_insufficient_amount: "La tarjeta no tenía fondos suficientes.",
   cc_rejected_bad_filled_card_number: "El número de tarjeta quedó mal escrito.",
@@ -56,7 +67,7 @@ function Contenido() {
           <p className="text-sm font-medium text-text-100">El pago no se completó</p>
           <p className="text-xs leading-relaxed text-text-400">
             {explicacion ??
-              "Mercado Pago no pudo procesar la operación. No se te cobró nada."}
+              "Saliste del checkout antes de terminar. No se te cobró nada."}
           </p>
 
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2">

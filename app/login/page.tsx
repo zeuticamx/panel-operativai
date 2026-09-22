@@ -4,8 +4,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch, getAccessToken, mensajeDeError, setTokens } from "@/lib/auth";
-import type { LoginIn, TokenOut } from "@/lib/types";
+import type { GoogleLoginIn, LoginIn, TokenOut } from "@/lib/types";
+import { GOOGLE_CLIENT_ID } from "@/lib/google-identity";
 import { AuthShell } from "@/app/components/auth-shell";
+import { GoogleBoton } from "@/app/components/google-boton";
 import { Aviso, Boton, Campo, inputClass } from "@/app/components/ui";
 
 export default function LoginPage() {
@@ -38,6 +40,26 @@ export default function LoginPage() {
       router.replace("/dashboard");
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo iniciar sesión."));
+      setLoading(false);
+    }
+  };
+
+  // El mismo botón sirve para entrar y para darse de alta: el backend
+  // crea el negocio si el correo de la cuenta de Google es nuevo.
+  const handleGoogle = async (credential: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const body: GoogleLoginIn = { credential };
+      const tokens = await apiFetch<TokenOut>("/api/auth/google", {
+        method: "POST",
+        json: body,
+        auth: false,
+      });
+      setTokens(tokens);
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo continuar con Google."));
       setLoading(false);
     }
   };
@@ -97,6 +119,17 @@ export default function LoginPage() {
           {loading ? "Ingresando…" : "Ingresar"}
         </Boton>
       </form>
+
+      {GOOGLE_CLIENT_ID && (
+        <>
+          <div className="mt-6 flex items-center gap-3 text-[11px] text-text-600">
+            <span className="h-px flex-1 bg-bg-700" />
+            o
+            <span className="h-px flex-1 bg-bg-700" />
+          </div>
+          <GoogleBoton onCredential={handleGoogle} disabled={loading} className="mt-4" />
+        </>
+      )}
     </AuthShell>
   );
 }

@@ -17,6 +17,7 @@ import {
   PanelLeftOpen,
   Plug,
   Settings,
+  ShieldCheck,
   Sun,
   Users,
   Wrench,
@@ -25,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { clearTokens } from "@/lib/auth";
 import { setStoredTheme, useStoredTheme } from "@/lib/theme";
+import { esGerenciaPlataforma } from "./gerencia";
 import { ConfirmDialog } from "./ui";
 import { useUsuario } from "./usuario-context";
 
@@ -37,6 +39,11 @@ const NAV_ITEMS = [
   { icon: Users, label: "Vendedores", href: "/vendedores" },
   { icon: CreditCard, label: "Suscripción", href: "/suscripcion" },
 ];
+
+// Sección del equipo de OperativAI, no del negocio. Va aparte y al final
+// para que se lea como lo que es: otro nivel, no una pantalla más del
+// portal del cliente.
+const NAV_PLATAFORMA = { icon: ShieldCheck, label: "Plataforma", href: "/gerencia" };
 
 export function Sidebar() {
   const router = useRouter();
@@ -170,6 +177,26 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Solo para el nivel gerencia de plataforma. El backend lo
+              vuelve a comprobar en cada endpoint: esconder el link es
+              para no ofrecer una puerta que no abre, no la seguridad. */}
+          {esGerenciaPlataforma(usuario) && (
+            <Link
+              href={NAV_PLATAFORMA.href}
+              title={expandido ? undefined : NAV_PLATAFORMA.label}
+              aria-current={pathname.startsWith(NAV_PLATAFORMA.href) ? "page" : undefined}
+              className={cn(
+                "mt-2 flex items-center gap-2.5 rounded border-t border-bg-700 px-2 pt-3 pb-1.5 text-sm",
+                pathname.startsWith(NAV_PLATAFORMA.href)
+                  ? "text-text-100"
+                  : "text-text-400 hover:text-text-100",
+              )}
+            >
+              <NAV_PLATAFORMA.icon size={16} className="shrink-0" aria-hidden />
+              {expandido && <span className="flex-1">{NAV_PLATAFORMA.label}</span>}
+            </Link>
+          )}
 
           <button
             type="button"

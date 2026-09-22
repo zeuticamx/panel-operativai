@@ -5,20 +5,22 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { useApi } from "@/lib/use-api";
-import type { PreferenciaEstadoOut } from "@/lib/types";
+import type { CheckoutEstadoOut } from "@/lib/types";
 import { formatoMonto } from "@/lib/formato";
 import { Aviso, Boton, Cargando, PageHeader } from "@/app/components/ui";
 
 /**
- * Retorno del checkout de Mercado Pago (back_urls.success / .pending).
+ * Retorno del checkout de Stripe (success_url).
  *
  * OJO: llegar acá NO significa que el pago esté acreditado. Esta URL es
  * pública y el usuario puede abrirla a mano; lo que confirma el cobro es el
  * webhook. Por eso la pantalla no afirma nada por su cuenta: le pregunta al
- * backend el estado real de la preferencia y muestra eso.
+ * backend el estado real del checkout y muestra eso.
  *
  * Como el webhook puede tardar unos segundos más que el redirect, el estado
  * 'pendiente' es normal al principio y por eso hay un botón para reconsultar.
+ * Con OXXO o SPEI puede seguir pendiente durante horas: el pago se confirma
+ * cuando el cliente va a pagar el voucher, no al volver de esta pantalla.
  */
 export default function PagoExitoPage() {
   return (
@@ -37,11 +39,11 @@ export default function PagoExitoPage() {
 
 function Contenido() {
   const params = useSearchParams();
-  // Mercado Pago devuelve preference_id en la query del back_url.
-  const preferenceId = params.get("preference_id");
+  // Stripe sustituye {CHECKOUT_SESSION_ID} en el success_url por el id real.
+  const sessionId = params.get("session_id");
 
-  const pago = useApi<PreferenciaEstadoOut>(
-    preferenceId ? `/api/pagos/preferencia/${encodeURIComponent(preferenceId)}` : null,
+  const pago = useApi<CheckoutEstadoOut>(
+    sessionId ? `/api/pagos/checkout/${encodeURIComponent(sessionId)}` : null,
   );
 
   const estado = pago.data?.estado;
@@ -67,7 +69,7 @@ function Contenido() {
             )}
           </div>
 
-          {!preferenceId ? (
+          {!sessionId ? (
             <>
               <p className="text-sm font-medium text-text-100">Volviste del checkout</p>
               <p className="text-xs leading-relaxed text-text-400">
@@ -91,8 +93,9 @@ function Contenido() {
             <>
               <p className="text-sm font-medium text-text-100">Estamos confirmando tu pago</p>
               <p className="text-xs leading-relaxed text-text-400">
-                Mercado Pago todavía no nos confirmó la operación. Suele tardar unos
-                segundos; no hace falta pagar de nuevo.
+                Stripe todavía no nos confirmó la operación. Con tarjeta suele tardar
+                unos segundos; si pagaste con OXXO o SPEI, se acredita cuando hagas el
+                pago. No hace falta pagar de nuevo.
               </p>
               <Boton variante="fantasma" onClick={() => pago.recargar()} loading={pago.loading}>
                 <RefreshCw size={13} aria-hidden />

@@ -10,13 +10,14 @@ import type {
   ActivarResultado,
   CanalOut,
   ConectarMetaOut,
+  ConectarWhatsAppOut,
   PaginaDisponible,
 } from "@/lib/types";
 import { CANALES, etiquetaCanal, formatoFechaHora, type CanalTipo } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { CanalIcon } from "@/app/components/status";
-import { Aviso, Boton, ConfirmDialog, PageHeader } from "@/app/components/ui";
+import { Aviso, Boton, Campo, ConfirmDialog, PageHeader, inputClass } from "@/app/components/ui";
 
 type Paso =
   | { etapa: "inactivo" }
@@ -38,6 +39,9 @@ export default function CanalesPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [desconectar, setDesconectar] = useState<CanalTipo | null>(null);
   const [desconectando, setDesconectando] = useState(false);
+  const [formWhatsApp, setFormWhatsApp] = useState(false);
+  const [lineaWhatsApp, setLineaWhatsApp] = useState("");
+  const [conectandoWhatsApp, setConectandoWhatsApp] = useState(false);
 
   const porTipo = new Map<string, CanalOut>();
   for (const c of canales.data ?? []) porTipo.set(c.channel_type, c);
@@ -106,6 +110,29 @@ export default function CanalesPage() {
     } catch (e) {
       setErrorFlujo(mensajeDeError(e, "No se pudieron activar las páginas."));
       setPaso({ ...paso, activando: false });
+    }
+  };
+
+  // ---- Flujo WhatsApp (vía Kontesta) ---------------------------------
+  const conectarWhatsApp = async () => {
+    const linea = lineaWhatsApp.trim();
+    if (!linea) return;
+    setErrorFlujo(null);
+    setAviso(null);
+    setConectandoWhatsApp(true);
+    try {
+      await apiFetch<ConectarWhatsAppOut>("/api/canales/whatsapp/conectar", {
+        method: "POST",
+        json: { phone_number_id: linea },
+      });
+      setAviso("WhatsApp conectado. Tu agente ya puede responder por ese número.");
+      setFormWhatsApp(false);
+      setLineaWhatsApp("");
+      canales.recargar(true);
+    } catch (e) {
+      setErrorFlujo(mensajeDeError(e, "No se pudo conectar WhatsApp."));
+    } finally {
+      setConectandoWhatsApp(false);
     }
   };
 
@@ -237,8 +264,17 @@ export default function CanalesPage() {
                         Conectar con Facebook
                       </Boton>
                     ) : (
-                      <Boton variante="secundario" disabled title="El alta de WhatsApp todavía no está disponible desde el portal">
-                        Próximamente
+                      <Boton
+                        variante="primario"
+                        onClick={() => {
+                          setErrorFlujo(null);
+                          setAviso(null);
+                          setFormWhatsApp(true);
+                        }}
+                        disabled={formWhatsApp}
+                      >
+                        <CanalIcon tipo="whatsapp" size={13} />
+                        Conectar WhatsApp
                       </Boton>
                     )}
                   </div>
@@ -246,6 +282,65 @@ export default function CanalesPage() {
               );
             })}
           </section>
+
+          {/* Alta de WhatsApp */}
+          {formWhatsApp && (
+            <section className="rounded-md border border-bg-700 bg-bg-800 p-4">
+              <header className="mb-3 flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-medium text-text-100">Conectar WhatsApp Business</h2>
+                  <p className="font-mono text-[11px] text-text-600">
+                    tu número ya tiene que estar dado de alta con nosotros
+                  </p>
+                </div>
+                <Boton
+                  variante="fantasma"
+                  onClick={() => setFormWhatsApp(false)}
+                  disabled={conectandoWhatsApp}
+                  aria-label="Cerrar panel"
+                  className="min-h-8 px-2"
+                >
+                  <X size={14} aria-hidden />
+                </Boton>
+              </header>
+
+              <Aviso tipo="info">
+                WhatsApp no se conecta solo desde el portal: primero damos de alta tu número de
+                WhatsApp Business de nuestro lado y te entregamos el id de línea que va acá abajo.
+                Si todavía no lo tienes, escríbenos y te lo pasamos.
+              </Aviso>
+
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <Campo
+                  id="linea-whatsapp"
+                  label="Id de línea"
+                  hint="el identificador que te dimos al dar de alta tu número"
+                  className="min-w-56 flex-1"
+                >
+                  <input
+                    id="linea-whatsapp"
+                    value={lineaWhatsApp}
+                    onChange={(e) => setLineaWhatsApp(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") conectarWhatsApp();
+                    }}
+                    disabled={conectandoWhatsApp}
+                    placeholder="p. ej. 1234567890"
+                    autoComplete="off"
+                    className={inputClass}
+                  />
+                </Campo>
+                <Boton
+                  variante="primario"
+                  onClick={conectarWhatsApp}
+                  loading={conectandoWhatsApp}
+                  disabled={!lineaWhatsApp.trim()}
+                >
+                  Conectar
+                </Boton>
+              </div>
+            </section>
+          )}
 
           {/* Panel del flujo Meta */}
           {paso.etapa !== "inactivo" && (

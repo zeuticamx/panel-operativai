@@ -103,6 +103,12 @@ export interface ActivarOut {
   resultados: ActivarResultado[];
 }
 
+/** POST /api/canales/whatsapp/conectar — alta de la línea de WhatsApp del negocio. */
+export interface ConectarWhatsAppOut {
+  conectado: boolean;
+  phone_number_id: string;
+}
+
 // ---- Herramientas ----
 /** GET /api/herramientas/info — el correo con el que hay que compartir el documento. */
 export interface HerramientaInfoOut {

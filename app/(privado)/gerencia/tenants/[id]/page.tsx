@@ -3,13 +3,15 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { apiFetch, mensajeDeError } from "@/lib/auth";
+import * as Dialog from "@radix-ui/react-dialog";
+import { ArrowLeft, Eye } from "lucide-react";
+import { apiFetch, iniciarVerComo, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
   AjusteCreditosOut,
   EntradaAuditoriaOut,
   EstadoTenantPlataforma,
+  ImpersonarOut,
   TenantGerenciaOut,
   TransaccionOut,
 } from "@/lib/types";
@@ -22,8 +24,10 @@ import {
   ESTADOS_TENANT,
   ESTADO_TENANT_INFO,
   EstadoTenantBadge,
+  FUENTE_TIPO_CAMBIO_INFO,
   GerenciaTabs,
   fmtCostoUsd,
+  fmtMargen,
   fmtTokens,
 } from "@/app/components/gerencia";
 import {
@@ -124,6 +128,7 @@ export default function DetalleTenantPage() {
                 {t.tenant_id}
                 <CopyButton text={t.tenant_id} label="Copiar UUID del negocio" />
               </span>
+              <VerComo tenantId={t.tenant_id} nombre={t.nombre} />
             </section>
 
             {t.estado !== "activo" && t.estado_motivo && (
@@ -136,11 +141,23 @@ export default function DetalleTenantPage() {
             )}
 
             {/* ---- Números ---- */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <StatCard
                 label="tokens"
                 value={fmtTokens(t.consumo.tokens_total)}
                 hint={`${fmtInt.format(t.consumo.llamadas)} llamadas · ${fmtCostoUsd(t.consumo.costo_usd)}`}
+              />
+              <StatCard
+                label="margen del período"
+                value={fmtMargen(t.margen, formatoMonto)}
+                tone={
+                  t.margen === null ? "neutral" : Number(t.margen) < 0 ? "danger" : "success"
+                }
+                hint={
+                  t.margen === null
+                    ? FUENTE_TIPO_CAMBIO_INFO[t.tipo_cambio_fuente].detalle
+                    : `${formatoMonto(t.ingreso_periodo)} − ${formatoMonto(t.costo_moneda)} de modelos (${FUENTE_TIPO_CAMBIO_INFO[t.tipo_cambio_fuente].label})`
+                }
               />
               <StatCard
                 label="créditos"
@@ -508,12 +525,106 @@ function AjustarCreditos({
 }
 
 // ------------------------------------------------------------
+// Ver como el negocio
+// ------------------------------------------------------------
+/**
+ * Abre el portal del negocio en esta pestaña, en solo lectura. El token va
+ * a sessionStorage (ver lib/auth.ts): las otras pestañas del gerente no se
+ * enteran, y al salir se vuelve a esta ficha.
+ *
+ * Recarga completa (`location.assign`) y no router.push: el usuario, el
+ * socket de alertas y todo lo que el layout ya cargó con la identidad del
+ * gerente tiene que volver a pedirse con la del negocio.
+ */
+function VerComo({ tenantId, nombre }: { tenantId: string; nombre: string }) {
+  const [abierto, setAbierto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const entrar = async (e: FormEvent) => {
+    e.preventDefault();
+    if (motivo.trim().length < 5) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      const res = await apiFetch<ImpersonarOut>(`/api/gerencia/tenants/${tenantId}/impersonar`, {
+        method: "POST",
+        json: { motivo: motivo.trim() },
+      });
+      iniciarVerComo(res.access_token, `/gerencia/tenants/${tenantId}`);
+      // Recarga completa a propósito (ver el docstring): router.push
+      // conservaría el usuario y el socket cargados como el gerente.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/dashboard");
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo abrir el portal del negocio."));
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={abierto} onOpenChange={setAbierto}>
+      <Dialog.Trigger asChild>
+        <Boton className="ml-auto">
+          <Eye size={13} aria-hidden />
+          Ver como el negocio
+        </Boton>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-bg-700 bg-bg-900 p-5 shadow-xl">
+          <Dialog.Title className="text-sm font-medium text-text-100">
+            Ver el portal de {nombre}
+          </Dialog.Title>
+          <Dialog.Description className="mt-1.5 text-xs leading-relaxed text-text-400">
+            Entras como el dueño, en solo lectura: cualquier cambio se rechaza. La sesión dura
+            poco, no se renueva y queda en la bitácora con el motivo.
+          </Dialog.Description>
+          <form onSubmit={entrar} className="mt-4 flex flex-col gap-3" noValidate>
+            <Campo id="motivo-ver-como" label="Motivo" hint="mínimo 5 caracteres">
+              <input
+                id="motivo-ver-como"
+                type="text"
+                autoFocus
+                value={motivo}
+                disabled={enviando}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Ticket #123: no ve sus conversaciones de Instagram"
+                maxLength={500}
+                className={inputClass}
+              />
+            </Campo>
+            {error && <Aviso tipo="error">{error}</Aviso>}
+            <div className="flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <Boton disabled={enviando}>Cancelar</Boton>
+              </Dialog.Close>
+              <Boton
+                type="submit"
+                variante="primario"
+                loading={enviando}
+                disabled={motivo.trim().length < 5}
+              >
+                Entrar en solo lectura
+              </Boton>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+// ------------------------------------------------------------
 // Bitácora
 // ------------------------------------------------------------
 const ACCIONES: Record<string, string> = {
   estado_tenant: "Cambio de estado",
   servicios_tenant: "Cambio de servicios",
   ajuste_creditos: "Ajuste de créditos",
+  impersonacion: "Vio el portal como el negocio",
+  alerta_revisada: "Alerta revisada",
 };
 
 function etiquetaAccion(accion: string): string {

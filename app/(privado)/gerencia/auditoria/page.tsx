@@ -14,6 +14,10 @@ const ACCIONES: Record<string, { label: string; tone: BadgeTone }> = {
   estado_tenant: { label: "estado", tone: "danger" },
   servicios_tenant: { label: "servicios", tone: "warning" },
   ajuste_creditos: { label: "créditos", tone: "info" },
+  impersonacion: { label: "ver como", tone: "warning" },
+  alerta_revisada: { label: "alerta revisada", tone: "neutral" },
+  gerencia_alta: { label: "alta gerencia", tone: "info" },
+  gerencia_baja: { label: "baja gerencia", tone: "danger" },
 };
 
 export default function AuditoriaPage() {

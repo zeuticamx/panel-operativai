@@ -19,6 +19,9 @@ export interface UsuarioOut {
   nombre_negocio: string | null;
   /** Nivel de plataforma (tabla gerencia_users), no el rol dentro de un tenant. */
   es_gerencia_plataforma: boolean;
+  /** Solo en una sesión "ver como" de plataforma: el gerente que mira. */
+  impersonado_por?: string | null;
+  impersonacion_expira?: string | null;
 }
 
 export interface RegistroIn {
@@ -668,6 +671,14 @@ export interface CrearPagoOut {
 
 export type EstadoTenantPlataforma = "activo" | "prueba" | "suspendido" | "baja";
 
+/**
+ * De dónde salió el tipo de cambio usado para el margen. "banxico" es el
+ * FIX oficial del día (services/banxico.py, con caché); "manual" es
+ * TIPO_CAMBIO_USD; "moneda_usd" es cuando la moneda de cobro ya es USD, sin
+ * conversión; "ninguno" es cuando no hay ninguna fuente disponible.
+ */
+export type FuenteTipoCambio = "moneda_usd" | "banxico" | "manual" | "ninguno";
+
 export interface ConsumoTenantOut {
   tokens_entrada: number;
   tokens_salida: number;
@@ -680,6 +691,8 @@ export interface ConsumoTenantOut {
 export interface TenantGerenciaOut {
   tenant_id: string;
   nombre: string;
+  /** Un solo portal_user (owner primero); null si no tiene ninguno activo. */
+  email: string | null;
   alta: string | null;
 
   estado: EstadoTenantPlataforma;
@@ -705,11 +718,21 @@ export interface TenantGerenciaOut {
   ultimo_mensaje: string | null;
 
   consumo: ConsumoTenantOut;
+
+  /** Suscripción prorrateada + créditos cobrados en la ventana, en `moneda`. */
+  ingreso_periodo: string;
+  /** null sin tipo de cambio configurado en el backend: no hay margen honesto sin conversión. */
+  costo_moneda: string | null;
+  margen: string | null;
+  tipo_cambio_fuente: FuenteTipoCambio;
 }
 
 export interface TenantsGerenciaOut {
   total: number;
   dias: number;
+  moneda: string;
+  tipo_cambio_configurado: boolean;
+  tipo_cambio_fuente: FuenteTipoCambio;
   items: TenantGerenciaOut[];
 }
 
@@ -755,6 +778,12 @@ export interface ResumenGerenciaOut {
   mensajes: number;
   consumo: ConsumoTenantOut;
   ingresos_periodo: string;
+
+  moneda: string;
+  ingreso_estimado: string;
+  costo_moneda: string | null;
+  margen: string | null;
+  tipo_cambio_fuente: FuenteTipoCambio;
 }
 
 export interface CambiarEstadoTenantIn {
@@ -788,4 +817,128 @@ export interface EntradaAuditoriaOut {
   tenant_nombre: string | null;
   detalle: Record<string, unknown>;
   creado_en: string;
+}
+
+// ---- Salud operativa ----
+export type SeveridadSalud = "alta" | "media" | "baja";
+
+export interface ProblemaSaludOut {
+  tipo: string;
+  severidad: SeveridadSalud;
+  tenant_id: string | null;
+  tenant_nombre: string | null;
+  detalle: string;
+  fecha: string | null;
+  datos: Record<string, unknown>;
+}
+
+export interface AlertaGerenciaOut {
+  id: string;
+  tipo: string;
+  tenant_id: string | null;
+  tenant_nombre: string | null;
+  titulo: string;
+  detalle: Record<string, unknown>;
+  creada_en: string;
+  revisada_en: string | null;
+  revisada_por: string | null;
+}
+
+export interface SaludOut {
+  generado_en: string;
+  problemas: ProblemaSaludOut[];
+  alertas_abiertas: AlertaGerenciaOut[];
+}
+
+// ---- Equipo de plataforma ----
+export interface GerenciaUsuarioIn {
+  email: string;
+  full_name: string;
+  cargo: string;
+}
+
+export interface GerenciaUsuarioOut {
+  id: string;
+  email: string;
+  full_name: string;
+  cargo: string;
+  creado_en: string;
+  /** Sin cuenta de portal con ese correo, el nivel existe pero nadie lo usa aún. */
+  tiene_cuenta_portal: boolean;
+  ultimo_acceso: string | null;
+  es_yo: boolean;
+}
+
+// ---- Cohortes ----
+export interface CohorteOut {
+  /** YYYY-MM-01 */
+  mes: string;
+  tamano: number;
+  /** Índice 0 = mes de alta; termina en el mes actual. */
+  activos: number[];
+  retencion: number[];
+}
+
+export interface CohortesOut {
+  meses: number;
+  cohortes: CohorteOut[];
+}
+
+// ---- Ver como el negocio ----
+export interface ImpersonarIn {
+  motivo: string;
+}
+
+export interface ImpersonarOut {
+  access_token: string;
+  expira_en: string;
+  email_usuario: string;
+  tenant_nombre: string;
+}
+
+// ---- Catálogo de planes ----
+// Espejo de PlanGerenciaOut/PlanCrearIn/PlanActualizarIn en backend/schemas.py.
+export interface PlanGerenciaOut {
+  nombre: string;
+  descripcion: string | null;
+  precio_monthly: string;
+  precio_annual: string | null;
+  /** null = sin tope (plan tipo enterprise). */
+  max_vendedores: number | null;
+  max_leads_mensuales: number | null;
+  creditos_incluidos_mensual: string;
+  agente_ia_activo: boolean;
+  gestion_vendedores_activo: boolean;
+  activo: boolean;
+  orden: number;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+export interface PlanCrearIn {
+  nombre: string;
+  descripcion?: string | null;
+  precio_monthly: string;
+  precio_annual?: string | null;
+  max_vendedores?: number | null;
+  max_leads_mensuales?: number | null;
+  creditos_incluidos_mensual?: string;
+  agente_ia_activo?: boolean;
+  gestion_vendedores_activo?: boolean;
+  activo?: boolean;
+  orden?: number;
+}
+
+/** Parcial: un campo ausente o en null no se toca (no se puede renombrar acá). */
+export interface PlanActualizarIn {
+  descripcion?: string | null;
+  precio_monthly?: string | null;
+  precio_annual?: string | null;
+  max_vendedores?: number | null;
+  max_leads_mensuales?: number | null;
+  creditos_incluidos_mensual?: string | null;
+  agente_ia_activo?: boolean | null;
+  gestion_vendedores_activo?: boolean | null;
+  activo?: boolean | null;
+  orden?: number | null;
 }

@@ -10,6 +10,7 @@ import type { MetricasPipelineOut, PipelineOut } from "./types";
 import { formatoHoras, infoEstadoPipeline } from "./formato";
 import { argbEtapa } from "./colores-etapa";
 import { descargarArchivo, fechaArchivo } from "./descargar-archivo";
+import { celdaCsv } from "./exportar-tenants";
 
 const FORMATO_MONEDA = '"$"#,##0.00';
 const FORMATO_FECHA = "dd/mm/yyyy hh:mm";
@@ -226,17 +227,16 @@ export async function exportarEmbudoExcel(
 // ------------------------------------------------------------
 const ENCABEZADOS_CSV = ["Cliente", "Handle", "Etapa", "Vendedor", "Monto", "Última actividad"];
 
-/** RFC 4180: solo hace falta comillas si el valor trae coma, comillas o salto de línea. */
-function csvEscape(valor: string): string {
-  if (/["\n\r,]/.test(valor)) {
-    return `"${valor.replace(/"/g, '""')}"`;
-  }
-  return valor;
-}
-
 /**
  * Arma el .csv del embudo y dispara la descarga. Sin estilos ni hojas
  * extra (eso es lo que da el Excel) — solo la lista de clientes.
+ *
+ * `celdaCsv` (de exportar-tenants.ts) escapa RFC 4180 y además neutraliza
+ * inyección de fórmulas: `cliente_nombre`/`cliente_handle` vienen de
+ * WhatsApp/IG/FB y `vendedor_nombre` lo escribe el dueño del negocio, así
+ * que ninguno de los tres es un dato de confianza. Un nombre que empiece
+ * con `=`, `+`, `-` o `@` (p. ej. "=HYPERLINK(...)") lo ejecutaría Excel
+ * como fórmula al abrir el archivo si no se neutralizara.
  */
 export function exportarEmbudoCSV(leads: PipelineOut[]): void {
   // Mismo orden que hojaLeads: no confiar en el orden con que llegó `leads`.
@@ -259,7 +259,7 @@ export function exportarEmbudoCSV(leads: PipelineOut[]): void {
   // de "Última actividad" (o de un nombre de cliente) llegan corruptos.
   const contenido =
     "﻿" +
-    [ENCABEZADOS_CSV, ...filas].map((fila) => fila.map(csvEscape).join(",")).join("\r\n");
+    [ENCABEZADOS_CSV, ...filas].map((fila) => fila.map(celdaCsv).join(",")).join("\r\n");
 
   descargarArchivo(contenido, `embudo_${fechaArchivo()}.csv`, "text/csv;charset=utf-8;");
 }

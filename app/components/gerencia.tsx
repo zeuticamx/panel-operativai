@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { EstadoTenantPlataforma, UsuarioOut } from "@/lib/types";
+import type { EstadoTenantPlataforma, FuenteTipoCambio, UsuarioOut } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge, type BadgeTone } from "./badge";
 import { selectClass } from "./ui";
@@ -24,15 +24,19 @@ export function esGerenciaPlataforma(usuario: UsuarioOut | null): boolean {
 // ------------------------------------------------------------
 const TABS = [
   { href: "/gerencia", label: "Resumen", exacto: true },
+  { href: "/gerencia/salud", label: "Salud", exacto: false },
   { href: "/gerencia/tenants", label: "Negocios", exacto: false },
+  { href: "/gerencia/planes", label: "Planes", exacto: false },
   { href: "/gerencia/consumo", label: "Consumo", exacto: false },
+  { href: "/gerencia/cohortes", label: "Retención", exacto: false },
   { href: "/gerencia/auditoria", label: "Bitácora", exacto: false },
+  { href: "/gerencia/equipo", label: "Equipo", exacto: false },
 ];
 
 export function GerenciaTabs() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1" aria-label="Secciones de plataforma">
+    <nav className="flex flex-wrap gap-1" aria-label="Secciones de plataforma">
       {TABS.map((t) => {
         const activo = t.exacto ? pathname === t.href : pathname.startsWith(t.href);
         return (
@@ -149,3 +153,40 @@ export function SelectorDias({
     </label>
   );
 }
+
+/**
+ * Margen en la moneda de cobro. null = no hay tipo de cambio con el que
+ * convertir el costo (ver FUENTE_TIPO_CAMBIO_INFO); se muestra como raya.
+ */
+export function fmtMargen(valor: string | null, formato: (v: string) => string): string {
+  return valor === null ? "—" : formato(valor);
+}
+
+/**
+ * De dónde salió el tipo de cambio, para mostrar en el panel de dónde sale
+ * el número y no solo si hay uno. Espejo de
+ * backend/services/banxico.FuenteTipoCambio.
+ */
+export const FUENTE_TIPO_CAMBIO_INFO: Record<
+  FuenteTipoCambio,
+  { label: string; detalle: string }
+> = {
+  banxico: {
+    label: "Banxico (FIX)",
+    detalle: "Tipo de cambio FIX oficial del día, del SIE API de Banxico.",
+  },
+  manual: {
+    label: "manual",
+    detalle: "TIPO_CAMBIO_USD configurado a mano en el backend.",
+  },
+  moneda_usd: {
+    label: "sin conversión",
+    detalle: "La moneda de cobro ya es USD, no hace falta convertir.",
+  },
+  ninguno: {
+    label: "sin configurar",
+    detalle:
+      "Sin BANXICO_TOKEN ni TIPO_CAMBIO_USD en el backend: el costo de modelos está en USD " +
+      "y no se puede restar del ingreso.",
+  },
+};

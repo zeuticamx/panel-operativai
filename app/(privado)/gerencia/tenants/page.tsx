@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
+import { apiFetch, mensajeDeError } from "@/lib/auth";
+import { descargarTenantsCsv } from "@/lib/exportar-tenants";
 import { useApi, useDebounce } from "@/lib/use-api";
-import type { EstadoTenantPlataforma, TenantsGerenciaOut } from "@/lib/types";
+import type { EstadoTenantPlataforma, TenantGerenciaOut, TenantsGerenciaOut } from "@/lib/types";
 import { fmtInt, formatoMonto, tiempoRelativo } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
@@ -12,9 +14,11 @@ import {
   ESTADOS_TENANT,
   ESTADO_TENANT_INFO,
   EstadoTenantBadge,
+  FUENTE_TIPO_CAMBIO_INFO,
   GerenciaTabs,
   SelectorDias,
   fmtCostoUsd,
+  fmtMargen,
   fmtTokens,
 } from "@/app/components/gerencia";
 import { Aviso, Boton, Cargando, PageHeader, inputClass, selectClass } from "@/app/components/ui";
@@ -25,6 +29,7 @@ const ORDENES = [
   { valor: "consumo", label: "más tokens" },
   { valor: "gasto", label: "más costo" },
   { valor: "ingreso", label: "más ingreso" },
+  { valor: "margen", label: "peor margen" },
   { valor: "actividad", label: "actividad reciente" },
   { valor: "alta", label: "alta reciente" },
   { valor: "nombre", label: "nombre" },
@@ -62,6 +67,39 @@ export default function TenantsGerenciaPage() {
     setter(valor);
     setPagina(0);
   };
+
+  const [exportando, setExportando] = useState(false);
+  const [errorExport, setErrorExport] = useState<string | null>(null);
+
+  /**
+   * Exporta TODO lo que coincide con los filtros, no solo la página a la
+   * vista: se piden páginas del tamaño máximo hasta juntar el total.
+   */
+  const exportar = async () => {
+    setExportando(true);
+    setErrorExport(null);
+    try {
+      const todos: TenantGerenciaOut[] = [];
+      const base = new URLSearchParams(params);
+      base.set("limite", "100");
+      for (let offset = 0; ; offset += 100) {
+        base.set("offset", String(offset));
+        const res = await apiFetch<TenantsGerenciaOut>(`/api/gerencia/tenants?${base}`);
+        todos.push(...res.items);
+        if (res.items.length < 100 || todos.length >= res.total) break;
+      }
+      descargarTenantsCsv(todos, dias);
+    } catch (e) {
+      setErrorExport(mensajeDeError(e, "No se pudo exportar."));
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const sinTipoCambio = lista.data ? !lista.data.tipo_cambio_configurado : false;
+  const fuenteInfo = lista.data
+    ? FUENTE_TIPO_CAMBIO_INFO[lista.data.tipo_cambio_fuente]
+    : null;
 
   return (
     <>
@@ -119,23 +157,51 @@ export default function TenantsGerenciaPage() {
             </option>
           ))}
         </select>
+
+        <Boton onClick={exportar} loading={exportando} disabled={!lista.data || total === 0}>
+          <Download size={12} aria-hidden />
+          CSV
+        </Boton>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
         {lista.error && <Aviso tipo="error">{lista.error}</Aviso>}
+        {errorExport && <Aviso tipo="error">{errorExport}</Aviso>}
+        {sinTipoCambio && orden === "margen" && fuenteInfo && (
+          <Aviso tipo="info" className="mb-3">
+            {fuenteInfo.detalle} Configura BANXICO_TOKEN o TIPO_CAMBIO_USD para ordenar por
+            margen.
+          </Aviso>
+        )}
         {!lista.data && lista.loading && <Cargando />}
 
         {lista.data && (
           <div className={cn("flex flex-col gap-3", lista.loading && "opacity-60")}>
             <div className="overflow-x-auto rounded-md border border-bg-700">
-              <table className="w-full min-w-[54rem] text-sm">
+              <table className="w-full min-w-[68rem] text-sm">
                 <thead className="bg-bg-800 text-left font-mono text-[11px] text-text-600">
                   <tr>
                     <th className="px-3 py-2 font-normal">negocio</th>
+                    <th
+                      className="px-3 py-2 font-normal"
+                      title="Owner primero; el resto del equipo por antigüedad si no hay owner"
+                    >
+                      correo
+                    </th>
                     <th className="px-3 py-2 font-normal">estado</th>
                     <th className="px-3 py-2 font-normal">plan</th>
                     <th className="px-3 py-2 text-right font-normal">tokens</th>
                     <th className="px-3 py-2 text-right font-normal">costo</th>
+                    <th
+                      className="px-3 py-2 text-right font-normal"
+                      title={
+                        sinTipoCambio
+                          ? fuenteInfo?.detalle
+                          : `Suscripción prorrateada + créditos cobrados − costo de modelos (tipo de cambio: ${fuenteInfo?.label})`
+                      }
+                    >
+                      margen
+                    </th>
                     <th className="px-3 py-2 text-right font-normal">créditos</th>
                     <th className="px-3 py-2 text-right font-normal">equipo</th>
                     <th className="px-3 py-2 text-right font-normal">último mensaje</th>
@@ -154,6 +220,24 @@ export default function TenantsGerenciaPage() {
                         <span className="font-mono text-[11px] text-text-600">
                           alta {t.alta ? tiempoRelativo(t.alta) : "—"}
                         </span>
+                      </td>
+
+                      <td className="max-w-[13rem] px-3 py-2">
+                        {t.email ? (
+                          <span
+                            className="block truncate text-text-400"
+                            title={t.email}
+                          >
+                            {t.email}
+                          </span>
+                        ) : (
+                          <span
+                            className="font-mono text-[11px] text-text-600"
+                            title="Ningún usuario activo del portal en este negocio"
+                          >
+                            sin usuarios
+                          </span>
+                        )}
                       </td>
 
                       <td className="px-3 py-2">
@@ -204,6 +288,21 @@ export default function TenantsGerenciaPage() {
                       <td className="px-3 py-2 text-right tabular-nums text-text-400">
                         {fmtCostoUsd(t.consumo.costo_usd)}
                       </td>
+                      <td
+                        className={cn(
+                          "px-3 py-2 text-right tabular-nums",
+                          t.margen !== null && Number(t.margen) < 0
+                            ? "text-danger"
+                            : "text-text-400",
+                        )}
+                        title={
+                          t.margen === null
+                            ? fuenteInfo?.detalle
+                            : `ingreso ${formatoMonto(t.ingreso_periodo)} − costo ${formatoMonto(t.costo_moneda)}`
+                        }
+                      >
+                        {fmtMargen(t.margen, formatoMonto)}
+                      </td>
                       <td className="px-3 py-2 text-right tabular-nums text-text-400">
                         {formatoMonto(t.creditos_disponibles)}
                       </td>
@@ -221,7 +320,7 @@ export default function TenantsGerenciaPage() {
                   {items.length === 0 && (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={10}
                         className="px-3 py-8 text-center font-mono text-[11px] text-text-600"
                       >
                         {q || estado
@@ -253,7 +352,7 @@ export default function TenantsGerenciaPage() {
 
             <p className="font-mono text-[11px] text-text-600">
               equipo = usuarios del portal / vendedores activos · tokens y costo, últimos{" "}
-              {lista.data.dias} días
+              {lista.data.dias} días · tipo de cambio: {fuenteInfo?.label}
             </p>
           </div>
         )}

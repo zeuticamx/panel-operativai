@@ -48,17 +48,55 @@ const ACCESS_KEY = "operativai_access_token";
 const REFRESH_KEY = "operativai_refresh_token";
 const AUTH_EVENT = "operativai-auth-change";
 
+/**
+ * "Ver como el negocio" (impersonación de plataforma, solo lectura).
+ *
+ * Va en sessionStorage y no en localStorage a propósito: queda limitado a
+ * la pestaña donde se abrió. Las otras pestañas del gerente siguen con su
+ * propia sesión, y los tokens del gerente en localStorage no se tocan —
+ * salir es borrar esta clave, no restaurar un respaldo que se pudo perder.
+ */
+const VER_COMO_KEY = "operativai_ver_como";
+const VER_COMO_VOLVER_KEY = "operativai_ver_como_volver";
+
 // ------------------------------------------------------------
 // Tokens en localStorage
 // ------------------------------------------------------------
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACCESS_KEY);
+  return (
+    window.sessionStorage.getItem(VER_COMO_KEY) ?? window.localStorage.getItem(ACCESS_KEY)
+  );
 }
 
 export function getRefreshToken(): string | null {
   if (typeof window === "undefined") return null;
+  // En "ver como" no hay refresh. Devolver el del gerente sería peor que
+  // nada: refrescaría SU sesión y el reintento seguiría saliendo con el
+  // token vencido de la impersonación, que es el que manda getAccessToken.
+  if (enVerComo()) return null;
   return window.localStorage.getItem(REFRESH_KEY);
+}
+
+export function enVerComo(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.sessionStorage.getItem(VER_COMO_KEY) !== null;
+}
+
+/** Entra al portal como el negocio. `volverA` es a dónde regresa al salir. */
+export function iniciarVerComo(token: string, volverA: string) {
+  window.sessionStorage.setItem(VER_COMO_KEY, token);
+  window.sessionStorage.setItem(VER_COMO_VOLVER_KEY, volverA);
+  window.dispatchEvent(new Event(AUTH_EVENT));
+}
+
+/** Sale del "ver como" y devuelve la ruta de plataforma a la que volver. */
+export function terminarVerComo(): string {
+  const volver = window.sessionStorage.getItem(VER_COMO_VOLVER_KEY) ?? "/gerencia";
+  window.sessionStorage.removeItem(VER_COMO_KEY);
+  window.sessionStorage.removeItem(VER_COMO_VOLVER_KEY);
+  window.dispatchEvent(new Event(AUTH_EVENT));
+  return volver;
 }
 
 export function setTokens(tokens: Pick<TokenOut, "access_token" | "refresh_token">) {
@@ -70,6 +108,8 @@ export function setTokens(tokens: Pick<TokenOut, "access_token" | "refresh_token
 export function clearTokens() {
   window.localStorage.removeItem(ACCESS_KEY);
   window.localStorage.removeItem(REFRESH_KEY);
+  window.sessionStorage.removeItem(VER_COMO_KEY);
+  window.sessionStorage.removeItem(VER_COMO_VOLVER_KEY);
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
@@ -218,6 +258,14 @@ export async function apiFetch<T = unknown>(
   }
 
   if (res.status === 401 && auth) {
+    // El "ver como" venció (o sacaron al gerente del nivel). No se refresca
+    // ni se manda a /login: se vuelve a la sesión propia del gerente, que
+    // sigue intacta en localStorage.
+    if (enVerComo()) {
+      const volver = terminarVerComo();
+      if (typeof window !== "undefined") window.location.replace(volver);
+      throw new ApiError(401, "La sesión de 'ver como' terminó.");
+    }
     const ok = await refrescarTokens();
     if (!ok) {
       clearTokens();

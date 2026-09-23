@@ -10,9 +10,11 @@ import { Badge } from "@/app/components/badge";
 import { StatCard } from "@/app/components/stat-card";
 import {
   EstadoTenantBadge,
+  FUENTE_TIPO_CAMBIO_INFO,
   GerenciaTabs,
   SelectorDias,
   fmtCostoUsd,
+  fmtMargen,
   fmtTokens,
 } from "@/app/components/gerencia";
 import { Aviso, Cargando, PageHeader } from "@/app/components/ui";
@@ -103,12 +105,23 @@ export default function GerenciaPage() {
             {/* ---- Dinero ---- */}
             <section className="flex flex-col gap-3">
               <h2 className="font-mono text-[11px] text-text-600">DINERO</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <StatCard
                   label="MRR"
                   value={formatoMonto(d.mrr)}
                   tone="success"
                   hint={`${fmtInt.format(d.suscripciones_activas)} suscripciones activas`}
+                  loading={resumen.loading}
+                />
+                <StatCard
+                  label="margen estimado"
+                  value={fmtMargen(d.margen, formatoMonto)}
+                  tone={d.margen === null ? "neutral" : Number(d.margen) < 0 ? "danger" : "success"}
+                  hint={
+                    d.margen === null
+                      ? FUENTE_TIPO_CAMBIO_INFO[d.tipo_cambio_fuente].detalle
+                      : `${formatoMonto(d.ingreso_estimado)} − ${formatoMonto(d.costo_moneda)} de modelos (${FUENTE_TIPO_CAMBIO_INFO[d.tipo_cambio_fuente].label})`
+                  }
                   loading={resumen.loading}
                 />
                 <StatCard

@@ -88,6 +88,21 @@ describe("exportarEmbudoCSV", () => {
     expect(filas[1].startsWith('"Abarrotes ""La Esquina"", S.A."')).toBe(true);
   });
 
+  test("neutraliza un cliente_nombre que Excel ejecutaría como fórmula", () => {
+    // cliente_nombre/vendedor_nombre no son datos de confianza: vienen de
+    // WhatsApp/IG/FB o los escribe el dueño del negocio (ver celdaCsv).
+    exportarEmbudoCSV([
+      lead({
+        cliente_nombre: '=HYPERLINK("http://evil.test")',
+        vendedor_nombre: "+52 no es un vendedor",
+      }),
+    ]);
+
+    const columnas = csvGenerado().split("\r\n")[1].split(",");
+    expect(columnas[0]).toBe('"\'=HYPERLINK(""http://evil.test"")"');
+    expect(columnas[3]).toBe("'+52 no es un vendedor");
+  });
+
   test("ordena los leads por actualizado_en descendente, sin importar el orden de entrada", () => {
     const viejo = lead({ id: "viejo", cliente_nombre: "Viejo", actualizado_en: "2026-01-01T00:00:00Z" });
     const nuevo = lead({ id: "nuevo", cliente_nombre: "Nuevo", actualizado_en: "2026-01-20T00:00:00Z" });

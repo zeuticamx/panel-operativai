@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 /** Fondo con banner + tarjeta centrada. Compartido por /login y /registro. */
 export function AuthShell({
@@ -39,6 +40,16 @@ export function AuthShell({
         {children}
 
         {pie && <div className="mt-6 text-center text-xs text-text-400">{pie}</div>}
+
+        <p className="mt-4 text-center text-xs text-text-400">
+          <Link href="/privacidad" className="underline underline-offset-2 hover:text-text-100">
+            Política de privacidad
+          </Link>
+          <span className="px-2 text-text-600">·</span>
+          <Link href="/condiciones" className="underline underline-offset-2 hover:text-text-100">
+            Condiciones del servicio
+          </Link>
+        </p>
       </div>
     </div>
   );

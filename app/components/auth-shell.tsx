@@ -45,6 +45,10 @@ export function AuthShell({
           <Link href="/privacidad" className="underline underline-offset-2 hover:text-text-100">
             Política de privacidad
           </Link>
+          <span className="px-2 text-text-600">·</span>
+          <Link href="/condiciones" className="underline underline-offset-2 hover:text-text-100">
+            Condiciones del servicio
+          </Link>
         </p>
       </div>
     </div>

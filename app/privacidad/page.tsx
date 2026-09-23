@@ -25,6 +25,14 @@ export default function PrivacidadPage() {
           aviso describe los datos personales que recabamos en este portal.
         </p>
 
+        <h2 className="mt-10 text-lg font-medium">Responsable del tratamiento</h2>
+        <p className="mt-3 text-sm leading-7 text-text-400">
+          El responsable es Fernando Ramón Parra Villanueva, quien opera bajo el nombre comercial
+          OperativAI. RFC PAVF881210AY1. Domicilio: Calle 8 de Julio, número 462, colonia Guadalajara
+          Centro, C.P. 44100, Guadalajara, Jalisco, México, entre las calles Leandro Valle y Nueva
+          Galicia.
+        </p>
+
         <h2 className="mt-10 text-lg font-medium">1. Datos personales que recabamos</h2>
         <p className="mt-3 text-sm leading-7 text-text-400">Al crear tu cuenta o usar el portal recabamos:</p>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-7 text-text-400">
@@ -72,8 +80,8 @@ export default function PrivacidadPage() {
           >
             operativai.com.mx
           </a>{" "}
-          indicando tu nombre, el derecho que quieres ejercer y un medio para responderte. El plazo de
-          respuesta es de 20 días hábiles.
+          o por escrito al domicilio del responsable, indicando tu nombre, el derecho que quieres
+          ejercer y un medio para responderte. El plazo de respuesta es de 20 días hábiles.
         </p>
 
         <h2 className="mt-10 text-lg font-medium">5. Conservación</h2>

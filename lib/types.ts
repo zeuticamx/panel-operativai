@@ -217,12 +217,16 @@ export interface ServiciosOut {
   tenant_id: string;
   agente_ia_activo: boolean;
   gestion_vendedores_activo: boolean;
+  calendario_activo: boolean;
+  zona_horaria: string;
 }
 
 /** Parcial: lo que no venga se deja como está. */
 export interface ServiciosIn {
   agente_ia_activo?: boolean;
   gestion_vendedores_activo?: boolean;
+  calendario_activo?: boolean;
+  zona_horaria?: string;
 }
 
 // ---- Vendedores ----
@@ -381,7 +385,9 @@ export type TipoAlerta =
   | "cambio_etapa"
   | "sin_actividad"
   | "cuota_excedida"
-  | "cierre";
+  | "cierre"
+  | "reserva_creada"
+  | "reserva_cancelada";
 
 export interface AlertaOut {
   id: string;
@@ -941,4 +947,227 @@ export interface PlanActualizarIn {
   gestion_vendedores_activo?: boolean | null;
   activo?: boolean | null;
   orden?: number | null;
+}
+
+// ============================================================
+// CALENDARIO (reservas para barberías/salones)
+// ============================================================
+// Espejo de la sección CALENDARIOS en backend/schemas.py.
+
+export interface ProveedorOut {
+  id: string;
+  tenant_id: string;
+  nombre: string;
+  /** "#rrggbb" */
+  color: string;
+  activo: boolean;
+  orden: number;
+  creado_en: string;
+}
+
+export interface ProveedorCrearIn {
+  nombre: string;
+  color?: string;
+  orden?: number;
+}
+
+export interface ProveedorActualizarIn {
+  nombre?: string;
+  color?: string;
+  activo?: boolean;
+  orden?: number;
+}
+
+export interface ServicioOut {
+  id: string;
+  tenant_id: string;
+  nombre: string;
+  duracion_minutos: number;
+  /** Decimal serializado como string; null si el negocio no publica precio. */
+  precio: string | null;
+  activo: boolean;
+  creado_en: string;
+}
+
+export interface ServicioCrearIn {
+  nombre: string;
+  duracion_minutos: number;
+  precio?: string | null;
+}
+
+export interface ServicioActualizarIn {
+  nombre?: string;
+  duracion_minutos?: number;
+  precio?: string | null;
+  activo?: boolean;
+}
+
+/** "HH:MM:SS" (TIME de Postgres). */
+export interface HorarioSemanalOut {
+  id: string;
+  proveedor_id: string;
+  /** 0=lunes … 6=domingo, igual que Python date.weekday(). */
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+export interface HorarioSemanalIn {
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+/** PUT completo: reemplaza toda la semana del proveedor de una vez. */
+export interface ReemplazarHorariosIn {
+  bloques: HorarioSemanalIn[];
+}
+
+/**
+ * `reservas_en_conflicto`: citas futuras que quedaron fuera del horario
+ * nuevo. El backend nunca las cancela ni bloquea el guardado por esto —
+ * el portal solo tiene que avisar.
+ */
+export interface ReemplazarHorariosOut {
+  horarios: HorarioSemanalOut[];
+  reservas_en_conflicto: ReservaOut[];
+}
+
+export interface ExcepcionOut {
+  id: string;
+  proveedor_id: string;
+  /** "YYYY-MM-DD" */
+  fecha: string;
+  disponible: boolean;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+}
+
+export interface ExcepcionCrearIn {
+  fecha: string;
+  disponible?: boolean;
+  hora_inicio?: string | null;
+  hora_fin?: string | null;
+}
+
+/**
+ * Pausa dentro de la jornada (almuerzo, descanso activo). Exactamente uno
+ * de dia_semana/fecha viene con valor — recurrente o puntual — nunca
+ * ambos. A diferencia de ExcepcionOut, un descanso nunca reemplaza la
+ * jornada: siempre la recorta.
+ */
+export interface DescansoOut {
+  id: string;
+  proveedor_id: string;
+  dia_semana: number | null;
+  /** "YYYY-MM-DD", solo si es puntual. */
+  fecha: string | null;
+  hora_inicio: string;
+  hora_fin: string;
+  etiqueta: string | null;
+}
+
+export interface DescansoCrearIn {
+  dia_semana?: number | null;
+  fecha?: string | null;
+  hora_inicio: string;
+  hora_fin: string;
+  etiqueta?: string | null;
+}
+
+export type EstadoReserva = "confirmada" | "cancelada" | "completada" | "no_asistio";
+
+export type MetodoPago = "efectivo" | "tarjeta" | "transferencia";
+
+export interface ReservaOut {
+  id: string;
+  tenant_id: string;
+  proveedor_id: string;
+  proveedor_nombre: string;
+  proveedor_color: string;
+  servicio_id: string;
+  servicio_nombre: string;
+  hora_inicio: string;
+  hora_fin: string;
+  estado: EstadoReserva;
+  user_id: string | null;
+  cliente_nombre: string | null;
+  cliente_telefono: string | null;
+  notas: string | null;
+  /** Snapshot del cobro al completar la cita — null hasta entonces. */
+  precio_cobrado: string | null;
+  metodo_pago: MetodoPago | null;
+  creado_en: string;
+}
+
+/** Alta manual desde el portal (walk-in o telefónico). */
+export interface ReservaCrearIn {
+  proveedor_id: string;
+  servicio_id: string;
+  hora_inicio: string;
+  user_id?: string | null;
+  cliente_nombre?: string | null;
+  cliente_telefono?: string | null;
+  notas?: string | null;
+}
+
+export interface ReprogramarReservaIn {
+  hora_inicio: string;
+}
+
+export interface CancelarReservaIn {
+  motivo?: string | null;
+}
+
+export interface CambiarEstadoReservaIn {
+  estado: "completada" | "no_asistio";
+  /** Obligatorios al completar; prohibidos en no_asistio (ver schemas.py). */
+  precio_cobrado?: string | null;
+  metodo_pago?: MetodoPago | null;
+}
+
+/** Corte de caja de un día: cuántos servicios se completaron y cuánto se cobró. */
+export interface CorteDiarioOut {
+  /** "YYYY-MM-DD" */
+  fecha: string;
+  total_servicios: number;
+  total_cobrado: string;
+  servicios: ReservaOut[];
+}
+
+/** Cambia el barbero de una cita ya agendada, sin tocar su horario. */
+export interface ReasignarReservaIn {
+  proveedor_id: string;
+}
+
+export type EventoAuditoria =
+  | "creada"
+  | "reprogramada"
+  | "cambio_barbero"
+  | "cancelada"
+  | "completada"
+  | "no_asistio";
+
+/**
+ * Una fila de la bitácora de una reserva. Solo lectura: no hay tipo *In
+ * para esto — cada fila la genera el backend al procesar el evento.
+ */
+export interface ReservaAuditoriaOut {
+  id: string;
+  tenant_id: string;
+  reserva_id: string;
+  evento: EventoAuditoria;
+  estado_anterior: EstadoReserva | null;
+  estado_nuevo: EstadoReserva;
+  motivo: string | null;
+  datos_anteriores: Record<string, unknown> | null;
+  datos_nuevos: Record<string, unknown> | null;
+  origen: "portal" | "n8n";
+  actor: string;
+  actor_portal_user_id: string | null;
+  actor_user_id: string | null;
+  proveedor_nombre: string;
+  servicio_nombre: string;
+  cliente_nombre: string | null;
+  creado_en: string;
 }

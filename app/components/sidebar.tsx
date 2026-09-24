@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bot,
+  CalendarDays,
   ChevronDown,
   LayoutDashboard,
   LogOut,
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { icon: Bot, label: "Agente", href: "/agente" },
   { icon: Wrench, label: "Herramientas", href: "/herramientas" },
   { icon: Users, label: "Vendedores", href: "/vendedores" },
+  { icon: CalendarDays, label: "Calendario", href: "/calendario" },
   { icon: CreditCard, label: "Suscripción", href: "/suscripcion" },
 ];
 

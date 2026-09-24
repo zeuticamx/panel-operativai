@@ -1,7 +1,15 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { AlertTriangle, Milestone, Siren, Sparkles, Trophy } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarCheck,
+  CalendarX2,
+  Milestone,
+  Siren,
+  Sparkles,
+  Trophy,
+} from "lucide-react";
 import { fmtInt } from "@/lib/formato";
 import { useApi } from "@/lib/use-api";
 import type { EstadisticasAlertasOut, TipoAlerta } from "@/lib/types";
@@ -19,6 +27,8 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   sin_actividad: { label: "Sin actividad", icon: AlertTriangle, clase: "text-orange-500" },
   cuota_excedida: { label: "Cuota excedida", icon: Siren, clase: "text-danger" },
   cierre: { label: "Cierre", icon: Trophy, clase: "text-emerald-500" },
+  reserva_creada: { label: "Nueva reserva", icon: CalendarCheck, clase: "text-emerald-500" },
+  reserva_cancelada: { label: "Reserva cancelada", icon: CalendarX2, clase: "text-amber-500" },
 };
 
 const ORDEN: TipoAlerta[] = [
@@ -27,6 +37,8 @@ const ORDEN: TipoAlerta[] = [
   "sin_actividad",
   "cuota_excedida",
   "cierre",
+  "reserva_creada",
+  "reserva_cancelada",
 ];
 
 /**

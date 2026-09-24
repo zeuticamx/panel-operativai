@@ -234,9 +234,9 @@ export function ConfirmDialog({
         <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-bg-700 bg-bg-900 p-5 shadow-xl">
           <Dialog.Title className="text-sm font-medium text-text-100">{titulo}</Dialog.Title>
           {descripcion && (
-            <Dialog.Description className="mt-1.5 text-xs text-text-400">
+            <div className="mt-1.5 text-xs text-text-400">
               {descripcion}
-            </Dialog.Description>
+            </div>
           )}
           <div className="mt-5 flex justify-end gap-2">
             <Dialog.Close asChild>

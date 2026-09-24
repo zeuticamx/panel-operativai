@@ -293,6 +293,121 @@ export function urlMapa(latitud: number, longitud: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${latitud},${longitud}`;
 }
 
+// ------------------------------------------------------------
+// Calendario (reservas)
+// ------------------------------------------------------------
+/** Índice 0=lunes … 6=domingo, igual que proveedor_horarios.dia_semana del backend. */
+export const DIAS_SEMANA = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+] as const;
+
+export const ESTADO_RESERVA_INFO: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warning" | "danger" | "info" }
+> = {
+  confirmada: { label: "Confirmada", tone: "info" },
+  completada: { label: "Completada", tone: "success" },
+  no_asistio: { label: "No asistió", tone: "warning" },
+  cancelada: { label: "Cancelada", tone: "danger" },
+};
+
+/** Bitácora de reservas: una entrada por tipo de evento auditado. */
+export const EVENTO_AUDITORIA_INFO: Record<
+  string,
+  { label: string; tone: "neutral" | "success" | "warning" | "danger" | "info" }
+> = {
+  creada: { label: "Creada", tone: "info" },
+  reprogramada: { label: "Reprogramada", tone: "neutral" },
+  cambio_barbero: { label: "Cambio de barbero", tone: "neutral" },
+  cancelada: { label: "Cancelada", tone: "danger" },
+  completada: { label: "Completada", tone: "success" },
+  no_asistio: { label: "No asistió", tone: "warning" },
+};
+
+export function infoEventoAuditoria(evento: string) {
+  return EVENTO_AUDITORIA_INFO[evento] ?? { label: evento, tone: "neutral" as const };
+}
+
+export function infoEstadoReserva(estado: string) {
+  return ESTADO_RESERVA_INFO[estado] ?? { label: estado, tone: "neutral" as const };
+}
+
+/** "09:30:00" -> 570 (minutos desde medianoche). */
+export function minutosDeHHMM(hhmmss: string): number {
+  const [h, m] = hhmmss.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** Recorta [restaInicio, restaFin) de cada ventana, partiéndola en dos si el corte cae en medio. */
+function restarIntervalo(
+  ventanas: Array<[number, number]>,
+  restaInicio: number,
+  restaFin: number,
+): Array<[number, number]> {
+  const resultado: Array<[number, number]> = [];
+  for (const [inicio, fin] of ventanas) {
+    if (restaFin <= inicio || restaInicio >= fin) {
+      resultado.push([inicio, fin]);
+      continue;
+    }
+    if (restaInicio > inicio) resultado.push([inicio, restaInicio]);
+    if (restaFin < fin) resultado.push([restaFin, fin]);
+  }
+  return resultado;
+}
+
+/**
+ * Ventanas de atención (en minutos locales desde medianoche) de un
+ * proveedor para una fecha puntual — espejo en el navegador de
+ * calendario_slots.ventanas_del_dia del backend, para poder deshabilitar en
+ * la grilla las franjas fuera de horario sin ir al servidor por cada celda.
+ *
+ * Si hay una excepción para esa fecha, REEMPLAZA por completo al horario
+ * semanal (igual que en el backend): día no disponible -> sin ventanas,
+ * horario especial -> solo esa ventana. Los `descansos` aplicables a esa
+ * fecha (recurrentes de ese día de la semana, o puntuales de esa fecha
+ * exacta) se restan al final, sea cual sea el origen de la ventana.
+ */
+export function ventanasDelDia(
+  fechaISO: string,
+  horarios: { dia_semana: number; hora_inicio: string; hora_fin: string }[],
+  excepcion: { disponible: boolean; hora_inicio: string | null; hora_fin: string | null } | undefined,
+  descansos: Array<{
+    dia_semana: number | null;
+    fecha: string | null;
+    hora_inicio: string;
+    hora_fin: string;
+  }> = [],
+): Array<[number, number]> {
+  // Date#getDay() es 0=domingo..6=sábado; el backend usa 0=lunes..6=domingo
+  // (igual que Python date.weekday()), así que hay que rotar el índice.
+  const dow = new Date(`${fechaISO}T00:00:00`).getDay();
+  const diaSemana = dow === 0 ? 6 : dow - 1;
+
+  let ventanas: Array<[number, number]>;
+  if (excepcion) {
+    if (!excepcion.disponible || !excepcion.hora_inicio || !excepcion.hora_fin) return [];
+    ventanas = [[minutosDeHHMM(excepcion.hora_inicio), minutosDeHHMM(excepcion.hora_fin)]];
+  } else {
+    ventanas = horarios
+      .filter((h) => h.dia_semana === diaSemana)
+      .map((h): [number, number] => [minutosDeHHMM(h.hora_inicio), minutosDeHHMM(h.hora_fin)]);
+  }
+
+  for (const d of descansos) {
+    const aplica = d.fecha === fechaISO || (d.fecha === null && d.dia_semana === diaSemana);
+    if (aplica) ventanas = restarIntervalo(ventanas, minutosDeHHMM(d.hora_inicio), minutosDeHHMM(d.hora_fin));
+  }
+
+  return ventanas;
+}
+
 /** Iniciales para avatar; cae al handle o "?" si no hay nombre. */
 export function iniciales(nombre: string | null, handle: string | null): string {
   const base = (nombre ?? "").trim();

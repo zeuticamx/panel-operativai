@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Bell, X } from "lucide-react";
 import { tiempoRelativo } from "@/lib/formato";
+import { rutaParaAlerta } from "@/lib/use-websocket-alertas";
 import type { AlertaOut, TipoAlerta } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAlertas } from "./alertas-context";
@@ -19,6 +21,8 @@ const TIPO_CLASES: Record<TipoAlerta, string> = {
   sin_actividad: "border-l-orange-500 bg-orange-500/10",
   cuota_excedida: "border-l-red-500 bg-red-500/10",
   cierre: "border-l-emerald-500 bg-emerald-500/10",
+  reserva_creada: "border-l-emerald-500 bg-emerald-500/10",
+  reserva_cancelada: "border-l-amber-500 bg-amber-500/10",
 };
 
 /**
@@ -30,14 +34,23 @@ export function CentroNotificaciones() {
   const { usuario } = useUsuario();
   const { alertas, noLeidosCount, marcarComoLeida } = useAlertas();
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   if (!usuario?.tenant_id) return null;
 
   const onClickAlerta = (alerta: AlertaOut) => {
-    if (alerta.leido) return;
-    // El hook ya revierte el estado optimista si el PATCH falla; acá no
-    // hace falta un manejo de error aparte.
-    marcarComoLeida(alerta.id).catch(() => {});
+    if (!alerta.leido) {
+      // El hook ya revierte el estado optimista si el PATCH falla; acá no
+      // hace falta un manejo de error aparte.
+      marcarComoLeida(alerta.id).catch(() => {});
+    }
+    // Escenario 3 de la historia de notificaciones: clic en la alerta lleva
+    // directo a la cita, no solo la marca leída.
+    const ruta = rutaParaAlerta(alerta);
+    if (ruta) {
+      setOpen(false);
+      router.push(ruta);
+    }
   };
 
   return (
@@ -89,7 +102,9 @@ export function CentroNotificaciones() {
               </p>
             ) : (
               <ul className="flex flex-col gap-1.5 p-2">
-                {alertas.map((alerta) => (
+                {alertas.map((alerta) => {
+                  const navegable = alerta.leido && rutaParaAlerta(alerta) !== null;
+                  return (
                   <li key={alerta.id}>
                     <button
                       type="button"
@@ -97,7 +112,8 @@ export function CentroNotificaciones() {
                       className={cn(
                         "w-full rounded-md border-l-4 px-3 py-2.5 text-left transition-opacity",
                         TIPO_CLASES[alerta.tipo] ?? "border-l-bg-600 bg-bg-800",
-                        alerta.leido ? "cursor-default opacity-50" : "cursor-pointer",
+                        alerta.leido ? "opacity-50" : "opacity-100",
+                        alerta.leido && !navegable ? "cursor-default" : "cursor-pointer",
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -115,7 +131,8 @@ export function CentroNotificaciones() {
                       </p>
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>

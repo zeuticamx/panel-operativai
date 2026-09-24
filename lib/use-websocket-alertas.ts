@@ -1,10 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import { API_URL, apiFetch, mensajeDeError } from "./auth";
 import { showToast } from "./notificaciones";
 import type { AlertaOut } from "./types";
+
+/**
+ * A dónde manda una alerta al hacerle clic (centro de notificaciones o
+ * botón "Ver detalle" del toast) — historia de notificaciones en tiempo
+ * real, escenario 3. Solo "reserva_creada" trae `hora_inicio` en `datos`
+ * (ver routers/eventos.py::calendario_crear_reserva); el resto de los
+ * tipos de alerta no navega a ningún lado en particular.
+ */
+export function rutaParaAlerta(alerta: AlertaOut): string | null {
+  if (alerta.tipo !== "reserva_creada") return null;
+  const reservaId = alerta.datos?.reserva_id;
+  const horaInicio = alerta.datos?.hora_inicio;
+  if (typeof reservaId !== "string" || typeof horaInicio !== "string") return null;
+
+  const d = new Date(horaInicio);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `/calendario?fecha=${y}-${m}-${dia}&reserva=${reservaId}`;
+}
 
 // Cuántas alertas se conservan en memoria durante la sesión. Es un feed en
 // vivo, no el historial completo (para eso está GET /tenants/{id}/alertas):
@@ -36,6 +58,15 @@ export function useWebsocketAlertas(
   const [conectado, setConectado] = useState(false);
   const [alertas, setAlertas] = useState<AlertaOut[]>([]);
   const socketRef = useRef<Socket | null>(null);
+  const router = useRouter();
+
+  // El handler de "nueva_alerta" vive dentro de un efecto que no depende de
+  // `router` (más abajo no puede: reabriría el socket en cada navegación),
+  // así que la referencia de router viaja por ref, igual que el token.
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
 
   // El token vive en un ref y no en las dependencias del efecto de conexión:
   // el access token se renueva cada ~60 minutos (ver lib/auth.ts) y no hace
@@ -80,7 +111,13 @@ export function useWebsocketAlertas(
 
     socket.on("nueva_alerta", (alerta: AlertaOut) => {
       setAlertas((actual) => [alerta, ...actual].slice(0, MAX_ALERTAS));
-      showToast(alerta.titulo, alerta.mensaje, alerta.tipo);
+      const ruta = rutaParaAlerta(alerta);
+      showToast(
+        alerta.titulo,
+        alerta.mensaje,
+        alerta.tipo,
+        ruta ? { label: "Ver detalle", onClick: () => routerRef.current.push(ruta) } : undefined,
+      );
     });
 
     // Alguien marcó una alerta leída desde otra pestaña/sesión del mismo

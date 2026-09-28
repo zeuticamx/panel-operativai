@@ -3,11 +3,15 @@ import { etiquetaCanal } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 
 // ------------------------------------------------------------
-// Estado de conversación. El backend solo garantiza "active" hoy;
-// cualquier otro valor se muestra tal cual en tono neutro.
+// Estado de conversación. Cualquier valor sin mapear se muestra tal cual
+// en tono neutro (ver infoEstado).
 // ------------------------------------------------------------
 const ESTADOS: Record<string, { color: string; label: string }> = {
   active: { color: "var(--success)", label: "Activa" },
+  // Puesto por el agente vía la herramienta escalar_humano (workflow
+  // entrada-canal-universal): el cliente sigue escribiendo y se registra,
+  // pero el agente ya no contesta hasta que alguien lo atienda.
+  transferred: { color: "var(--danger)", label: "Transferida" },
 };
 
 function infoEstado(status: string) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { TokenOut, UsuarioOut } from "./types";
+import type { BloqueoPlanDetalle, TokenOut, UsuarioOut } from "./types";
 
 /** uvicorn corre acá en HTTP plano; el proxy HTTPS de `dev:https`, acá. */
 const PUERTO_BACKEND_HTTP = "8000";
@@ -128,23 +128,48 @@ export function onAuthChange(cb: () => void) {
 export class ApiError extends Error {
   status: number;
   detail: string;
+  /** Solo en los 402 del gate por plan: qué herramienta y por qué. */
+  bloqueo: BloqueoPlanDetalle | null;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, bloqueo: BloqueoPlanDetalle | null = null) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.bloqueo = bloqueo;
   }
 }
 
 /**
- * FastAPI devuelve `detail` como string en errores de negocio, y como
- * lista de objetos en errores de validación (422). Se normaliza a string.
+ * Evento de ventana que emite apiFetch cuando el backend responde que el
+ * plan no alcanza. Lo escucha PlanProvider para abrir el modal de mejora de
+ * plan sin que cada pantalla tenga que manejar el 402 por su cuenta.
+ */
+export const PLAN_BLOQUEADO_EVENT = "operativai-plan-bloqueado";
+
+function extraerBloqueo(data: unknown, status: number): BloqueoPlanDetalle | null {
+  if (status !== 402 || !data || typeof data !== "object" || !("detail" in data)) return null;
+  const d = (data as { detail: unknown }).detail;
+  if (d && typeof d === "object" && "codigo" in d && "herramienta" in d) {
+    return d as BloqueoPlanDetalle;
+  }
+  return null;
+}
+
+/**
+ * FastAPI devuelve `detail` como string en errores de negocio, como lista
+ * de objetos en errores de validación (422), y como objeto con `mensaje`
+ * en los errores estructurados (402 del plan, 409 del embudo). Se
+ * normaliza a string.
  */
 function extraerDetalle(data: unknown, status: number): string {
   if (data && typeof data === "object" && "detail" in data) {
     const d = (data as { detail: unknown }).detail;
     if (typeof d === "string") return d;
+    if (d && typeof d === "object" && !Array.isArray(d) && "mensaje" in d) {
+      const mensaje = (d as { mensaje: unknown }).mensaje;
+      if (typeof mensaje === "string" && mensaje) return mensaje;
+    }
     if (Array.isArray(d)) {
       const msgs = d
         .map((item) => {
@@ -295,7 +320,16 @@ export async function apiFetch<T = unknown>(
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, extraerDetalle(data, res.status));
+    const bloqueo = extraerBloqueo(data, res.status);
+    // Solo cuando la persona intentó HACER algo (guardar, responder...). Un
+    // GET que da 402 es una carga de fondo: esa pantalla ya la tapa la vista
+    // de bloqueo, y abrir un modal sin que nadie tocara nada sería justo el
+    // aviso intrusivo que se quiere evitar.
+    const metodo = (rest.method ?? "GET").toUpperCase();
+    if (bloqueo && metodo !== "GET" && metodo !== "HEAD" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(PLAN_BLOQUEADO_EVENT, { detail: bloqueo }));
+    }
+    throw new ApiError(res.status, extraerDetalle(data, res.status), bloqueo);
   }
 
   return data as T;

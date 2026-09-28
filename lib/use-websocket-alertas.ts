@@ -10,11 +10,18 @@ import type { AlertaOut } from "./types";
 /**
  * A dónde manda una alerta al hacerle clic (centro de notificaciones o
  * botón "Ver detalle" del toast) — historia de notificaciones en tiempo
- * real, escenario 3. Solo "reserva_creada" trae `hora_inicio` en `datos`
- * (ver routers/eventos.py::calendario_crear_reserva); el resto de los
- * tipos de alerta no navega a ningún lado en particular.
+ * real, escenario 3. "reserva_creada" trae `hora_inicio` en `datos` (ver
+ * routers/eventos.py::calendario_crear_reserva); "conversacion_transferida"
+ * trae `conversation_id` (ver routers/eventos.py::conversacion_transferida).
+ * El resto de los tipos de alerta no navega a ningún lado en particular.
  */
 export function rutaParaAlerta(alerta: AlertaOut): string | null {
+  if (alerta.tipo === "conversacion_transferida") {
+    const conversationId = alerta.datos?.conversation_id;
+    if (typeof conversationId !== "string") return null;
+    return `/conversaciones/${conversationId}`;
+  }
+
   if (alerta.tipo !== "reserva_creada") return null;
   const reservaId = alerta.datos?.reserva_id;
   const horaInicio = alerta.datos?.hora_inicio;

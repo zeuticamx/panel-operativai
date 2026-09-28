@@ -9,6 +9,7 @@ import { AlertasProvider } from "@/app/components/alertas-context";
 import { BannerVerComo } from "@/app/components/banner-ver-como";
 import { Sidebar } from "@/app/components/sidebar";
 import { ChatWidget } from "@/app/components/chat-widget";
+import { GuardaPlan, PlanProvider } from "@/app/components/plan-context";
 import { UsuarioProvider } from "@/app/components/usuario-context";
 
 const noop = () => () => {};
@@ -49,13 +50,19 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
       {/* El socket de alertas vive acá y no en la campana: así sobrevive a
           los cambios de página, que sí desmontan el header. */}
       <AlertasProvider>
-        <BannerVerComo />
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
-          <Sidebar />
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
-          <ChatWidget />
-        </div>
-        <Toaster position="top-right" theme={tema} richColors={false} />
+        {/* Qué herramientas incluye el plan: candados del sidebar, vista de
+            bloqueo por pantalla y modal ante un 402 (plan-context.tsx). */}
+        <PlanProvider>
+          <BannerVerComo />
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
+            <Sidebar />
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+              <GuardaPlan>{children}</GuardaPlan>
+            </main>
+            <ChatWidget />
+          </div>
+          <Toaster position="top-right" theme={tema} richColors={false} />
+        </PlanProvider>
       </AlertasProvider>
     </UsuarioProvider>
   );

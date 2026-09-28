@@ -11,6 +11,13 @@ interface ConversationRowProps {
   /** Compacta: sin preview ni estado (para el dashboard). */
   compact?: boolean;
   active?: boolean;
+  /** A dónde enlaza cada fila. Gerencia de plataforma lo cambia para
+   * mandar a /gerencia/conversaciones/{id}?tenant_id=... en vez de la
+   * vista tenant-scoped. */
+  hrefBase?: string;
+  /** Query string (con el "?") que se agrega después del id — así el
+   * tenant_id viaja a la vista de detalle sin volver a pedirlo. */
+  hrefQuery?: string;
 }
 
 export function ConversationRow({
@@ -18,6 +25,8 @@ export function ConversationRow({
   now,
   compact = false,
   active = false,
+  hrefBase = "/conversaciones",
+  hrefQuery = "",
 }: ConversationRowProps) {
   // El @usuario de Instagram identifica mejor que el id numérico, así que
   // cuando no hay nombre real se prefiere antes de caer al handle.
@@ -31,7 +40,7 @@ export function ConversationRow({
 
   return (
     <Link
-      href={`/conversaciones/${c.id}`}
+      href={`${hrefBase}/${c.id}${hrefQuery}`}
       className={cn(
         "flex w-full items-center gap-3 border-b border-bg-800 px-3 text-left hover:bg-bg-800 focus:outline-none focus-visible:bg-bg-800",
         compact ? "py-2" : "py-2.5",

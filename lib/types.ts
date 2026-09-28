@@ -117,6 +117,11 @@ export interface ConectarWhatsAppOut {
   phone_number_id: string;
 }
 
+/** POST /api/canales/whatsapp/neuroapi/iniciar — crea una NeuroAPI Connect Session. */
+export interface IniciarNeuroApiConnectOut {
+  connect_url: string;
+}
+
 // ---- Herramientas ----
 /** GET /api/herramientas/info — el correo con el que hay que compartir el documento. */
 export interface HerramientaInfoOut {
@@ -182,6 +187,19 @@ export interface MensajeOut {
   role: string;
   content: string;
   created_at: string;
+  /** Solo role='human': nombre o correo de quien mandó la respuesta manual. */
+  enviado_por: string | null;
+}
+
+/** Body de POST .../conversaciones/{id}/mensajes */
+export interface EnviarMensajeIn {
+  texto: string;
+}
+
+/** Respuesta de POST .../conversaciones/{id}/volver-a-ia */
+export interface ConversacionEstadoOut {
+  id: string;
+  status: string;
 }
 
 export interface ConversacionDetalleOut {
@@ -387,7 +405,8 @@ export type TipoAlerta =
   | "cuota_excedida"
   | "cierre"
   | "reserva_creada"
-  | "reserva_cancelada";
+  | "reserva_cancelada"
+  | "conversacion_transferida";
 
 export interface AlertaOut {
   id: string;
@@ -597,11 +616,16 @@ export type EstadoPago =
   | "cancelado"
   | "reembolsado";
 export type EstadoSuscripcion = "activa" | "pausada" | "cancelada";
-export type NombrePlan = "starter" | "pro" | "enterprise";
+/**
+ * Texto libre: los planes se dan de alta desde /gerencia/planes (en el
+ * backend, tenant_subscriptions.plan es FK a planes.nombre).
+ */
+export type NombrePlan = string;
 
 export interface PlanOut {
   nombre: string;
   descripcion: string | null;
+  /** Sin IVA — CatalogoPagosOut.iva_tasa dice cuánto se le suma al cobrar. */
   precio_monthly: string;
   precio_annual: string | null;
   /** null = sin tope (enterprise). */
@@ -610,6 +634,9 @@ export interface PlanOut {
   creditos_incluidos_mensual: string;
   agente_ia_activo: boolean;
   gestion_vendedores_activo: boolean;
+  herramientas_activo: boolean;
+  crm_campo_activo: boolean;
+  calendario_activo: boolean;
 }
 
 export interface PaqueteCreditosOut {
@@ -620,6 +647,8 @@ export interface PaqueteCreditosOut {
 export interface CatalogoPagosOut {
   planes: PlanOut[];
   paquetes: PaqueteCreditosOut[];
+  /** 0.16 = 16%. Los precios de `planes` no lo incluyen (ver PlanOut). */
+  iva_tasa: string;
 }
 
 export interface SuscripcionOut {
@@ -629,6 +658,44 @@ export interface SuscripcionOut {
   precio_monthly: string | null;
   creditos_disponibles: string;
   creditos_gastados: string;
+}
+
+// ------------------------------------------------------------
+// Control de acceso por plan: espejo de AccesoPlanOut y del `detail` de los
+// 402 que arma backend/services/acceso_plan.py.
+// ------------------------------------------------------------
+export type Herramienta = "agente" | "vendedores" | "herramientas" | "crm_campo" | "calendario";
+export type EstadoCuenta =
+  | "vigente"
+  | "vencido"
+  | "cancelado"
+  | "sin_plan"
+  | "prueba"
+  | "suspendido";
+export type CodigoBloqueo = "plan_insuficiente" | "plan_requerido" | "cuenta_suspendida";
+
+export interface PlanHerramientasOut {
+  nombre: string;
+  herramientas: Herramienta[];
+}
+
+export interface AccesoPlanOut {
+  estado: EstadoCuenta;
+  plan: string | null;
+  /** Lo que se puede usar ahora (vacío si el plan no está vigente). */
+  herramientas: Herramienta[];
+  /** Planes contratables, en el orden de la grilla, con lo que incluye cada uno. */
+  planes: PlanHerramientasOut[];
+}
+
+/** `detail` de un 402 del gate por plan. */
+export interface BloqueoPlanDetalle {
+  codigo: CodigoBloqueo;
+  herramienta: Herramienta;
+  estado: EstadoCuenta;
+  plan_actual: string | null;
+  planes_que_la_incluyen: string[];
+  mensaje: string;
 }
 
 export interface TransaccionOut {
@@ -915,6 +982,9 @@ export interface PlanGerenciaOut {
   creditos_incluidos_mensual: string;
   agente_ia_activo: boolean;
   gestion_vendedores_activo: boolean;
+  herramientas_activo: boolean;
+  crm_campo_activo: boolean;
+  calendario_activo: boolean;
   activo: boolean;
   orden: number;
   creado_en: string;
@@ -931,6 +1001,9 @@ export interface PlanCrearIn {
   creditos_incluidos_mensual?: string;
   agente_ia_activo?: boolean;
   gestion_vendedores_activo?: boolean;
+  herramientas_activo?: boolean;
+  crm_campo_activo?: boolean;
+  calendario_activo?: boolean;
   activo?: boolean;
   orden?: number;
 }
@@ -945,6 +1018,9 @@ export interface PlanActualizarIn {
   creditos_incluidos_mensual?: string | null;
   agente_ia_activo?: boolean | null;
   gestion_vendedores_activo?: boolean | null;
+  herramientas_activo?: boolean | null;
+  crm_campo_activo?: boolean | null;
+  calendario_activo?: boolean | null;
   activo?: boolean | null;
   orden?: number | null;
 }

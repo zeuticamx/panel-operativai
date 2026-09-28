@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Coins, CreditCard, ExternalLink } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { Check, Coins, CreditCard, ExternalLink, Minus } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
@@ -9,17 +9,42 @@ import type {
   CrearPagoIn,
   CrearPagoOut,
   EstadoPago,
-  NombrePlan,
+  Herramienta,
   PlanOut,
   SuscripcionOut,
   TransaccionOut,
 } from "@/lib/types";
-import { fmtInt, formatoFechaHora, formatoMonto } from "@/lib/formato";
+import { fmtInt, formatoFechaHora, formatoMonto, formatoPorcentaje } from "@/lib/formato";
+import { HERRAMIENTAS_INFO } from "@/lib/herramientas-plan";
 import { cn } from "@/lib/utils";
 import { esGerencia } from "@/app/components/modulo-vendedores";
 import { StatCard } from "@/app/components/stat-card";
 import { Aviso, Boton, Cargando, PageHeader } from "@/app/components/ui";
 import { useUsuario } from "@/app/components/usuario-context";
+
+/** Herramienta del plan → columna de PlanOut que dice si la incluye. */
+const COLUMNA_HERRAMIENTA: Record<Herramienta, keyof PlanOut> = {
+  agente: "agente_ia_activo",
+  vendedores: "gestion_vendedores_activo",
+  herramientas: "herramientas_activo",
+  crm_campo: "crm_campo_activo",
+  calendario: "calendario_activo",
+};
+
+const noop = () => () => {};
+
+/**
+ * ?plan=pro llega desde la vista/modal de bloqueo ("Ver plan Pro"). Se lee
+ * de window y no con useSearchParams, que en Next 16 exige un <Suspense>
+ * alrededor para que la página siga pudiendo prerenderizarse.
+ */
+function usePlanDestacado(): string | null {
+  return useSyncExternalStore(
+    noop,
+    () => new URLSearchParams(window.location.search).get("plan"),
+    () => null,
+  );
+}
 
 /** Cómo se pinta cada estado de pago en el historial. */
 const ESTADO_INFO: Record<EstadoPago, { label: string; clase: string }> = {
@@ -33,6 +58,7 @@ const ESTADO_INFO: Record<EstadoPago, { label: string; clase: string }> = {
 export default function SuscripcionPage() {
   const { usuario } = useUsuario();
   const gerencia = esGerencia(usuario);
+  const destacado = usePlanDestacado();
 
   const catalogo = useApi<CatalogoPagosOut>("/api/pagos/catalogo");
   const suscripcion = useApi<SuscripcionOut>("/api/pagos/suscripcion");
@@ -45,6 +71,10 @@ export default function SuscripcionPage() {
   const [error, setError] = useState<string | null>(null);
 
   const s = suscripcion.data;
+  // "0.16" -> "16%": la leyenda de IVA nunca queda desincronizada de lo que
+  // de verdad se cobra, porque el número sale del mismo catálogo que los
+  // precios (ver services.pagos.con_iva en el backend).
+  const ivaLabel = catalogo.data ? formatoPorcentaje(Number(catalogo.data.iva_tasa) * 100) : null;
 
   /**
    * Pide el checkout al backend y manda el navegador ahí.
@@ -112,7 +142,11 @@ export default function SuscripcionPage() {
               label="Plan"
               value={s?.plan ? <span className="capitalize">{s.plan}</span> : "—"}
               tone={s?.estado_suscripcion === "activa" ? "success" : "neutral"}
-              hint={s?.precio_monthly ? `${formatoMonto(s.precio_monthly)} / mes` : "sin contratar"}
+              hint={
+                s?.precio_monthly
+                  ? `${formatoMonto(s.precio_monthly)} / mes + IVA`
+                  : "sin contratar"
+              }
             />
             <StatCard
               label="Estado"
@@ -148,8 +182,14 @@ export default function SuscripcionPage() {
             <header className="mb-3">
               <h2 className="text-sm font-medium text-text-100">Planes</h2>
               <p className="font-mono text-[11px] text-text-600">
-                el plan decide cuántos vendedores y cuántos créditos mensuales entran
+                el plan decide qué herramientas usas, cuántos vendedores y cuántos créditos
+                mensuales entran
               </p>
+              {ivaLabel && (
+                <p className="mt-1 font-mono text-[11px] text-text-600">
+                  precios más IVA ({ivaLabel})
+                </p>
+              )}
             </header>
 
             {catalogo.loading && !catalogo.data ? (
@@ -160,14 +200,16 @@ export default function SuscripcionPage() {
                   <TarjetaPlan
                     key={plan.nombre}
                     plan={plan}
+                    ivaLabel={ivaLabel}
                     esActual={s?.plan === plan.nombre && s?.estado_suscripcion === "activa"}
+                    destacado={destacado === plan.nombre}
                     puedeComprar={gerencia}
                     cargando={comprando === `plan:${plan.nombre}`}
                     bloqueado={comprando !== null}
                     onContratar={() =>
                       comprar(`plan:${plan.nombre}`, {
                         tipo: "subscription",
-                        plan: plan.nombre as NombrePlan,
+                        plan: plan.nombre,
                       })
                     }
                   />
@@ -296,14 +338,20 @@ export default function SuscripcionPage() {
 
 function TarjetaPlan({
   plan,
+  ivaLabel,
   esActual,
+  destacado,
   puedeComprar,
   cargando,
   bloqueado,
   onContratar,
 }: {
   plan: PlanOut;
+  /** "16%", ya calculado desde catalogo.iva_tasa. null mientras carga el catálogo. */
+  ivaLabel: string | null;
   esActual: boolean;
+  /** Es el plan que recomendó la vista de bloqueo. */
+  destacado: boolean;
   puedeComprar: boolean;
   cargando: boolean;
   bloqueado: boolean;
@@ -313,23 +361,34 @@ function TarjetaPlan({
     <div
       className={cn(
         "flex flex-col gap-3 rounded-md border bg-bg-800 p-4",
-        esActual ? "border-success" : "border-bg-700",
+        esActual ? "border-success" : destacado ? "border-text-400" : "border-bg-700",
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-medium text-text-100 capitalize">{plan.nombre}</h3>
-        {esActual && (
+        {esActual ? (
           <span className="rounded bg-success/10 px-1.5 py-0.5 font-mono text-[11px] text-success">
             actual
           </span>
+        ) : (
+          destacado && (
+            <span className="rounded bg-bg-700 px-1.5 py-0.5 font-mono text-[11px] text-text-100">
+              incluye lo que buscas
+            </span>
+          )
         )}
       </div>
 
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-semibold tabular-nums text-text-100">
-          {formatoMonto(plan.precio_monthly)}
-        </span>
-        <span className="font-mono text-[11px] text-text-600">/ mes</span>
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-semibold tabular-nums text-text-100">
+            {formatoMonto(plan.precio_monthly)}
+          </span>
+          <span className="font-mono text-[11px] text-text-600">/ mes</span>
+        </div>
+        {ivaLabel && (
+          <span className="font-mono text-[11px] text-text-600">más IVA ({ivaLabel})</span>
+        )}
       </div>
 
       {plan.descripcion && (
@@ -350,8 +409,14 @@ function TarjetaPlan({
             {fmtInt.format(plan.max_leads_mensuales)} leads mensuales
           </Caracteristica>
         )}
-        {plan.agente_ia_activo && <Caracteristica>Agente de IA</Caracteristica>}
-        {plan.gestion_vendedores_activo && <Caracteristica>CRM de vendedores</Caracteristica>}
+      </ul>
+
+      <ul className="flex flex-col gap-1.5 border-t border-bg-700 pt-3" aria-label="Herramientas">
+        {(Object.keys(COLUMNA_HERRAMIENTA) as Herramienta[]).map((h) => (
+          <Caracteristica key={h} incluida={Boolean(plan[COLUMNA_HERRAMIENTA[h]])}>
+            {HERRAMIENTAS_INFO[h].nombre}
+          </Caracteristica>
+        ))}
       </ul>
 
       <Boton
@@ -373,11 +438,22 @@ function TarjetaPlan({
   );
 }
 
-function Caracteristica({ children }: { children: React.ReactNode }) {
+function Caracteristica({
+  children,
+  incluida = true,
+}: {
+  children: React.ReactNode;
+  incluida?: boolean;
+}) {
   return (
-    <li className="flex items-start gap-1.5 text-xs text-text-400">
-      <Check size={12} className="mt-0.5 shrink-0 text-success" aria-hidden />
+    <li className={cn("flex items-start gap-1.5 text-xs", incluida ? "text-text-400" : "text-text-600")}>
+      {incluida ? (
+        <Check size={12} className="mt-0.5 shrink-0 text-success" aria-hidden />
+      ) : (
+        <Minus size={12} className="mt-0.5 shrink-0" aria-hidden />
+      )}
       {children}
+      {!incluida && <span className="sr-only">(no incluido)</span>}
     </li>
   );
 }

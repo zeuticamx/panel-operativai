@@ -67,6 +67,15 @@ const VARIANTE: Record<Variante, string> = {
   fantasma: "text-text-400 hover:bg-bg-800 hover:text-text-100",
 };
 
+/** Clases de Boton, para un <Link> que tiene que verse igual que un botón. */
+export function claseBoton(variante: Variante = "secundario", className?: string): string {
+  return cn(
+    "inline-flex min-h-9 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
+    VARIANTE[variante],
+    className,
+  );
+}
+
 export function Boton({
   variante = "secundario",
   loading = false,
@@ -82,11 +91,7 @@ export function Boton({
     <button
       type="button"
       disabled={disabled || loading}
-      className={cn(
-        "inline-flex min-h-9 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
-        VARIANTE[variante],
-        className,
-      )}
+      className={claseBoton(variante, className)}
       {...rest}
     >
       {loading && <Loader2 size={13} className="animate-spin" aria-hidden />}

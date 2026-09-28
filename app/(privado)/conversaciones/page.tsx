@@ -11,10 +11,16 @@ import { Aviso, Boton, PageHeader, selectClass } from "@/app/components/ui";
 const LIMITE = 25;
 
 /**
- * Estados que ofrece el filtro. El backend solo garantiza "active" hoy;
- * el select acepta el valor tal cual, sin lógica del lado del cliente.
+ * Estados que ofrece el filtro. El select acepta el valor tal cual, sin
+ * lógica del lado del cliente. "transferred" es lo que deja
+ * entrada-canal-universal cuando el agente usa `escalar_humano`: la
+ * conversación sigue recibiendo mensajes del cliente (se registran acá
+ * mismo, ver ese workflow) pero el agente ya no contesta.
  */
-const ESTADOS = [{ value: "active", label: "Activas" }];
+const ESTADOS = [
+  { value: "active", label: "Activas" },
+  { value: "transferred", label: "Transferidas a humano" },
+];
 
 export default function ConversacionesPage() {
   const [canal, setCanal] = useState("");

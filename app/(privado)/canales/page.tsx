@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Check, ExternalLink, RefreshCw, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
@@ -11,13 +12,14 @@ import type {
   CanalOut,
   ConectarMetaOut,
   ConectarWhatsAppOut,
+  IniciarNeuroApiConnectOut,
   PaginaDisponible,
 } from "@/lib/types";
 import { CANALES, etiquetaCanal, formatoFechaHora, type CanalTipo } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { CanalIcon } from "@/app/components/status";
-import { Aviso, Boton, Campo, ConfirmDialog, PageHeader, inputClass } from "@/app/components/ui";
+import { Aviso, Boton, Campo, Cargando, ConfirmDialog, PageHeader, inputClass } from "@/app/components/ui";
 
 type Paso =
   | { etapa: "inactivo" }
@@ -33,6 +35,22 @@ const DESCRIPCION: Record<CanalTipo, string> = {
 };
 
 export default function CanalesPage() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader titulo="Canales" sub="dónde responde tu agente" />
+          <Cargando />
+        </>
+      }
+    >
+      <Contenido />
+    </Suspense>
+  );
+}
+
+function Contenido() {
+  const params = useSearchParams();
   const canales = useApi<CanalOut[]>("/api/canales");
   const [paso, setPaso] = useState<Paso>({ etapa: "inactivo" });
   const [errorFlujo, setErrorFlujo] = useState<string | null>(null);
@@ -42,6 +60,17 @@ export default function CanalesPage() {
   const [formWhatsApp, setFormWhatsApp] = useState(false);
   const [lineaWhatsApp, setLineaWhatsApp] = useState("");
   const [conectandoWhatsApp, setConectandoWhatsApp] = useState(false);
+  const [conectandoNeuroApi, setConectandoNeuroApi] = useState(false);
+
+  // Retorno de la NeuroAPI Connect Session: llegar acá no significa que ya
+  // esté conectado (eso lo decide el webhook, del lado del servidor). Solo
+  // se avisa (ver JSX) y se refresca el estado real, mismo criterio que
+  // pagos/exito.
+  const retornoNeuroApi = params.get("whatsapp_neuroapi") === "retorno";
+  useEffect(() => {
+    if (!retornoNeuroApi) return;
+    canales.recargar(true);
+  }, [retornoNeuroApi, canales.recargar]);
 
   const porTipo = new Map<string, CanalOut>();
   for (const c of canales.data ?? []) porTipo.set(c.channel_type, c);
@@ -136,6 +165,25 @@ export default function CanalesPage() {
     }
   };
 
+  // ---- Flujo WhatsApp (vía NeuroAPI Connect Sessions) ----------------
+  const iniciarNeuroApiConnect = async () => {
+    setErrorFlujo(null);
+    setAviso(null);
+    setConectandoNeuroApi(true);
+    try {
+      const datos = await apiFetch<IniciarNeuroApiConnectOut>(
+        "/api/canales/whatsapp/neuroapi/iniciar",
+        { method: "POST" },
+      );
+      // .assign() y no `.href`: la regla react-hooks/immutability de
+      // eslint-config-next 16 prohíbe asignarle a window.location.
+      window.location.assign(datos.connect_url);
+    } catch (e) {
+      setErrorFlujo(mensajeDeError(e, "No se pudo iniciar la vinculación con WhatsApp."));
+      setConectandoNeuroApi(false);
+    }
+  };
+
   // ---- Desconectar ---------------------------------------------------
   const confirmarDesconexion = async () => {
     if (!desconectar) return;
@@ -178,6 +226,12 @@ export default function CanalesPage() {
           {canales.error && <Aviso tipo="error">{canales.error}</Aviso>}
           {errorFlujo && <Aviso tipo="error">{errorFlujo}</Aviso>}
           {aviso && <Aviso tipo="exito">{aviso}</Aviso>}
+          {retornoNeuroApi && (
+            <Aviso tipo="info">
+              Estamos terminando de vincular tu WhatsApp. Si no aparece como conectado en unos
+              segundos, vuelve a intentarlo.
+            </Aviso>
+          )}
           {(!META_APP_ID || !META_REDIRECT_URI) && (
             <Aviso tipo="info">
               Falta{" "}
@@ -264,18 +318,28 @@ export default function CanalesPage() {
                         Conectar con Facebook
                       </Boton>
                     ) : (
-                      <Boton
-                        variante="primario"
-                        onClick={() => {
-                          setErrorFlujo(null);
-                          setAviso(null);
-                          setFormWhatsApp(true);
-                        }}
-                        disabled={formWhatsApp}
-                      >
-                        <CanalIcon tipo="whatsapp" size={13} />
-                        Conectar WhatsApp
-                      </Boton>
+                      <>
+                        <Boton
+                          variante="primario"
+                          onClick={iniciarNeuroApiConnect}
+                          loading={conectandoNeuroApi}
+                          disabled={formWhatsApp}
+                        >
+                          <CanalIcon tipo="whatsapp" size={13} />
+                          Conectar WhatsApp
+                        </Boton>
+                        <Boton
+                          variante="fantasma"
+                          onClick={() => {
+                            setErrorFlujo(null);
+                            setAviso(null);
+                            setFormWhatsApp(true);
+                          }}
+                          disabled={formWhatsApp || conectandoNeuroApi}
+                        >
+                          Conectar manualmente
+                        </Boton>
+                      </>
                     )}
                   </div>
                 </div>
@@ -305,9 +369,9 @@ export default function CanalesPage() {
               </header>
 
               <Aviso tipo="info">
-                WhatsApp no se conecta solo desde el portal: primero damos de alta tu número de
-                WhatsApp Business de nuestro lado y te entregamos el id de línea que va acá abajo.
-                Si todavía no lo tienes, escríbenos y te lo pasamos.
+                Esta alta manual es solo para números que ya dimos de alta de nuestro lado, fuera
+                del portal. Para la mayoría de los casos conviene el botón “Conectar WhatsApp” de
+                arriba, que vincula tu cuenta directamente.
               </Aviso>
 
               <div className="mt-3 flex flex-wrap items-end gap-2">

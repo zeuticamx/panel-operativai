@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CalendarCheck,
   CalendarX2,
+  Headset,
   Milestone,
   Siren,
   Sparkles,
@@ -29,6 +30,7 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   cierre: { label: "Cierre", icon: Trophy, clase: "text-emerald-500" },
   reserva_creada: { label: "Nueva reserva", icon: CalendarCheck, clase: "text-emerald-500" },
   reserva_cancelada: { label: "Reserva cancelada", icon: CalendarX2, clase: "text-amber-500" },
+  conversacion_transferida: { label: "Transferida a humano", icon: Headset, clase: "text-danger" },
 };
 
 const ORDEN: TipoAlerta[] = [
@@ -39,6 +41,7 @@ const ORDEN: TipoAlerta[] = [
   "cierre",
   "reserva_creada",
   "reserva_cancelada",
+  "conversacion_transferida",
 ];
 
 /**

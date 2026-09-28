@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ChevronDown,
   LayoutDashboard,
+  Lock,
   LogOut,
   MessagesSquare,
   Menu,
@@ -26,8 +27,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearTokens } from "@/lib/auth";
+import { bloqueoDePantalla } from "@/lib/herramientas-plan";
 import { setStoredTheme, useStoredTheme } from "@/lib/theme";
 import { esGerenciaPlataforma } from "./gerencia";
+import { usePlan } from "./plan-context";
 import { ConfirmDialog } from "./ui";
 import { useUsuario } from "./usuario-context";
 
@@ -57,16 +60,22 @@ export function Sidebar() {
   const theme = useStoredTheme();
   const isLight = theme === "light";
   const { usuario } = useUsuario();
+  const { acceso } = usePlan();
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", isLight);
   }, [isLight]);
 
   // El menú mobile se cierra solo al cambiar de ruta, para que no quede
-  // tapando la pantalla después de tocar un link.
-  useEffect(() => {
+  // tapando la pantalla después de tocar un link. Se ajusta durante el
+  // render y no en un effect (react-hooks/set-state-in-effect): es el patrón
+  // de React para "resetear estado cuando cambia un valor", y evita el
+  // render extra con el menú todavía abierto.
+  const [rutaDelMenu, setRutaDelMenu] = useState(pathname);
+  if (rutaDelMenu !== pathname) {
+    setRutaDelMenu(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   const handleLogout = () => {
     clearTokens();
@@ -161,11 +170,14 @@ export function Sidebar() {
         <nav className="flex flex-1 flex-col gap-0.5 px-2" aria-label="Principal">
           {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
+            // Fuera del plan el link sigue ahí (lleva a la vista que explica
+            // cómo conseguirlo); el candado solo avisa antes de entrar.
+            const bloqueado = acceso !== null && bloqueoDePantalla(acceso, href) !== null;
             return (
               <Link
                 key={href}
                 href={href}
-                title={expandido ? undefined : label}
+                title={expandido ? (bloqueado ? "No incluido en tu plan actual" : undefined) : label}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-2.5 rounded px-2 py-1.5 text-sm",
@@ -176,6 +188,9 @@ export function Sidebar() {
               >
                 <Icon size={16} className="shrink-0" aria-hidden />
                 {expandido && <span className="flex-1">{label}</span>}
+                {expandido && bloqueado && (
+                  <Lock size={12} className="shrink-0 text-text-600" aria-label="No incluido en tu plan" />
+                )}
               </Link>
             );
           })}

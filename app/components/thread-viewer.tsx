@@ -58,7 +58,9 @@ export function ThreadViewer({
                   ? nombreAgente
                   : m.role === "user"
                     ? nombreCliente
-                    : m.role
+                    : m.role === "human"
+                      ? m.enviado_por || "Equipo"
+                      : m.role
               }
             >
               <span title={formatoFechaHora(m.created_at)}>{m.content}</span>

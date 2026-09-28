@@ -23,6 +23,7 @@ const TIPO_CLASES: Record<TipoAlerta, string> = {
   cierre: "border-l-emerald-500 bg-emerald-500/10",
   reserva_creada: "border-l-emerald-500 bg-emerald-500/10",
   reserva_cancelada: "border-l-amber-500 bg-amber-500/10",
+  conversacion_transferida: "border-l-red-500 bg-red-500/10",
 };
 
 /**

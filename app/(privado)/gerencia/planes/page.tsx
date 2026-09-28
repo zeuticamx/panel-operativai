@@ -95,8 +95,8 @@ export default function PlanesPage() {
                 <thead className="bg-bg-800 text-left font-mono text-[11px] text-text-600">
                   <tr>
                     <th className="px-3 py-2 font-normal">plan</th>
-                    <th className="px-3 py-2 text-right font-normal">mensual</th>
-                    <th className="px-3 py-2 text-right font-normal">anual</th>
+                    <th className="px-3 py-2 text-right font-normal">mensual (sin IVA)</th>
+                    <th className="px-3 py-2 text-right font-normal">anual (sin IVA)</th>
                     <th className="px-3 py-2 text-right font-normal">créditos/mes</th>
                     <th className="px-3 py-2 text-right font-normal">vendedores</th>
                     <th className="px-3 py-2 text-right font-normal">leads/mes</th>
@@ -146,6 +146,15 @@ export default function PlanesPage() {
                           </Badge>
                           <Badge tone={p.gestion_vendedores_activo ? "success" : "neutral"}>
                             vendedores
+                          </Badge>
+                          <Badge tone={p.herramientas_activo ? "success" : "neutral"}>
+                            herramientas
+                          </Badge>
+                          <Badge tone={p.crm_campo_activo ? "success" : "neutral"}>
+                            CRM campo
+                          </Badge>
+                          <Badge tone={p.calendario_activo ? "success" : "neutral"}>
+                            calendario
                           </Badge>
                         </div>
                       </td>
@@ -247,6 +256,9 @@ function FormularioPlan({
   const [orden, setOrden] = useState("0");
   const [agenteIa, setAgenteIa] = useState(true);
   const [gestionVendedores, setGestionVendedores] = useState(true);
+  const [herramientas, setHerramientas] = useState(true);
+  const [crmCampo, setCrmCampo] = useState(true);
+  const [calendario, setCalendario] = useState(true);
   const [activo, setActivo] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -265,11 +277,15 @@ function FormularioPlan({
     setOrden(plan?.orden?.toString() ?? "0");
     setAgenteIa(plan?.agente_ia_activo ?? true);
     setGestionVendedores(plan?.gestion_vendedores_activo ?? true);
+    setHerramientas(plan?.herramientas_activo ?? true);
+    setCrmCampo(plan?.crm_campo_activo ?? true);
+    setCalendario(plan?.calendario_activo ?? true);
     setActivo(plan?.activo ?? true);
     setError(null);
   }, [open, plan]);
 
-  const nombreValido = modo === "editar" || (nombre.trim().length >= 2 && nombre.length <= 100);
+  // 50 y no 100: es lo que admite tenant_subscriptions.plan (ver PlanCrearIn).
+  const nombreValido = modo === "editar" || (nombre.trim().length >= 2 && nombre.length <= 50);
   const precioValido =
     precioMonthly.trim() !== "" && !Number.isNaN(Number(precioMonthly)) && Number(precioMonthly) >= 0;
   const camposOpcionalesValidos =
@@ -297,6 +313,9 @@ function FormularioPlan({
           orden: aOpcional(orden) === null ? undefined : Number(orden),
           agente_ia_activo: agenteIa,
           gestion_vendedores_activo: gestionVendedores,
+          herramientas_activo: herramientas,
+          crm_campo_activo: crmCampo,
+          calendario_activo: calendario,
           activo,
         };
         await apiFetch<PlanGerenciaOut>("/api/gerencia/planes", { method: "POST", json: body });
@@ -312,6 +331,9 @@ function FormularioPlan({
           orden: aOpcional(orden) === null ? null : Number(orden),
           agente_ia_activo: agenteIa,
           gestion_vendedores_activo: gestionVendedores,
+          herramientas_activo: herramientas,
+          crm_campo_activo: crmCampo,
+          calendario_activo: calendario,
           activo,
         };
         await apiFetch<PlanGerenciaOut>(
@@ -358,7 +380,7 @@ function FormularioPlan({
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             {error && <Aviso tipo="error">{error}</Aviso>}
 
-            <Campo id="plan-nombre" label="Nombre" hint="2-100 caracteres, no se puede cambiar después">
+            <Campo id="plan-nombre" label="Nombre" hint="2-50 caracteres, no se puede cambiar después">
               <input
                 id="plan-nombre"
                 type="text"
@@ -366,7 +388,7 @@ function FormularioPlan({
                 onChange={(e) => setNombre(e.target.value)}
                 disabled={guardando || modo === "editar"}
                 placeholder="starter, pro, enterprise…"
-                maxLength={100}
+                maxLength={50}
                 className={inputClass}
               />
             </Campo>
@@ -385,7 +407,7 @@ function FormularioPlan({
             </Campo>
 
             <div className="grid grid-cols-2 gap-3">
-              <Campo id="plan-precio-mensual" label="Precio mensual">
+              <Campo id="plan-precio-mensual" label="Precio mensual" hint="Sin IVA — se le suma 16% al cobrar">
                 <input
                   id="plan-precio-mensual"
                   type="number"
@@ -399,7 +421,7 @@ function FormularioPlan({
                   className={inputClass}
                 />
               </Campo>
-              <Campo id="plan-precio-anual" label="Precio anual" hint="Opcional">
+              <Campo id="plan-precio-anual" label="Precio anual" hint="Opcional, sin IVA — se le suma 16% al cobrar">
                 <input
                   id="plan-precio-anual"
                   type="number"
@@ -488,6 +510,33 @@ function FormularioPlan({
                   checked={gestionVendedores}
                   disabled={guardando}
                   onChange={setGestionVendedores}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-100">Incluye herramientas del agente</span>
+                <Interruptor
+                  label="Incluye herramientas del agente"
+                  checked={herramientas}
+                  disabled={guardando}
+                  onChange={setHerramientas}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-100">Incluye CRM de campo</span>
+                <Interruptor
+                  label="Incluye CRM de campo"
+                  checked={crmCampo}
+                  disabled={guardando}
+                  onChange={setCrmCampo}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-100">Incluye calendario</span>
+                <Interruptor
+                  label="Incluye calendario"
+                  checked={calendario}
+                  disabled={guardando}
+                  onChange={setCalendario}
                 />
               </div>
               <div className="flex items-center justify-between">

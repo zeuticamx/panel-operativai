@@ -28,6 +28,9 @@ type Paso =
   | { etapa: "paginas"; paginas: PaginaDisponible[]; seleccion: Set<string>; activando: boolean }
   | { etapa: "resultado"; resultados: ActivarResultado[] };
 
+const INTERVALO_RETORNO_MS = 3_000;
+const ESPERA_RETORNO_MS = 90_000;
+
 const DESCRIPCION: Record<CanalTipo, string> = {
   whatsapp: "Mensajes al número de WhatsApp Business de tu negocio.",
   instagram: "Mensajes directos a tu cuenta de Instagram profesional.",
@@ -62,19 +65,30 @@ function Contenido() {
   const [conectandoWhatsApp, setConectandoWhatsApp] = useState(false);
   const [conectandoNeuroApi, setConectandoNeuroApi] = useState(false);
 
-  // Retorno de la NeuroAPI Connect Session: llegar acá no significa que ya
-  // esté conectado (eso lo decide el webhook, del lado del servidor). Solo
-  // se avisa (ver JSX) y se refresca el estado real, mismo criterio que
-  // pagos/exito.
-  const retornoNeuroApi = params.get("whatsapp_neuroapi") === "retorno";
-  const recargarCanales = canales.recargar;
-  useEffect(() => {
-    if (!retornoNeuroApi) return;
-    recargarCanales(true);
-  }, [retornoNeuroApi, recargarCanales]);
-
   const porTipo = new Map<string, CanalOut>();
   for (const c of canales.data ?? []) porTipo.set(c.channel_type, c);
+
+  // Retorno de la NeuroAPI Connect Session: llegar acá no significa que ya
+  // esté conectado (eso lo decide el webhook, del lado del servidor), y el
+  // webhook suele llegar DESPUÉS que el navegador. Por eso se consulta
+  // periódicamente hasta verlo activo o agotar la espera.
+  const retornoNeuroApi = params.get("whatsapp_neuroapi") === "retorno";
+  const whatsappActivo = Boolean(porTipo.get("whatsapp")?.is_active);
+  const [esperaAgotada, setEsperaAgotada] = useState(false);
+  const recargarCanales = canales.recargar;
+  useEffect(() => {
+    if (!retornoNeuroApi || whatsappActivo) return;
+    void recargarCanales(true);
+    const intervalo = setInterval(() => void recargarCanales(true), INTERVALO_RETORNO_MS);
+    const limite = setTimeout(() => {
+      clearInterval(intervalo);
+      setEsperaAgotada(true);
+    }, ESPERA_RETORNO_MS);
+    return () => {
+      clearInterval(intervalo);
+      clearTimeout(limite);
+    };
+  }, [retornoNeuroApi, whatsappActivo, recargarCanales]);
 
   // ---- Flujo Meta ----------------------------------------------------
   const cargarPaginas = async () => {
@@ -227,10 +241,15 @@ function Contenido() {
           {canales.error && <Aviso tipo="error">{canales.error}</Aviso>}
           {errorFlujo && <Aviso tipo="error">{errorFlujo}</Aviso>}
           {aviso && <Aviso tipo="exito">{aviso}</Aviso>}
-          {retornoNeuroApi && (
+          {retornoNeuroApi && !whatsappActivo && !esperaAgotada && (
             <Aviso tipo="info">
-              Estamos terminando de vincular tu WhatsApp. Si no aparece como conectado en unos
-              segundos, vuelve a intentarlo.
+              Estamos terminando de vincular tu WhatsApp. Esto puede tardar unos segundos.
+            </Aviso>
+          )}
+          {retornoNeuroApi && !whatsappActivo && esperaAgotada && (
+            <Aviso tipo="error">
+              No recibimos la confirmación de WhatsApp. Recarga la página en un momento o vuelve a
+              intentarlo.
             </Aviso>
           )}
           {(!META_APP_ID || !META_REDIRECT_URI) && (

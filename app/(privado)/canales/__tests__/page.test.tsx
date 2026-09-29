@@ -111,3 +111,25 @@ test("al volver con ?whatsapp_neuroapi=retorno se avisa y se recarga el estado r
     expect(llamadasACanales.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+test("si el webhook llega después del retorno, el portal lo detecta sin recargar a mano", async () => {
+  searchParams = new URLSearchParams("whatsapp_neuroapi=retorno");
+  let consultas = 0;
+  (global.fetch as jest.Mock).mockImplementation((url: string) => {
+    const responder = (data: unknown) =>
+      Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify(data) });
+    if (!url.endsWith("/api/canales")) return responder(null);
+    consultas += 1;
+    // Las dos primeras consultas (montaje + retorno) todavía sin webhook.
+    const activo = consultas > 2;
+    return responder(
+      SIN_CANALES.map((c) => (c.channel_type === "whatsapp" ? { ...c, is_active: activo } : c)),
+    );
+  });
+
+  render(<CanalesPage />);
+
+  expect(await screen.findByText(/terminando de vincular tu whatsapp/i)).toBeInTheDocument();
+  expect(await screen.findByText("conectado", {}, { timeout: 5_000 })).toBeInTheDocument();
+  expect(screen.queryByText(/terminando de vincular tu whatsapp/i)).not.toBeInTheDocument();
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
@@ -60,28 +60,39 @@ export function ProveedorHorarioModal({
   const [guardandoDescanso, setGuardandoDescanso] = useState<number | null>(null);
   const [errorDescanso, setErrorDescanso] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!horarios.data) return;
-    const nuevos = DIAS_SEMANA.map(() => ({ ...DIA_DEFAULT }));
-    for (const h of horarios.data) {
-      nuevos[h.dia_semana] = {
-        activo: true,
-        horaInicio: h.hora_inicio.slice(0, 5),
-        horaFin: h.hora_fin.slice(0, 5),
-      };
+  // Los dos bloques de abajo ajustan estado durante el render (patrón de
+  // React para "reiniciar estado cuando cambia algo") y no en efectos, que
+  // provocarían un render extra en cascada.
+  // `undefined` = todavía no se procesó nada (`useApi` usa `null` para "sin datos").
+  const [horariosPrevios, setHorariosPrevios] = useState<typeof horarios.data | undefined>(
+    undefined,
+  );
+  if (horarios.data !== horariosPrevios) {
+    setHorariosPrevios(horarios.data ?? null);
+    if (horarios.data) {
+      const nuevos = DIAS_SEMANA.map(() => ({ ...DIA_DEFAULT }));
+      for (const h of horarios.data) {
+        nuevos[h.dia_semana] = {
+          activo: true,
+          horaInicio: h.hora_inicio.slice(0, 5),
+          horaFin: h.hora_fin.slice(0, 5),
+        };
+      }
+      setDias(nuevos);
     }
-    setDias(nuevos);
-  }, [horarios.data]);
+  }
 
   // Cada vez que se abre el modal (no en cada render mientras sigue
   // abierto) se limpia el aviso de la vez anterior.
-  useEffect(() => {
+  const [abiertoPrevio, setAbiertoPrevio] = useState(false);
+  if (open !== abiertoPrevio) {
+    setAbiertoPrevio(open);
     if (open) {
       setConflictos(null);
       setFormDescanso({});
       setErrorDescanso(null);
     }
-  }, [open]);
+  }
 
   if (!proveedor || !rutaHorarios || !rutaDescansos) return null;
 

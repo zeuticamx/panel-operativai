@@ -141,6 +141,8 @@ export interface HerramientaOut {
   /** Título real del documento en Google, no lo que escribió el usuario. */
   nombre_documento: string | null;
   url_original: string | null;
+  /** La crea el sistema (herramientas del calendario): se pausa o edita, no se borra. */
+  gestionada: boolean;
 }
 
 export interface ConectarGoogleSheetIn {
@@ -616,6 +618,8 @@ export type EstadoPago =
   | "cancelado"
   | "reembolsado";
 export type EstadoSuscripcion = "activa" | "pausada" | "cancelada";
+/** De dónde salió la suscripción: un pago aprobado o una prueba de gerencia. */
+export type OrigenSuscripcion = "pago" | "prueba";
 /**
  * Texto libre: los planes se dan de alta desde /gerencia/planes (en el
  * backend, tenant_subscriptions.plan es FK a planes.nombre).
@@ -775,11 +779,15 @@ export interface TenantGerenciaOut {
 
   agente_ia_activo: boolean;
   gestion_vendedores_activo: boolean;
+  /** Interruptor del módulo de calendario; aparte del plan, que solo da el derecho. */
+  calendario_activo: boolean;
   /** El efectivo, ya cruzado con pagos y suspensión: lo que responde n8n. */
   agente_operando: boolean;
 
   plan: NombrePlan | null;
   estado_suscripcion: EstadoSuscripcion | null;
+  /** 'prueba' = la otorgó gerencia; `fecha_renovacion` es entonces el fin de la prueba. */
+  origen_suscripcion: OrigenSuscripcion | null;
   fecha_renovacion: string | null;
   precio_monthly: string | null;
   creditos_disponibles: string;
@@ -798,6 +806,23 @@ export interface TenantGerenciaOut {
   costo_moneda: string | null;
   margen: string | null;
   tipo_cambio_fuente: FuenteTipoCambio;
+}
+
+// Espejo de OtorgarPruebaIn / RevocarPruebaIn en backend/schemas.py.
+export type UnidadDuracionPrueba = "dias" | "semanas" | "fecha";
+
+export interface OtorgarPruebaIn {
+  plan: NombrePlan;
+  unidad: UnidadDuracionPrueba;
+  /** Solo con unidad 'dias' o 'semanas'. */
+  cantidad?: number;
+  /** Solo con unidad 'fecha': ISO con zona horaria. */
+  fecha_expiracion?: string;
+  motivo: string;
+}
+
+export interface RevocarPruebaIn {
+  motivo: string;
 }
 
 export interface TenantsGerenciaOut {
@@ -869,6 +894,7 @@ export interface CambiarEstadoTenantIn {
 export interface CambiarServiciosTenantIn {
   agente_ia_activo?: boolean;
   gestion_vendedores_activo?: boolean;
+  calendario_activo?: boolean;
   motivo?: string | null;
 }
 

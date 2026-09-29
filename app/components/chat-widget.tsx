@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAccessToken } from "@/lib/auth";
@@ -23,9 +23,7 @@ export function ChatWidget() {
 
   // Monta el iframe recién al primer open y nunca lo desmonta:
   // así no pierde su estado/URL interna al cerrar y reabrir.
-  useEffect(() => {
-    if (open) setMontado(true);
-  }, [open]);
+  if (open && !montado) setMontado(true);
 
   const handleLoad = () => {
     if (!iframeRef.current?.contentWindow) return;

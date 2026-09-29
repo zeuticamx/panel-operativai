@@ -3,6 +3,7 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
+  CalendarDays,
   ExternalLink,
   FileSpreadsheet,
   FileText,
@@ -53,6 +54,13 @@ const TIPO = {
 
 function metaTipo(tool_type: string) {
   return TIPO[tool_type as HerramientaTipo] ?? TIPO.google_docs;
+}
+
+/** Las del calendario: las crea el sistema al encender el módulo, no son un documento. */
+const CALENDARIO = { icono: CalendarDays, etiqueta: "Calendario" } as const;
+
+function metaHerramienta(h: HerramientaOut) {
+  return h.gestionada ? CALENDARIO : metaTipo(h.tool_type);
 }
 
 /** Mínimos del backend (schemas.py): si no se cumplen, la API responde 422. */
@@ -240,7 +248,7 @@ export default function HerramientasPage() {
           ) : (
             <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
               {lista.map((h, i) => {
-                const { icono: Icono, etiqueta } = metaTipo(h.tool_type);
+                const { icono: Icono, etiqueta } = metaHerramienta(h);
                 const trabajando = ocupada === h.tool_key;
                 return (
                   <article
@@ -299,15 +307,17 @@ export default function HerramientasPage() {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <Boton
-                        variante="fantasma"
-                        onClick={() => verificar(h)}
-                        loading={trabajando}
-                        title="Comprobar que el documento sigue compartido"
-                      >
-                        <RefreshCw size={13} aria-hidden />
-                        Verificar
-                      </Boton>
+                      {!h.gestionada && (
+                        <Boton
+                          variante="fantasma"
+                          onClick={() => verificar(h)}
+                          loading={trabajando}
+                          title="Comprobar que el documento sigue compartido"
+                        >
+                          <RefreshCw size={13} aria-hidden />
+                          Verificar
+                        </Boton>
+                      )}
                       <Boton
                         variante="fantasma"
                         onClick={() => setFormulario({ modo: "editar", herramienta: h })}
@@ -324,15 +334,17 @@ export default function HerramientasPage() {
                       >
                         {h.is_enabled ? "Pausar" : "Activar"}
                       </Boton>
-                      <Boton
-                        variante="fantasma"
-                        onClick={() => setEliminar(h)}
-                        disabled={trabajando}
-                        aria-label={`Eliminar ${h.display_name}`}
-                        className="min-h-8 px-2 hover:text-danger"
-                      >
-                        <Trash2 size={13} aria-hidden />
-                      </Boton>
+                      {!h.gestionada && (
+                        <Boton
+                          variante="fantasma"
+                          onClick={() => setEliminar(h)}
+                          disabled={trabajando}
+                          aria-label={`Eliminar ${h.display_name}`}
+                          className="min-h-8 px-2 hover:text-danger"
+                        >
+                          <Trash2 size={13} aria-hidden />
+                        </Boton>
+                      )}
                     </div>
                   </article>
                 );
@@ -462,7 +474,9 @@ function FormularioHerramienta({
               </Dialog.Title>
               <Dialog.Description className="font-mono text-[11px] text-text-600">
                 {editando
-                  ? "el documento y su enlace no cambian"
+                  ? formulario.herramienta.gestionada
+                    ? "herramienta del calendario: solo cambian el nombre y las instrucciones"
+                    : "el documento y su enlace no cambian"
                   : "se comprueba el acceso antes de guardar"}
               </Dialog.Description>
             </div>

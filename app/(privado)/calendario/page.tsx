@@ -58,12 +58,10 @@ function useVentanasPorProveedor(
 ): Record<string, Array<[number, number]>> {
   const [datos, setDatos] = useState<Record<string, Array<[number, number]>>>({});
   const clave = proveedorIds.join(",");
+  const sinProveedores = !base || proveedorIds.length === 0;
 
   useEffect(() => {
-    if (!base || proveedorIds.length === 0) {
-      setDatos({});
-      return;
-    }
+    if (sinProveedores || !base) return;
     let cancelado = false;
 
     Promise.all(
@@ -87,8 +85,12 @@ function useVentanasPorProveedor(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, clave, fecha]);
 
-  return datos;
+  // Sin proveedores no hay ventanas: se deriva en vez de vaciar el estado
+  // desde el efecto (un setState síncrono ahí provoca un render en cascada).
+  return sinProveedores ? SIN_VENTANAS : datos;
 }
+
+const SIN_VENTANAS: Record<string, Array<[number, number]>> = {};
 
 export default function CalendarioPage() {
   return (
@@ -162,6 +164,9 @@ function Contenido() {
     if (!reservaBuscadaId || !reservas.data) return;
     const buscada = reservas.data.find((r) => r.id === reservaBuscadaId);
     if (buscada) {
+      // Sincroniza el estado con el parámetro de la URL (sistema externo) una
+      // sola vez: enseguida se limpia la URL y `reservaBuscadaId` pasa a null.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReservaVista(buscada);
       router.replace("/calendario", { scroll: false });
     }

@@ -12,8 +12,12 @@ import type {
   EntradaAuditoriaOut,
   EstadoTenantPlataforma,
   ImpersonarOut,
+  OtorgarPruebaIn,
+  PlanGerenciaOut,
+  RevocarPruebaIn,
   TenantGerenciaOut,
   TransaccionOut,
+  UnidadDuracionPrueba,
 } from "@/lib/types";
 import { fmtInt, formatoFechaHora, formatoMonto, tiempoRelativo } from "@/lib/formato";
 import { cn } from "@/lib/utils";
@@ -124,6 +128,9 @@ export default function DetalleTenantPage() {
                 {t.agente_operando ? "agente respondiendo" : "agente detenido"}
               </Badge>
               {t.plan && <Badge tone="info">{t.plan}</Badge>}
+              {pruebaVigente(t) && t.fecha_renovacion && (
+                <Badge tone="warning">prueba hasta {formatoFechaHora(t.fecha_renovacion)}</Badge>
+              )}
               <span className="flex items-center gap-1 font-mono text-[11px] text-text-600">
                 {t.tenant_id}
                 <CopyButton text={t.tenant_id} label="Copiar UUID del negocio" />
@@ -244,6 +251,30 @@ export default function DetalleTenantPage() {
                   }
                 />
               </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-bg-700 pt-3">
+                <div className="flex flex-col">
+                  <span className="text-sm text-text-100">Calendario</span>
+                  <span className="font-mono text-[11px] text-text-600">
+                    el agente consulta y reserva citas; el plan solo da el derecho, este interruptor
+                    lo enciende
+                  </span>
+                </div>
+                <Interruptor
+                  label="Calendario"
+                  checked={t.calendario_activo}
+                  disabled={ocupado !== null}
+                  onChange={(v) =>
+                    patch(
+                      "servicios",
+                      { calendario_activo: v },
+                      "calendario",
+                      v ? "Calendario activado." : "Calendario apagado.",
+                      "No se pudo cambiar el calendario.",
+                    )
+                  }
+                />
+              </div>
             </section>
 
             <CambiarEstado
@@ -267,6 +298,15 @@ export default function DetalleTenantPage() {
                 await tras(`Saldo actualizado: ${formatoMonto(saldo)} créditos.`);
               }}
               onError={setError}
+            />
+
+            <PlanDePrueba
+              tenant={t}
+              onHecho={tras}
+              onError={(e) => {
+                setAviso(null);
+                setError(e);
+              }}
             />
 
             {/* ---- Cobros ---- */}
@@ -532,6 +572,293 @@ function AjustarCreditos({
 }
 
 // ------------------------------------------------------------
+// Plan de prueba
+// ------------------------------------------------------------
+// Tope de services/pruebas.py: 3 meses calendario desde que se otorga.
+const MESES_MAXIMO_PRUEBA = 3;
+
+function pruebaVigente(t: TenantGerenciaOut): boolean {
+  return t.origen_suscripcion === "prueba" && t.estado_suscripcion === "activa";
+}
+
+/** Mismo cálculo que sumar_meses del backend: si el mes destino es más corto, su último día. */
+function sumarMeses(fecha: Date, meses: number): Date {
+  const r = new Date(fecha);
+  const dia = r.getDate();
+  r.setDate(1);
+  r.setMonth(r.getMonth() + meses);
+  const ultimo = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate();
+  r.setDate(Math.min(dia, ultimo));
+  return r;
+}
+
+/** YYYY-MM-DD en hora local, el formato de <input type="date">. */
+function aInputFecha(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/**
+ * Cuándo vencería la prueba con lo que hay en el formulario, o null si
+ * todavía no es válido. La fecha límite es el final de ese día en la hora
+ * local de quien la elige; si es el último día permitido, se recorta al
+ * instante exacto del tope para que el backend no la rechace por minutos.
+ */
+function expiracionPrevista(
+  unidad: UnidadDuracionPrueba,
+  cantidad: string,
+  fecha: string,
+  ahora: Date,
+  limite: Date,
+): Date | null {
+  let exp: Date;
+  if (unidad === "fecha") {
+    if (!fecha) return null;
+    exp = new Date(`${fecha}T23:59:59`);
+    if (exp > limite && aInputFecha(exp) === aInputFecha(limite)) exp = limite;
+  } else {
+    const n = Number(cantidad);
+    if (!Number.isInteger(n) || n < 1) return null;
+    const dias = unidad === "semanas" ? n * 7 : n;
+    exp = new Date(ahora.getTime() + dias * 86_400_000);
+  }
+  if (Number.isNaN(exp.getTime()) || exp <= ahora || exp > limite) return null;
+  return exp;
+}
+
+function PlanDePrueba({
+  tenant,
+  onHecho,
+  onError,
+}: {
+  tenant: TenantGerenciaOut;
+  onHecho: (mensaje: string) => Promise<void>;
+  onError: (e: string) => void;
+}) {
+  const planes = useApi<PlanGerenciaOut[]>("/api/gerencia/planes");
+  // Los retirados del catálogo no se ofrecen (el backend los rechaza con 409).
+  const activos = (planes.data ?? []).filter((p) => p.activo);
+
+  // Foto de "ahora" al montar: el tope y la vista previa no necesitan
+  // moverse segundo a segundo, y el backend vuelve a validar al guardar.
+  const [ahora] = useState(() => new Date());
+  const limite = sumarMeses(ahora, MESES_MAXIMO_PRUEBA);
+
+  const [plan, setPlan] = useState("");
+  const [unidad, setUnidad] = useState<UnidadDuracionPrueba>("dias");
+  const [cantidad, setCantidad] = useState("14");
+  const [fecha, setFecha] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [motivoRevocar, setMotivoRevocar] = useState("");
+  const [enviando, setEnviando] = useState<"otorgar" | "revocar" | null>(null);
+
+  const planElegido = plan || activos[0]?.nombre || "";
+  const expiracion = expiracionPrevista(unidad, cantidad, fecha, ahora, limite);
+  const valido = Boolean(planElegido) && expiracion !== null && motivo.trim().length >= 3;
+
+  const vigente = pruebaVigente(tenant);
+  // Una prueba no pisa un plan pagado vigente: el backend responde 409.
+  const pagadoVigente =
+    tenant.origen_suscripcion === "pago" && tenant.estado_suscripcion === "activa";
+
+  const otorgar = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!valido || !expiracion) return;
+    const cuerpo: OtorgarPruebaIn =
+      unidad === "fecha"
+        ? { plan: planElegido, unidad, fecha_expiracion: expiracion.toISOString(), motivo: motivo.trim() }
+        : { plan: planElegido, unidad, cantidad: Number(cantidad), motivo: motivo.trim() };
+    setEnviando("otorgar");
+    try {
+      await apiFetch<TenantGerenciaOut>(`/api/gerencia/tenants/${tenant.tenant_id}/prueba`, {
+        method: "POST",
+        json: cuerpo,
+      });
+      setMotivo("");
+      await onHecho(
+        `Prueba del plan ${planElegido} otorgada hasta ${formatoFechaHora(expiracion.toISOString())}.`,
+      );
+    } catch (err) {
+      onError(mensajeDeError(err, "No se pudo otorgar la prueba."));
+    } finally {
+      setEnviando(null);
+    }
+  };
+
+  const revocar = async (e: FormEvent) => {
+    e.preventDefault();
+    if (motivoRevocar.trim().length < 3) return;
+    const cuerpo: RevocarPruebaIn = { motivo: motivoRevocar.trim() };
+    setEnviando("revocar");
+    try {
+      await apiFetch<TenantGerenciaOut>(
+        `/api/gerencia/tenants/${tenant.tenant_id}/prueba/revocar`,
+        { method: "POST", json: cuerpo },
+      );
+      setMotivoRevocar("");
+      await onHecho("Prueba revocada: el negocio queda sin plan vigente.");
+    } catch (err) {
+      onError(mensajeDeError(err, "No se pudo revocar la prueba."));
+    } finally {
+      setEnviando(null);
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3 rounded-md border border-bg-700 p-4">
+      <h2 className="text-sm font-medium text-text-100">Plan de prueba</h2>
+      <p className="text-xs leading-relaxed text-text-400">
+        Da acceso a las herramientas de un plan del catálogo, sin cobro, por un máximo de{" "}
+        {MESES_MAXIMO_PRUEBA} meses. Al vencer, el negocio queda como cualquier cuenta sin plan
+        vigente. Si paga durante la prueba, su plan pagado la reemplaza.
+      </p>
+
+      {vigente && tenant.fecha_renovacion && (
+        <form
+          onSubmit={revocar}
+          className="flex flex-col gap-3 border-t border-bg-700 pt-3 sm:flex-row sm:items-end"
+          noValidate
+        >
+          <p className="text-xs text-text-100 sm:w-56">
+            Prueba de <strong>{tenant.plan}</strong> vigente hasta{" "}
+            {formatoFechaHora(tenant.fecha_renovacion)}.
+          </p>
+          <Campo id="motivo-revocar" label="Motivo" hint="mínimo 3 caracteres" className="flex-1">
+            <input
+              id="motivo-revocar"
+              type="text"
+              value={motivoRevocar}
+              disabled={enviando !== null}
+              onChange={(e) => setMotivoRevocar(e.target.value)}
+              placeholder="Terminó la demo"
+              maxLength={500}
+              className={inputClass}
+            />
+          </Campo>
+          <Boton
+            type="submit"
+            variante="peligro"
+            loading={enviando === "revocar"}
+            disabled={motivoRevocar.trim().length < 3 || enviando !== null}
+          >
+            Revocar prueba
+          </Boton>
+        </form>
+      )}
+
+      {pagadoVigente ? (
+        <Aviso tipo="info">
+          Tiene un plan pagado vigente ({tenant.plan}): una prueba no lo puede reemplazar.
+        </Aviso>
+      ) : (
+        <form
+          onSubmit={otorgar}
+          className="flex flex-col gap-3 border-t border-bg-700 pt-3"
+          noValidate
+        >
+          {planes.error && <Aviso tipo="error">{planes.error}</Aviso>}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Campo id="plan-prueba" label="Plan" className="sm:w-44">
+              <select
+                id="plan-prueba"
+                value={planElegido}
+                disabled={enviando !== null || activos.length === 0}
+                onChange={(e) => setPlan(e.target.value)}
+                className={selectClass}
+              >
+                {activos.map((p) => (
+                  <option key={p.nombre} value={p.nombre}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+
+            <Campo id="unidad-prueba" label="Duración" className="sm:w-40">
+              <select
+                id="unidad-prueba"
+                value={unidad}
+                disabled={enviando !== null}
+                onChange={(e) => setUnidad(e.target.value as UnidadDuracionPrueba)}
+                className={selectClass}
+              >
+                <option value="dias">Días</option>
+                <option value="semanas">Semanas</option>
+                <option value="fecha">Hasta una fecha</option>
+              </select>
+            </Campo>
+
+            {unidad === "fecha" ? (
+              <Campo id="fecha-prueba" label="Vence el" className="sm:w-44">
+                <input
+                  id="fecha-prueba"
+                  type="date"
+                  value={fecha}
+                  min={aInputFecha(ahora)}
+                  max={aInputFecha(limite)}
+                  disabled={enviando !== null}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className={inputClass}
+                />
+              </Campo>
+            ) : (
+              <Campo id="cantidad-prueba" label="Cantidad" className="sm:w-28">
+                <input
+                  id="cantidad-prueba"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={unidad === "semanas" ? 13 : 92}
+                  step={1}
+                  value={cantidad}
+                  disabled={enviando !== null}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  className={inputClass}
+                />
+              </Campo>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Campo id="motivo-prueba" label="Motivo" hint="mínimo 3 caracteres" className="flex-1">
+              <input
+                id="motivo-prueba"
+                type="text"
+                value={motivo}
+                disabled={enviando !== null}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Demo comercial acordada con el cliente"
+                maxLength={500}
+                className={inputClass}
+              />
+            </Campo>
+            <Boton
+              type="submit"
+              variante="primario"
+              loading={enviando === "otorgar"}
+              disabled={!valido || enviando !== null}
+            >
+              {vigente ? "Reemplazar prueba" : "Otorgar prueba"}
+            </Boton>
+          </div>
+
+          <p
+            className={cn(
+              "font-mono text-[11px]",
+              expiracion ? "text-text-600" : "text-warning",
+            )}
+          >
+            {expiracion
+              ? `vence el ${formatoFechaHora(expiracion.toISOString())}`
+              : `elige una duración de hasta ${MESES_MAXIMO_PRUEBA} meses (tope: ${formatoFechaHora(limite.toISOString())})`}
+          </p>
+        </form>
+      )}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------
 // Ver como el negocio
 // ------------------------------------------------------------
 /**
@@ -630,6 +957,8 @@ const ACCIONES: Record<string, string> = {
   estado_tenant: "Cambio de estado",
   servicios_tenant: "Cambio de servicios",
   ajuste_creditos: "Ajuste de créditos",
+  prueba_otorgada: "Plan de prueba otorgado",
+  prueba_revocada: "Plan de prueba revocado",
   impersonacion: "Vio el portal como el negocio",
   alerta_revisada: "Alerta revisada",
 };

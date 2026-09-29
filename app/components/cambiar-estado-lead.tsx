@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
@@ -39,14 +39,19 @@ export function CambiarEstadoLead({
   // Cada vez que se abre (o cambia el lead detrás), se vuelve a partir del
   // estado real en el servidor: si quedó abierto un cambio a medias no
   // debe sobrevivir a cerrar y reabrir el dialog.
-  useEffect(() => {
-    if (!open) return;
-    setNuevoEstado("");
-    setMontoEstimado(lead.monto_estimado ?? "");
-    setMotivoPerdida("");
-    setNota("");
-    setError(null);
-  }, [open, lead]);
+  // Se ajusta durante el render (patrón de React para "reiniciar estado
+  // cuando cambia una prop") y no en un efecto, que causaría un render extra.
+  const [previo, setPrevio] = useState({ open: false, lead });
+  if (previo.open !== open || previo.lead !== lead) {
+    setPrevio({ open, lead });
+    if (open) {
+      setNuevoEstado("");
+      setMontoEstimado(lead.monto_estimado ?? "");
+      setMotivoPerdida("");
+      setNota("");
+      setError(null);
+    }
+  }
 
   const nombre = lead.cliente_nombre ?? lead.cliente_handle ?? "Cliente sin nombre";
   const cambio = nuevoEstado !== "";

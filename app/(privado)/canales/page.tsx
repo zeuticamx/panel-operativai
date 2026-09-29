@@ -67,10 +67,11 @@ function Contenido() {
   // se avisa (ver JSX) y se refresca el estado real, mismo criterio que
   // pagos/exito.
   const retornoNeuroApi = params.get("whatsapp_neuroapi") === "retorno";
+  const recargarCanales = canales.recargar;
   useEffect(() => {
     if (!retornoNeuroApi) return;
-    canales.recargar(true);
-  }, [retornoNeuroApi, canales.recargar]);
+    recargarCanales(true);
+  }, [retornoNeuroApi, recargarCanales]);
 
   const porTipo = new Map<string, CanalOut>();
   for (const c of canales.data ?? []) porTipo.set(c.channel_type, c);

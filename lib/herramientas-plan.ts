@@ -30,7 +30,8 @@ const RUTAS: RutaHerramienta[] = [
 ];
 
 /** Siempre abiertas: por acá se sale de un bloqueo (o no son del negocio). */
-const RUTAS_LIBRES = ["/suscripcion", "/pagos", "/gerencia"];
+// /preferencias es de la persona, no del negocio: no depende del plan.
+const RUTAS_LIBRES = ["/suscripcion", "/pagos", "/gerencia", "/preferencias"];
 
 function coincidePrefijo(pathname: string, prefijo: string): boolean {
   return pathname === prefijo || pathname.startsWith(prefijo + "/");

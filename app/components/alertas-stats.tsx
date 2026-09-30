@@ -10,6 +10,7 @@ import {
   Siren,
   Sparkles,
   Trophy,
+  UserRound,
 } from "lucide-react";
 import { fmtInt } from "@/lib/formato";
 import { useApi } from "@/lib/use-api";
@@ -31,6 +32,7 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   reserva_creada: { label: "Nueva reserva", icon: CalendarCheck, clase: "text-emerald-500" },
   reserva_cancelada: { label: "Reserva cancelada", icon: CalendarX2, clase: "text-amber-500" },
   conversacion_transferida: { label: "Transferida a humano", icon: Headset, clase: "text-danger" },
+  perfil_incompleto: { label: "Completa tu perfil", icon: UserRound, clase: "text-blue-500" },
 };
 
 const ORDEN: TipoAlerta[] = [
@@ -42,6 +44,7 @@ const ORDEN: TipoAlerta[] = [
   "reserva_creada",
   "reserva_cancelada",
   "conversacion_transferida",
+  "perfil_incompleto",
 ];
 
 /**

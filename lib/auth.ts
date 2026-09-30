@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { BloqueoPlanDetalle, TokenOut, UsuarioOut } from "./types";
 
 /** uvicorn corre acá en HTTP plano; el proxy HTTPS de `dev:https`, acá. */
@@ -244,6 +244,11 @@ export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
   body?: BodyInit | null;
   /** false para endpoints públicos (login, registro). Default true. */
   auth?: boolean;
+  /**
+   * "blob" para respuestas binarias (la foto de perfil). Por defecto la
+   * respuesta se lee como texto/JSON, que corrompería una imagen.
+   */
+  respuesta?: "json" | "blob";
 }
 
 /**
@@ -255,7 +260,7 @@ export async function apiFetch<T = unknown>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const { json, auth = true, headers: extraHeaders, ...rest } = options;
+  const { json, auth = true, respuesta = "json", headers: extraHeaders, ...rest } = options;
 
   const construir = (): RequestInit => {
     const headers = new Headers(extraHeaders);
@@ -309,6 +314,8 @@ export async function apiFetch<T = unknown>(
     }
   }
 
+  if (res.ok && respuesta === "blob") return (await res.blob()) as T;
+
   const texto = await res.text();
   let data: unknown = null;
   if (texto) {
@@ -342,15 +349,19 @@ export interface UsuarioActualState {
   usuario: UsuarioOut | null;
   loading: boolean;
   error: string | null;
+  /** Vuelve a pedir /auth/yo (p. ej. tras guardar el perfil, para el sidebar). */
+  recargar?: () => void;
 }
 
 /** Llama a GET /api/auth/yo al montar. */
 export function useUsuarioActual(): UsuarioActualState {
-  const [state, setState] = useState<UsuarioActualState>({
+  const [state, setState] = useState<Omit<UsuarioActualState, "recargar">>({
     usuario: null,
     loading: true,
     error: null,
   });
+  const [version, setVersion] = useState(0);
+  const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
     let cancelado = false;
@@ -365,7 +376,7 @@ export function useUsuarioActual(): UsuarioActualState {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [version]);
 
-  return state;
+  return { ...state, recargar };
 }

@@ -16,6 +16,8 @@ import type { AlertaOut } from "./types";
  * El resto de los tipos de alerta no navega a ningún lado en particular.
  */
 export function rutaParaAlerta(alerta: AlertaOut): string | null {
+  if (alerta.tipo === "perfil_incompleto") return "/preferencias";
+
   if (alerta.tipo === "conversacion_transferida") {
     const conversationId = alerta.datos?.conversation_id;
     if (typeof conversationId !== "string") return null;
@@ -117,7 +119,16 @@ export function useWebsocketAlertas(
     });
 
     socket.on("nueva_alerta", (alerta: AlertaOut) => {
-      setAlertas((actual) => [alerta, ...actual].slice(0, MAX_ALERTAS));
+      // El recordatorio de perfil reemplaza al del día anterior (el backend
+      // borra el viejo): acá también, para que no queden los dos en el feed.
+      setAlertas((actual) =>
+        [
+          alerta,
+          ...(alerta.tipo === "perfil_incompleto"
+            ? actual.filter((a) => a.tipo !== "perfil_incompleto")
+            : actual),
+        ].slice(0, MAX_ALERTAS),
+      );
       const ruta = rutaParaAlerta(alerta);
       showToast(
         alerta.titulo,

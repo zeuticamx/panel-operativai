@@ -26,6 +26,10 @@ import {
  * Es la misma tabla que pinta la pantalla de suscripción del portal
  * (GET /api/pagos/catalogo, que solo trae los `activo`); acá se ven
  * también los apagados, para poder reactivarlos.
+ *
+ * `stripe_price_id` es el Price recurrente creado en el panel de Stripe: es
+ * lo que de verdad se cobra cada mes. Sin él, el plan no se puede contratar
+ * en línea (crear-pago responde 409).
  */
 export default function PlanesPage() {
   const planes = useApi<PlanGerenciaOut[]>("/api/gerencia/planes");
@@ -91,16 +95,17 @@ export default function PlanesPage() {
             </p>
 
             <div className="overflow-x-auto rounded-md border border-bg-700">
-              <table className="w-full min-w-[62rem] text-sm">
+              <table className="w-full min-w-[70rem] text-sm">
                 <thead className="bg-bg-800 text-left font-mono text-[11px] text-text-600">
                   <tr>
                     <th className="px-3 py-2 font-normal">plan</th>
-                    <th className="px-3 py-2 text-right font-normal">mensual (sin IVA)</th>
-                    <th className="px-3 py-2 text-right font-normal">anual (sin IVA)</th>
+                    <th className="px-3 py-2 text-right font-normal">mensual (neto)</th>
+                    <th className="px-3 py-2 text-right font-normal">anual (neto)</th>
                     <th className="px-3 py-2 text-right font-normal">créditos/mes</th>
                     <th className="px-3 py-2 text-right font-normal">vendedores</th>
                     <th className="px-3 py-2 text-right font-normal">leads/mes</th>
                     <th className="px-3 py-2 font-normal">servicios</th>
+                    <th className="px-3 py-2 font-normal">price stripe</th>
                     <th className="px-3 py-2 font-normal">activo</th>
                     <th className="px-3 py-2 font-normal" aria-label="Acciones" />
                   </tr>
@@ -158,6 +163,18 @@ export default function PlanesPage() {
                           </Badge>
                         </div>
                       </td>
+                      <td className="max-w-[12rem] px-3 py-2">
+                        {p.stripe_price_id ? (
+                          <span
+                            className="block truncate font-mono text-[11px] text-text-400"
+                            title={p.stripe_price_id}
+                          >
+                            {p.stripe_price_id}
+                          </span>
+                        ) : (
+                          <Badge tone="warning">sin price</Badge>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         <Interruptor
                           label={`Plan ${p.nombre} activo`}
@@ -181,7 +198,7 @@ export default function PlanesPage() {
                   {lista.length === 0 && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-3 py-8 text-center font-mono text-[11px] text-text-600"
                       >
                         todavía no hay ningún plan en el catálogo
@@ -226,6 +243,9 @@ function aOpcional(texto: string): string | null {
   return t === "" ? null : t;
 }
 
+/** Vacío o un Price de Stripe (price_...). Mismo patrón que StripePriceId en el backend. */
+const PATRON_PRICE_STRIPE = /^(price_[A-Za-z0-9]+)?$/;
+
 /** Vacío o un número >= 0. Mismo criterio que montoEstimado en CrearClienteForm. */
 function numeroOpcionalValido(texto: string): boolean {
   const t = texto.trim();
@@ -250,6 +270,7 @@ function FormularioPlan({
   const [descripcion, setDescripcion] = useState("");
   const [precioMonthly, setPrecioMonthly] = useState("");
   const [precioAnnual, setPrecioAnnual] = useState("");
+  const [stripePriceId, setStripePriceId] = useState("");
   const [creditos, setCreditos] = useState("100");
   const [maxVendedores, setMaxVendedores] = useState("");
   const [maxLeads, setMaxLeads] = useState("");
@@ -271,6 +292,7 @@ function FormularioPlan({
     setDescripcion(plan?.descripcion ?? "");
     setPrecioMonthly(plan?.precio_monthly ?? "");
     setPrecioAnnual(plan?.precio_annual ?? "");
+    setStripePriceId(plan?.stripe_price_id ?? "");
     setCreditos(plan?.creditos_incluidos_mensual ?? "100");
     setMaxVendedores(plan?.max_vendedores?.toString() ?? "");
     setMaxLeads(plan?.max_leads_mensuales?.toString() ?? "");
@@ -294,7 +316,9 @@ function FormularioPlan({
     numeroOpcionalValido(maxVendedores) &&
     numeroOpcionalValido(maxLeads) &&
     numeroOpcionalValido(orden);
-  const puedeGuardar = nombreValido && precioValido && camposOpcionalesValidos && !guardando;
+  const priceValido = PATRON_PRICE_STRIPE.test(stripePriceId.trim());
+  const puedeGuardar =
+    nombreValido && precioValido && camposOpcionalesValidos && priceValido && !guardando;
 
   const guardar = async () => {
     if (!puedeGuardar) return;
@@ -307,6 +331,7 @@ function FormularioPlan({
           descripcion: descripcion.trim() || null,
           precio_monthly: precioMonthly.trim(),
           precio_annual: aOpcional(precioAnnual),
+          stripe_price_id: aOpcional(stripePriceId),
           creditos_incluidos_mensual: aOpcional(creditos) ?? undefined,
           max_vendedores: aOpcional(maxVendedores) === null ? null : Number(maxVendedores),
           max_leads_mensuales: aOpcional(maxLeads) === null ? null : Number(maxLeads),
@@ -325,6 +350,8 @@ function FormularioPlan({
           descripcion: descripcion.trim() || null,
           precio_monthly: precioMonthly.trim(),
           precio_annual: aOpcional(precioAnnual),
+          // "" y no null: en PATCH null es "no tocar", "" es borrarlo.
+          stripe_price_id: stripePriceId.trim(),
           creditos_incluidos_mensual: aOpcional(creditos),
           max_vendedores: aOpcional(maxVendedores) === null ? null : Number(maxVendedores),
           max_leads_mensuales: aOpcional(maxLeads) === null ? null : Number(maxLeads),
@@ -407,7 +434,7 @@ function FormularioPlan({
             </Campo>
 
             <div className="grid grid-cols-2 gap-3">
-              <Campo id="plan-precio-mensual" label="Precio mensual" hint="Sin IVA — se le suma 16% al cobrar">
+              <Campo id="plan-precio-mensual" label="Precio mensual" hint="Precio neto — se cobra tal cual">
                 <input
                   id="plan-precio-mensual"
                   type="number"
@@ -421,7 +448,7 @@ function FormularioPlan({
                   className={inputClass}
                 />
               </Campo>
-              <Campo id="plan-precio-anual" label="Precio anual" hint="Opcional, sin IVA — se le suma 16% al cobrar">
+              <Campo id="plan-precio-anual" label="Precio anual" hint="Opcional, precio neto — se cobra tal cual">
                 <input
                   id="plan-precio-anual"
                   type="number"
@@ -436,6 +463,26 @@ function FormularioPlan({
                 />
               </Campo>
             </div>
+
+            <Campo
+              id="plan-stripe-price"
+              label="Price de Stripe"
+              hint="Price recurrente mensual (price_…), no el Product. Vacío = no se puede contratar en línea"
+              error={priceValido ? null : "Tiene que empezar con price_ (el Product prod_… no sirve)"}
+            >
+              <input
+                id="plan-stripe-price"
+                type="text"
+                value={stripePriceId}
+                onChange={(e) => setStripePriceId(e.target.value)}
+                disabled={guardando}
+                placeholder="price_1Pq…"
+                maxLength={255}
+                spellCheck={false}
+                aria-invalid={!priceValido}
+                className={cn(inputClass, "font-mono")}
+              />
+            </Campo>
 
             <Campo id="plan-creditos" label="Créditos incluidos por mes">
               <input

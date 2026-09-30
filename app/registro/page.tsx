@@ -13,6 +13,7 @@ import type {
 } from "@/lib/types";
 import { GOOGLE_CLIENT_ID } from "@/lib/google-identity";
 import { AuthShell } from "@/app/components/auth-shell";
+import { AceptarTerminos } from "@/app/components/aceptar-terminos";
 import { GoogleBoton } from "@/app/components/google-boton";
 import { Aviso, Boton, Campo, inputClass } from "@/app/components/ui";
 
@@ -36,6 +37,7 @@ export default function RegistroPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [tocado, setTocado] = useState<{ password?: boolean; negocio?: boolean }>({});
 
   const [codigo, setCodigo] = useState("");
@@ -69,7 +71,8 @@ export default function RegistroPage() {
   const puedeEnviar =
     nombreNegocio.trim().length >= NEGOCIO_MIN &&
     email.trim().length > 0 &&
-    password.length >= PASSWORD_MIN;
+    password.length >= PASSWORD_MIN &&
+    aceptaTerminos;
 
   const emailNormalizado = email.trim().toLowerCase();
 
@@ -90,6 +93,7 @@ export default function RegistroPage() {
         password,
         full_name: fullName.trim() || null,
         nombre_negocio: nombreNegocio.trim(),
+        acepta_terminos: aceptaTerminos,
       };
       const pendiente = await apiFetch<VerificacionPendienteOut>(
         "/api/auth/registro",
@@ -172,12 +176,15 @@ export default function RegistroPage() {
 
   // Mismo endpoint que /login: si el correo de la cuenta de Google es
   // nuevo, el backend da de alta el negocio ahí mismo, sin pasar por el
-  // paso del código.
+  // paso del código. Por eso el botón está deshabilitado hasta marcar la
+  // casilla, y la aceptación viaja con el credential: sin ella el backend
+  // no crea la cuenta.
   const handleGoogle = async (credential: string) => {
+    if (!aceptaTerminos) return;
     setLoading(true);
     setError(null);
     try {
-      const body: GoogleLoginIn = { credential };
+      const body: GoogleLoginIn = { credential, acepta_terminos: true };
       const tokens = await apiFetch<TokenOut>("/api/auth/google", {
         method: "POST",
         json: body,
@@ -344,6 +351,12 @@ export default function RegistroPage() {
           />
         </Campo>
 
+        <AceptarTerminos
+          checked={aceptaTerminos}
+          onChange={setAceptaTerminos}
+          disabled={loading}
+        />
+
         {error && <Aviso tipo="error">{error}</Aviso>}
 
         <Boton
@@ -364,7 +377,16 @@ export default function RegistroPage() {
             o
             <span className="h-px flex-1 bg-bg-700" />
           </div>
-          <GoogleBoton onCredential={handleGoogle} disabled={loading} className="mt-4" />
+          <GoogleBoton
+            onCredential={handleGoogle}
+            disabled={loading || !aceptaTerminos}
+            className="mt-4"
+          />
+          {!aceptaTerminos && (
+            <p className="mt-2 text-center font-mono text-[11px] text-text-600">
+              Acepta los términos para continuar con Google
+            </p>
+          )}
         </>
       )}
     </AuthShell>

@@ -4,11 +4,13 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowLeft, Eye, MessageSquare } from "lucide-react";
+import { ArrowLeft, Eye, MessageSquare, Trash2 } from "lucide-react";
 import { apiFetch, iniciarVerComo, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
   AjusteCreditosOut,
+  EliminacionTenantOut,
+  EliminarTenantIn,
   EntradaAuditoriaOut,
   EstadoTenantPlataforma,
   ImpersonarOut,
@@ -57,17 +59,50 @@ export default function DetalleTenantPage() {
   const bitacora = useApi<EntradaAuditoriaOut[]>(
     `/api/gerencia/auditoria?tenant_id=${id}&limite=15`,
   );
+  const eliminacion = useApi<EliminacionTenantOut>(`/api/gerencia/tenants/${id}/eliminacion`);
 
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  // Nombre del negocio recién eliminado: la ficha ya no existe, se muestra
+  // solo la confirmación y el camino de vuelta.
+  const [eliminado, setEliminado] = useState<string | null>(null);
 
   const t = tenant.data;
+
+  if (eliminado) {
+    return (
+      <>
+        <PageHeader titulo="Negocio eliminado" acciones={<GerenciaTabs />} />
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex max-w-4xl flex-col gap-4">
+            <Aviso tipo="exito">
+              <strong>{eliminado}</strong> se eliminó definitivamente. Queda registrado en la
+              bitácora de gerencia.
+            </Aviso>
+            <Link
+              href="/gerencia/tenants"
+              className="inline-flex w-fit items-center gap-2 text-xs text-text-400 hover:text-text-100"
+            >
+              <ArrowLeft size={13} aria-hidden />
+              Volver a negocios
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // ---- Acciones ---------------------------------------------------------
   const tras = async (mensaje: string) => {
     setAviso(mensaje);
-    await Promise.all([tenant.recargar(true), bitacora.recargar(true)]);
+    // La eliminación depende del estado y de la suscripción: se revisa de
+    // nuevo después de cualquier cambio (típicamente, la baja).
+    await Promise.all([
+      tenant.recargar(true),
+      bitacora.recargar(true),
+      eliminacion.recargar(true),
+    ]);
   };
 
   const patch = async (
@@ -370,6 +405,13 @@ export default function DetalleTenantPage() {
                 )}
               </ul>
             </section>
+
+            <EliminarNegocio
+              tenantId={t.tenant_id}
+              nombre={t.nombre}
+              revision={eliminacion.data}
+              onEliminado={() => setEliminado(t.nombre)}
+            />
           </div>
         )}
       </div>
@@ -951,9 +993,152 @@ function VerComo({ tenantId, nombre }: { tenantId: string; nombre: string }) {
 }
 
 // ------------------------------------------------------------
+// Eliminación definitiva
+// ------------------------------------------------------------
+/**
+ * Solo se habilita con el negocio en 'baja' y sin suscripción vigente; la
+ * regla vive en el backend (services/eliminacion_tenant.py) y acá solo se
+ * lee `revision`. Aun habilitado, el diálogo pide escribir el nombre
+ * exacto, y el backend lo vuelve a comparar.
+ */
+function EliminarNegocio({
+  tenantId,
+  nombre,
+  revision,
+  onEliminado,
+}: {
+  tenantId: string;
+  nombre: string;
+  revision: EliminacionTenantOut | null;
+  onEliminado: () => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [confirmacion, setConfirmacion] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const coincide = confirmacion.trim() === nombre.trim();
+  const eliminable = revision?.eliminable ?? false;
+  const creditos = Number(revision?.creditos_disponibles ?? 0);
+
+  const cambiarAbierto = (v: boolean) => {
+    if (enviando) return;
+    setAbierto(v);
+    if (!v) {
+      setConfirmacion("");
+      setError(null);
+    }
+  };
+
+  const eliminar = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!coincide) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      const cuerpo: EliminarTenantIn = { confirmacion };
+      await apiFetch<void>(`/api/gerencia/tenants/${tenantId}/eliminar`, {
+        method: "POST",
+        json: cuerpo,
+      });
+      setAbierto(false);
+      onEliminado();
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo eliminar el negocio."));
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="zona-peligro"
+      className="flex flex-col gap-3 rounded-md border border-danger/40 p-4"
+    >
+      <h2 id="zona-peligro" className="text-sm font-medium text-text-100">
+        Eliminar negocio
+      </h2>
+      <p className="text-xs leading-relaxed text-text-400">
+        Borra el negocio y todo lo suyo: usuarios del portal, conversaciones, CRM, calendario e
+        historial de cobros. <strong className="text-text-100">No se puede deshacer.</strong> Solo
+        se permite con el negocio en <strong className="text-text-100">Baja</strong> y sin
+        suscripción vigente.
+      </p>
+
+      {revision && revision.bloqueos.length > 0 && (
+        <ul className="flex flex-col gap-1" aria-label="Por qué no se puede eliminar">
+          {revision.bloqueos.map((b) => (
+            <li key={b.codigo} className="font-mono text-[11px] text-warning">
+              {b.mensaje}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Dialog.Root open={abierto} onOpenChange={cambiarAbierto}>
+        <Dialog.Trigger asChild>
+          <Boton variante="peligro" className="w-fit" disabled={!eliminable}>
+            <Trash2 size={13} aria-hidden />
+            Eliminar negocio
+          </Boton>
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-bg-700 bg-bg-900 p-5 shadow-xl">
+            <Dialog.Title className="text-sm font-medium text-text-100">
+              Eliminar {nombre} definitivamente
+            </Dialog.Title>
+            <Dialog.Description className="mt-1.5 text-xs leading-relaxed text-text-400">
+              Esta acción no se puede deshacer. Se borran para siempre:
+            </Dialog.Description>
+            <ul className="mt-2 flex list-disc flex-col gap-0.5 pl-5 text-xs text-text-400">
+              <li>{fmtInt.format(revision?.usuarios_portal ?? 0)} usuarios del portal</li>
+              <li>{fmtInt.format(revision?.conversaciones ?? 0)} conversaciones</li>
+              <li>{fmtInt.format(revision?.transacciones ?? 0)} registros de cobro</li>
+            </ul>
+            {creditos > 0 && (
+              <Aviso tipo="info" className="mt-3">
+                Tiene <strong>{formatoMonto(revision?.creditos_disponibles ?? "0")}</strong>{" "}
+                créditos sin usar que se pierden.
+              </Aviso>
+            )}
+            <form onSubmit={eliminar} className="mt-4 flex flex-col gap-3" noValidate>
+              <Campo
+                id="confirmar-eliminacion"
+                label={`Escribe «${nombre}» para confirmar`}
+              >
+                <input
+                  id="confirmar-eliminacion"
+                  type="text"
+                  autoFocus
+                  autoComplete="off"
+                  value={confirmacion}
+                  disabled={enviando}
+                  onChange={(e) => setConfirmacion(e.target.value)}
+                  className={inputClass}
+                />
+              </Campo>
+              {error && <Aviso tipo="error">{error}</Aviso>}
+              <div className="flex justify-end gap-2">
+                <Dialog.Close asChild>
+                  <Boton disabled={enviando}>Cancelar</Boton>
+                </Dialog.Close>
+                <Boton type="submit" variante="peligro" loading={enviando} disabled={!coincide}>
+                  Eliminar definitivamente
+                </Boton>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </section>
+  );
+}
+
+// ------------------------------------------------------------
 // Bitácora
 // ------------------------------------------------------------
 const ACCIONES: Record<string, string> = {
+  eliminar_tenant: "Negocio eliminado",
   estado_tenant: "Cambio de estado",
   servicios_tenant: "Cambio de servicios",
   ajuste_creditos: "Ajuste de créditos",

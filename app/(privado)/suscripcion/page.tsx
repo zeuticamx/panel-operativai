@@ -14,7 +14,7 @@ import type {
   SuscripcionOut,
   TransaccionOut,
 } from "@/lib/types";
-import { fmtInt, formatoFechaHora, formatoMonto, formatoPorcentaje } from "@/lib/formato";
+import { fmtInt, formatoFechaHora, formatoMonto } from "@/lib/formato";
 import { HERRAMIENTAS_INFO } from "@/lib/herramientas-plan";
 import { cn } from "@/lib/utils";
 import { esGerencia } from "@/app/components/modulo-vendedores";
@@ -30,6 +30,9 @@ const COLUMNA_HERRAMIENTA: Record<Herramienta, keyof PlanOut> = {
   crm_campo: "crm_campo_activo",
   calendario: "calendario_activo",
 };
+
+const LEYENDA_NETOS = "Los precios son Netos";
+const LEYENDA_CREDITOS = "Los créditos son llamadas del agente al uso de herramientas.";
 
 const noop = () => () => {};
 
@@ -71,10 +74,6 @@ export default function SuscripcionPage() {
   const [error, setError] = useState<string | null>(null);
 
   const s = suscripcion.data;
-  // "0.16" -> "16%": la leyenda de IVA nunca queda desincronizada de lo que
-  // de verdad se cobra, porque el número sale del mismo catálogo que los
-  // precios (ver services.pagos.con_iva en el backend).
-  const ivaLabel = catalogo.data ? formatoPorcentaje(Number(catalogo.data.iva_tasa) * 100) : null;
 
   /**
    * Pide el checkout al backend y manda el navegador ahí.
@@ -144,7 +143,7 @@ export default function SuscripcionPage() {
               tone={s?.estado_suscripcion === "activa" ? "success" : "neutral"}
               hint={
                 s?.precio_monthly
-                  ? `${formatoMonto(s.precio_monthly)} / mes + IVA`
+                  ? `${formatoMonto(s.precio_monthly)} / mes`
                   : "sin contratar"
               }
             />
@@ -159,9 +158,13 @@ export default function SuscripcionPage() {
                     : "neutral"
               }
               hint={
-                s?.fecha_renovacion
-                  ? `renueva ${formatoFechaHora(s.fecha_renovacion)}`
-                  : "—"
+                !s?.fecha_renovacion
+                  ? "—"
+                  : s.cancela_al_vencer
+                    ? `cancelada · vigente hasta ${formatoFechaHora(s.fecha_renovacion)}`
+                    : s.suscripcion_recurrente
+                      ? `se cobra sola el ${formatoFechaHora(s.fecha_renovacion)}`
+                      : `renueva ${formatoFechaHora(s.fecha_renovacion)}`
               }
             />
             <StatCard
@@ -185,11 +188,7 @@ export default function SuscripcionPage() {
                 el plan decide qué herramientas usas, cuántos vendedores y cuántos créditos
                 mensuales entran
               </p>
-              {ivaLabel && (
-                <p className="mt-1 font-mono text-[11px] text-text-600">
-                  precios más IVA ({ivaLabel})
-                </p>
-              )}
+              <p className="mt-1 font-mono text-[11px] text-text-600">{LEYENDA_CREDITOS}</p>
             </header>
 
             {catalogo.loading && !catalogo.data ? (
@@ -200,8 +199,9 @@ export default function SuscripcionPage() {
                   <TarjetaPlan
                     key={plan.nombre}
                     plan={plan}
-                    ivaLabel={ivaLabel}
                     esActual={s?.plan === plan.nombre && s?.estado_suscripcion === "activa"}
+                    recurrente={s?.suscripcion_recurrente ?? false}
+                    cancelaAlVencer={s?.cancela_al_vencer ?? false}
                     destacado={destacado === plan.nombre}
                     puedeComprar={gerencia}
                     cargando={comprando === `plan:${plan.nombre}`}
@@ -227,6 +227,7 @@ export default function SuscripcionPage() {
                 <p className="font-mono text-[11px] text-text-600">
                   se suman al saldo y no vencen
                 </p>
+                <p className="mt-1 font-mono text-[11px] text-text-600">{LEYENDA_CREDITOS}</p>
               </div>
             </header>
 
@@ -255,6 +256,7 @@ export default function SuscripcionPage() {
                     <span className="mt-1 font-mono text-xs tabular-nums text-text-400">
                       {formatoMonto(paquete.precio)}
                     </span>
+                    <span className="font-mono text-[11px] text-text-600">{LEYENDA_NETOS}</span>
                     {comprando === clave && (
                       <span className="font-mono text-[11px] text-text-600">abriendo…</span>
                     )}
@@ -336,10 +338,55 @@ export default function SuscripcionPage() {
   );
 }
 
+/** Texto y tooltip del botón de una tarjeta de plan. */
+function botonPlan({
+  esActual,
+  recurrente,
+  cancelaAlVencer,
+  puedeComprar,
+}: {
+  esActual: boolean;
+  recurrente: boolean;
+  cancelaAlVencer: boolean;
+  puedeComprar: boolean;
+}): { texto: string; title: string; habilitado: boolean } {
+  // Con una suscripción recurrente viva el backend responde 409 a cualquier
+  // contratación (ver services/stripe_suscripciones.py): se deshabilita acá
+  // en vez de dejar que el dueño llegue al error.
+  if (recurrente) {
+    if (esActual) {
+      return cancelaAlVencer
+        ? {
+            texto: "Cancelación programada",
+            title: "Sigue vigente hasta la fecha de renovación y después se pausa",
+            habilitado: false,
+          }
+        : {
+            texto: "Se renueva automáticamente",
+            title: "Stripe cobra este plan cada mes, no hace falta renovarlo a mano",
+            habilitado: false,
+          };
+    }
+    return {
+      texto: "Contratar ahora",
+      title: cancelaAlVencer
+        ? "Podrás contratar otro plan cuando termine el período de tu suscripción actual"
+        : "Ya tienes una suscripción con renovación automática. Para cambiar de plan, escríbenos",
+      habilitado: false,
+    };
+  }
+  return {
+    texto: esActual ? "Renovar ahora" : "Contratar ahora",
+    title: puedeComprar ? "Ir al checkout de Stripe" : "Solo el dueño del negocio puede contratar",
+    habilitado: puedeComprar,
+  };
+}
+
 function TarjetaPlan({
   plan,
-  ivaLabel,
   esActual,
+  recurrente,
+  cancelaAlVencer,
   destacado,
   puedeComprar,
   cargando,
@@ -347,9 +394,10 @@ function TarjetaPlan({
   onContratar,
 }: {
   plan: PlanOut;
-  /** "16%", ya calculado desde catalogo.iva_tasa. null mientras carga el catálogo. */
-  ivaLabel: string | null;
   esActual: boolean;
+  /** El tenant ya tiene una suscripción de Stripe viva (SuscripcionOut). */
+  recurrente: boolean;
+  cancelaAlVencer: boolean;
   /** Es el plan que recomendó la vista de bloqueo. */
   destacado: boolean;
   puedeComprar: boolean;
@@ -357,6 +405,8 @@ function TarjetaPlan({
   bloqueado: boolean;
   onContratar: () => void;
 }) {
+  const boton = botonPlan({ esActual, recurrente, cancelaAlVencer, puedeComprar });
+
   return (
     <div
       className={cn(
@@ -386,9 +436,7 @@ function TarjetaPlan({
           </span>
           <span className="font-mono text-[11px] text-text-600">/ mes</span>
         </div>
-        {ivaLabel && (
-          <span className="font-mono text-[11px] text-text-600">más IVA ({ivaLabel})</span>
-        )}
+        <span className="font-mono text-[11px] text-text-600">{LEYENDA_NETOS}</span>
       </div>
 
       {plan.descripcion && (
@@ -424,15 +472,11 @@ function TarjetaPlan({
         className="mt-auto"
         onClick={onContratar}
         loading={cargando}
-        disabled={!puedeComprar || bloqueado}
-        title={
-          puedeComprar
-            ? "Ir al checkout de Stripe"
-            : "Solo el dueño del negocio puede contratar"
-        }
+        disabled={!boton.habilitado || bloqueado}
+        title={boton.title}
       >
-        {!cargando && <ExternalLink size={13} aria-hidden />}
-        {esActual ? "Renovar ahora" : "Contratar ahora"}
+        {!cargando && boton.habilitado && <ExternalLink size={13} aria-hidden />}
+        {boton.texto}
       </Boton>
     </div>
   );

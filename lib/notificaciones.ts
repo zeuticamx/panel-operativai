@@ -24,6 +24,7 @@ const COLOR_POR_TIPO: Record<TipoAlerta, string> = {
   reserva_creada: "#10b981", // emerald-500, igual que "cierre": buena noticia
   reserva_cancelada: "#f59e0b", // amber-500: aviso, no error
   conversacion_transferida: "#ef4444", // red-500: pide atención humana ya
+  perfil_incompleto: "#3b82f6", // blue-500: recordatorio, no problema
 };
 
 const DURACION_MS = 5000;

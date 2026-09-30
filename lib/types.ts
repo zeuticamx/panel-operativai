@@ -22,6 +22,38 @@ export interface UsuarioOut {
   /** Solo en una sesión "ver como" de plataforma: el gerente que mira. */
   impersonado_por?: string | null;
   impersonacion_expira?: string | null;
+  /** Perfil personal (GET /api/perfil tiene el resto). Para el sidebar. */
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  perfil_completo?: boolean;
+  /** Cambia al subir o borrar la foto. null = sin foto. */
+  foto_version?: string | null;
+}
+
+// ---- Perfil (routers/perfil.py) ----
+export type GeneroPerfil = "femenino" | "masculino" | "prefiero_no_decirlo";
+
+/** Claves de schemas.CAMPOS_PERFIL_OBLIGATORIOS. */
+export type CampoPerfilObligatorio = "nombres" | "apellido_paterno" | "fecha_nacimiento" | "genero";
+
+/** PUT /api/perfil: el perfil entero; null deja el campo vacío. */
+export interface PerfilIn {
+  nombres: string | null;
+  apellido_paterno: string | null;
+  apellido_materno: string | null;
+  /** YYYY-MM-DD */
+  fecha_nacimiento: string | null;
+  genero: GeneroPerfil | null;
+  empresa: string | null;
+}
+
+export interface PerfilOut extends PerfilIn {
+  completo: boolean;
+  faltantes: CampoPerfilObligatorio[];
+  tiene_foto: boolean;
+  foto_version: string | null;
+  /** Días de recordatorios que quedan; null si está completo o ya pasó la ventana. */
+  recordatorio_dias_restantes: number | null;
 }
 
 export interface RegistroIn {
@@ -29,6 +61,8 @@ export interface RegistroIn {
   password: string;
   full_name?: string | null;
   nombre_negocio: string;
+  /** Obligatorio: el backend rechaza el alta (422) si no es `true`. */
+  acepta_terminos: boolean;
 }
 
 /**
@@ -54,11 +88,18 @@ export interface ReenviarCodigoIn {
 export interface LoginIn {
   email: string;
   password: string;
+  /**
+   * Solo la primera vez de una cuenta que todavía no aceptó los términos:
+   * sin él el backend responde 428 (TERMINOS_REQUERIDOS) y se pide la aceptación.
+   */
+  acepta_terminos?: boolean;
 }
 
 /** POST /api/auth/google — ID token que entrega el botón de Google. */
 export interface GoogleLoginIn {
   credential: string;
+  /** Una cuenta nueva sin esto no se crea (428). */
+  acepta_terminos?: boolean;
 }
 
 // ---- Agente ----
@@ -408,7 +449,8 @@ export type TipoAlerta =
   | "cierre"
   | "reserva_creada"
   | "reserva_cancelada"
-  | "conversacion_transferida";
+  | "conversacion_transferida"
+  | "perfil_incompleto";
 
 export interface AlertaOut {
   id: string;
@@ -419,6 +461,8 @@ export interface AlertaOut {
   datos: Record<string, unknown>;
   leido: boolean;
   creado_en: string;
+  /** null = alerta del negocio; con valor = personal de ese usuario. */
+  portal_user_id?: string | null;
 }
 
 /** GET /tenants/{id}/alertas/estadisticas. `por_tipo` solo trae los tipos con alguna alerta sin leer. */
@@ -629,7 +673,7 @@ export type NombrePlan = string;
 export interface PlanOut {
   nombre: string;
   descripcion: string | null;
-  /** Sin IVA — CatalogoPagosOut.iva_tasa dice cuánto se le suma al cobrar. */
+  /** Precio neto. */
   precio_monthly: string;
   precio_annual: string | null;
   /** null = sin tope (enterprise). */
@@ -651,8 +695,6 @@ export interface PaqueteCreditosOut {
 export interface CatalogoPagosOut {
   planes: PlanOut[];
   paquetes: PaqueteCreditosOut[];
-  /** 0.16 = 16%. Los precios de `planes` no lo incluyen (ver PlanOut). */
-  iva_tasa: string;
 }
 
 export interface SuscripcionOut {
@@ -662,6 +704,10 @@ export interface SuscripcionOut {
   precio_monthly: string | null;
   creditos_disponibles: string;
   creditos_gastados: string;
+  /** Hay una suscripción de Stripe viva: se cobra sola y no se puede contratar otra (409). */
+  suscripcion_recurrente: boolean;
+  /** Se pidió cancelar: sigue vigente hasta fecha_renovacion y después se pausa. */
+  cancela_al_vencer: boolean;
 }
 
 // ------------------------------------------------------------
@@ -823,6 +869,27 @@ export interface OtorgarPruebaIn {
 
 export interface RevocarPruebaIn {
   motivo: string;
+}
+
+// Eliminación definitiva de un negocio — espejo de schemas.EliminacionTenantOut.
+export type CodigoBloqueoEliminacion = "cuenta_activa" | "suscripcion_vigente" | "cuenta_propia";
+
+export interface BloqueoEliminacionOut {
+  codigo: CodigoBloqueoEliminacion;
+  mensaje: string;
+}
+
+export interface EliminacionTenantOut {
+  eliminable: boolean;
+  bloqueos: BloqueoEliminacionOut[];
+  creditos_disponibles: string; // Decimal
+  usuarios_portal: number;
+  conversaciones: number;
+  transacciones: number;
+}
+
+export interface EliminarTenantIn {
+  confirmacion: string;
 }
 
 export interface TenantsGerenciaOut {
@@ -1013,6 +1080,8 @@ export interface PlanGerenciaOut {
   calendario_activo: boolean;
   activo: boolean;
   orden: number;
+  /** Price recurrente de Stripe (price_...). null = no se puede contratar en línea. */
+  stripe_price_id: string | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -1032,6 +1101,7 @@ export interface PlanCrearIn {
   calendario_activo?: boolean;
   activo?: boolean;
   orden?: number;
+  stripe_price_id?: string | null;
 }
 
 /** Parcial: un campo ausente o en null no se toca (no se puede renombrar acá). */
@@ -1049,6 +1119,8 @@ export interface PlanActualizarIn {
   calendario_activo?: boolean | null;
   activo?: boolean | null;
   orden?: number | null;
+  /** "" lo borra; null/ausente no lo toca. */
+  stripe_price_id?: string | null;
 }
 
 // ============================================================

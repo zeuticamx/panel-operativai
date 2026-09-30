@@ -27,8 +27,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearTokens } from "@/lib/auth";
+import { iniciales, useFotoPerfil } from "@/lib/foto-perfil";
 import { bloqueoDePantalla } from "@/lib/herramientas-plan";
 import { setStoredTheme, useStoredTheme } from "@/lib/theme";
+import { AvatarPerfil } from "./avatar-perfil";
 import { esGerenciaPlataforma } from "./gerencia";
 import { usePlan } from "./plan-context";
 import { ConfirmDialog } from "./ui";
@@ -61,6 +63,10 @@ export function Sidebar() {
   const isLight = theme === "light";
   const { usuario } = useUsuario();
   const { acceso } = usePlan();
+  const fotoUrl = useFotoPerfil(usuario?.foto_version);
+  const nombrePerfil =
+    [usuario?.nombres, usuario?.apellido_paterno].filter(Boolean).join(" ") || usuario?.email || "";
+  const faltaPerfil = usuario !== null && usuario.perfil_completo === false;
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", isLight);
@@ -155,18 +161,6 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* Negocio actual */}
-        {expandido && (
-          <div className="mx-2 mb-2 rounded-md border border-bg-700 bg-bg-950 px-2.5 py-2">
-            <div className="truncate text-xs font-medium text-text-100">
-              {usuario?.nombre_negocio ?? " "}
-            </div>
-            <div className="truncate font-mono text-[11px] text-text-600">
-              {usuario?.email ?? "cargando…"}
-            </div>
-          </div>
-        )}
-
         <nav className="flex flex-1 flex-col gap-0.5 px-2" aria-label="Principal">
           {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
@@ -237,6 +231,21 @@ export function Sidebar() {
 
           {settingsOpen && expandido && (
             <div className="ml-2 flex flex-col border-l border-bg-700 pl-3">
+              <Link
+                href="/preferencias"
+                aria-current={pathname === "/preferencias" ? "page" : undefined}
+                className={cn(
+                  "flex items-center justify-between gap-2 rounded px-2 py-1.5 text-sm",
+                  pathname === "/preferencias"
+                    ? "text-text-100"
+                    : "text-text-400 hover:bg-bg-800 hover:text-text-100",
+                )}
+              >
+                Mi perfil
+                {faltaPerfil && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-label="Faltan datos" />
+                )}
+              </Link>
               <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                 <span className="flex items-center gap-2 text-sm text-text-400">
                   {isLight ? <Sun size={14} aria-hidden /> : <Moon size={14} aria-hidden />}
@@ -266,6 +275,46 @@ export function Sidebar() {
         </nav>
 
         <div className="border-t border-bg-700 px-2 py-2">
+          {/* Perfil personal: al pie, junto a "Cerrar sesión", para no
+              desplazar la navegación. El negocio y el correo se ven en
+              /preferencias. El punto avisa que faltan datos mientras el
+              perfil esté incompleto. */}
+          {usuario && (
+            <Link
+              href="/preferencias"
+              title={expandido ? undefined : `Mi perfil${faltaPerfil ? " (faltan datos)" : ""}`}
+              aria-label={expandido ? undefined : "Mi perfil"}
+              aria-current={pathname === "/preferencias" ? "page" : undefined}
+              className={cn(
+                "mb-1 flex items-center gap-2.5 rounded px-1.5 py-1.5 text-sm",
+                pathname === "/preferencias"
+                  ? "bg-bg-800 text-text-100"
+                  : "text-text-400 hover:bg-bg-800 hover:text-text-100",
+              )}
+            >
+              <span className="relative shrink-0">
+                <AvatarPerfil
+                  src={fotoUrl}
+                  iniciales={iniciales(usuario.nombres, usuario.apellido_paterno, usuario.email)}
+                  tamano={22}
+                />
+                {faltaPerfil && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full border border-bg-900 bg-warning"
+                    aria-hidden
+                  />
+                )}
+              </span>
+              {expandido && (
+                <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                  <span className="truncate text-xs text-text-100">{nombrePerfil}</span>
+                  {faltaPerfil && (
+                    <span className="truncate font-mono text-[10px] text-warning">completa tu perfil</span>
+                  )}
+                </span>
+              )}
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}

@@ -5,6 +5,18 @@ import { GOOGLE_CLIENT_ID, cargarGoogleIdentity } from "@/lib/google-identity";
 import { cn } from "@/lib/utils";
 
 /**
+ * Google guarda UNA sola configuración por página: llamar a `initialize()`
+ * otra vez (al volver a /login, o el doble montaje de StrictMode en
+ * desarrollo) la reemplaza y dispara el aviso "initialize() is called
+ * multiple times". Por eso se inicializa una sola vez y el callback que
+ * registra apunta a `manejadorActivo`: siempre el del botón montado ahora.
+ * `renderButton` sí se llama en cada montaje, porque dibuja dentro del
+ * contenedor de esa instancia.
+ */
+let inicializado = false;
+let manejadorActivo: ((credential: string) => void) | null = null;
+
+/**
  * Botón "Continuar con Google". Atajo opcional a /login y /registro: no
  * reemplaza el alta con correo, entra por POST /api/auth/google con el ID
  * token que dibuja Google. Sin NEXT_PUBLIC_GOOGLE_CLIENT_ID no se dibuja
@@ -33,13 +45,19 @@ export function GoogleBoton({
     if (!GOOGLE_CLIENT_ID) return;
     let cancelado = false;
 
+    const miManejador = (credential: string) => callbackRef.current(credential);
+    manejadorActivo = miManejador;
+
     cargarGoogleIdentity()
       .then(() => {
         if (cancelado || !window.google || !contenedorRef.current) return;
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (resp) => callbackRef.current(resp.credential),
-        });
+        if (!inicializado) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (resp) => manejadorActivo?.(resp.credential),
+          });
+          inicializado = true;
+        }
         window.google.accounts.id.renderButton(contenedorRef.current, {
           type: "standard",
           theme: "outline",
@@ -56,6 +74,9 @@ export function GoogleBoton({
 
     return () => {
       cancelado = true;
+      // Solo si sigue siendo el nuestro: al navegar, el botón nuevo ya
+      // puede haberse registrado antes de que este se desmonte.
+      if (manejadorActivo === miManejador) manejadorActivo = null;
     };
   }, []);
 

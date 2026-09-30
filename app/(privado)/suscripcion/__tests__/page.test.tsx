@@ -1,9 +1,9 @@
 /**
- * Tests de la leyenda de IVA en /suscripcion: los precios del catálogo se
- * muestran sin IVA (ver backend/services/pagos.py::con_iva), así que la
- * pantalla tiene que avisarlo — con el porcentaje real que manda el
- * backend en `catalogo.iva_tasa`, no un texto fijo que se pueda
- * desincronizar de lo que de verdad se cobra.
+ * Tests de /suscripcion:
+ *  - las leyendas: los precios son netos (sin IVA sumado en pantalla ni al
+ *    cobrar) y los créditos se explican en la página;
+ *  - los botones de plan con una suscripción recurrente de Stripe viva, que
+ *    el backend no deja volver a contratar (409).
  */
 import { render, screen } from "@testing-library/react";
 
@@ -37,7 +37,6 @@ const PLAN_STARTER: PlanOut = {
 const CATALOGO: CatalogoPagosOut = {
   planes: [PLAN_STARTER],
   paquetes: [{ creditos: "500", precio: "129.99" }],
-  iva_tasa: "0.16",
 };
 
 const SUSCRIPCION: SuscripcionOut = {
@@ -47,7 +46,11 @@ const SUSCRIPCION: SuscripcionOut = {
   precio_monthly: "199.00",
   creditos_disponibles: "50",
   creditos_gastados: "10",
+  suscripcion_recurrente: false,
+  cancela_al_vencer: false,
 };
+
+const PLAN_PRO: PlanOut = { ...PLAN_STARTER, nombre: "pro", precio_monthly: "499.00" };
 
 function mockApiPorRuta(respuestas: Record<string, unknown>) {
   mockUseApi.mockImplementation((path: string | null) => ({
@@ -71,43 +74,62 @@ beforeEach(() => {
   });
 });
 
-describe("Leyenda de IVA en /suscripcion", () => {
-  it("avisa, con el porcentaje real, que los precios del catálogo no lo incluyen", () => {
+describe("Leyendas en /suscripcion", () => {
+  it("cada tarjeta de plan y de créditos avisa que los precios son netos", () => {
     render(<SuscripcionPage />);
 
-    expect(screen.getByText("precios más IVA (16%)")).toBeInTheDocument();
+    // 1 tarjeta de plan + 1 paquete de créditos.
+    expect(screen.getAllByText("Los precios son Netos")).toHaveLength(2);
   });
 
-  it("cada tarjeta de plan repite el aviso junto a su precio", () => {
+  it("explica qué es un crédito", () => {
     render(<SuscripcionPage />);
 
-    expect(screen.getByText("más IVA (16%)")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Los créditos son llamadas del agente al uso de herramientas.").length,
+    ).toBeGreaterThan(0);
   });
 
-  it("el plan vigente también aclara que su precio es antes de IVA", () => {
+  it("ya no menciona IVA", () => {
     render(<SuscripcionPage />);
 
-    expect(screen.getByText("$199.00 / mes + IVA")).toBeInTheDocument();
+    expect(screen.queryByText(/IVA/)).not.toBeInTheDocument();
+    expect(screen.getByText("$199.00 / mes")).toBeInTheDocument();
   });
+});
 
-  it("usa la tasa que manda el backend, no un 16% fijo", () => {
+describe("Botones de plan con suscripción recurrente", () => {
+  function conSuscripcion(extra: Partial<SuscripcionOut>) {
     mockApiPorRuta({
-      "/api/pagos/catalogo": { ...CATALOGO, iva_tasa: "0.08" },
-      "/api/pagos/suscripcion": SUSCRIPCION,
+      "/api/pagos/catalogo": { ...CATALOGO, planes: [PLAN_STARTER, PLAN_PRO] },
+      "/api/pagos/suscripcion": { ...SUSCRIPCION, ...extra },
       "/api/pagos/historial": [],
     });
+  }
 
+  it("sin suscripción recurrente se puede renovar a mano y contratar otro plan", () => {
+    conSuscripcion({});
     render(<SuscripcionPage />);
 
-    expect(screen.getByText("precios más IVA (8%)")).toBeInTheDocument();
-    expect(screen.queryByText(/16%/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Renovar ahora/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Contratar ahora/ })).toBeEnabled();
   });
 
-  it("mientras el catálogo no cargó, no muestra una leyenda a medias", () => {
-    mockApiPorRuta({ "/api/pagos/suscripcion": SUSCRIPCION, "/api/pagos/historial": [] });
-
+  it("con renovación automática el plan actual no se renueva a mano y los demás no se contratan", () => {
+    conSuscripcion({ suscripcion_recurrente: true });
     render(<SuscripcionPage />);
 
-    expect(screen.queryByText(/más IVA/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Se renueva automáticamente" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Contratar ahora/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Renovar ahora/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/se cobra sola el/)).toBeInTheDocument();
+  });
+
+  it("con la cancelación programada lo dice en el botón y en el estado", () => {
+    conSuscripcion({ suscripcion_recurrente: true, cancela_al_vencer: true });
+    render(<SuscripcionPage />);
+
+    expect(screen.getByRole("button", { name: "Cancelación programada" })).toBeDisabled();
+    expect(screen.getByText(/cancelada · vigente hasta/)).toBeInTheDocument();
   });
 });

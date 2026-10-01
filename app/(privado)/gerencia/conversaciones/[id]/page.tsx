@@ -141,6 +141,7 @@ export default function ConversacionDetalleGerenciaPage() {
         <MensajeComposer
           status={data.status}
           enviarUrl={`${base}/${encodeURIComponent(data.id)}/mensajes`}
+          tomarUrl={`${base}/${encodeURIComponent(data.id)}/tomar`}
           volverIaUrl={`${base}/${encodeURIComponent(data.id)}/volver-a-ia`}
           onCambio={() => recargar(true)}
         />

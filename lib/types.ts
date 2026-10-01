@@ -85,6 +85,29 @@ export interface ReenviarCodigoIn {
   email: string;
 }
 
+/** Body de POST /api/auth/recuperar/solicitar. */
+export interface SolicitarRecuperacionIn {
+  email: string;
+}
+
+/**
+ * Respuesta de POST /api/auth/recuperar/solicitar. Siempre la misma, exista
+ * o no la cuenta (anti-enumeración): no confirma que se haya mandado nada.
+ */
+export interface RecuperacionSolicitadaOut {
+  expira_en_minutos: number;
+  reenviar_en_segundos: number;
+}
+
+/** Body de POST /api/auth/recuperar/restablecer (responde 204 sin cuerpo). */
+export interface RestablecerPasswordIn {
+  email: string;
+  /** Exactamente 6 dígitos. */
+  codigo: string;
+  /** 8 a 128 caracteres, misma regla que el registro. */
+  password: string;
+}
+
 export interface LoginIn {
   email: string;
   password: string;
@@ -1353,4 +1376,43 @@ export interface ReservaAuditoriaOut {
   servicio_nombre: string;
   cliente_nombre: string | null;
   creado_en: string;
+}
+
+// ------------------------------------------------------------
+// Reportes de incidencias (routers/incidencias.py, gerencia_incidencias.py)
+// ------------------------------------------------------------
+export type EstadoReporte = "abierto" | "en_revision" | "resuelto";
+
+/** Respuesta de POST /api/incidencias: solo el acuse. */
+export interface ReporteCreadoOut {
+  id: string;
+}
+
+export interface ReporteGerenciaOut {
+  id: string;
+  tenant_id: string | null;
+  nombre_negocio: string | null;
+  email: string;
+  resumen: string;
+  descripcion: string;
+  /** Lo que mandó el navegador; ver lib/contexto-reporte.ts. */
+  contexto: {
+    ruta?: string;
+    navegador?: string;
+    sistema_operativo?: string;
+    user_agent?: string;
+    idioma?: string;
+    zona_horaria?: string;
+    pantalla?: { ancho: number; alto: number };
+    ventana?: { ancho: number; alto: number };
+  };
+  estado: EstadoReporte;
+  creado_en: string;
+  atendido_por: string | null;
+  atendido_en: string | null;
+  tiene_adjunto: boolean;
+}
+
+export interface ReporteEstadoIn {
+  estado: EstadoReporte;
 }

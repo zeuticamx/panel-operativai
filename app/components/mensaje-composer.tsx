@@ -1,31 +1,35 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import { Bot, Send } from "lucide-react";
+import { Bot, Hand, Send } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { Aviso, Boton, inputClass } from "@/app/components/ui";
 
 /**
- * Compositor de respuesta manual + botón "Volver a IA" (handoff humano).
+ * Compositor de respuesta manual + botones "Tomar conversación" y "Volver a
+ * IA" (handoff humano en ambos sentidos).
  *
  * Reusado tanto en la conversación tenant-scoped (/conversaciones/{id})
  * como en la de gerencia de plataforma (/gerencia/conversaciones/{id}) —
- * ambas exponen los mismos dos endpoints, solo cambia la base de la ruta.
+ * ambas exponen los mismos tres endpoints, solo cambia la base de la ruta.
  */
 export function MensajeComposer({
   status,
   enviarUrl,
+  tomarUrl,
   volverIaUrl,
   onCambio,
 }: {
   status: string;
   enviarUrl: string;
+  tomarUrl: string;
   volverIaUrl: string;
   onCambio: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [volviendo, setVolviendo] = useState(false);
+  const [tomando, setTomando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const transferida = status === "transferred";
@@ -43,6 +47,20 @@ export function MensajeComposer({
       setError(mensajeDeError(e, "No se pudo enviar el mensaje."));
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const tomar = async () => {
+    if (tomando) return;
+    setTomando(true);
+    setError(null);
+    try {
+      await apiFetch(tomarUrl, { method: "POST" });
+      onCambio();
+    } catch (e) {
+      setError(mensajeDeError(e, "No se pudo tomar la conversación."));
+    } finally {
+      setTomando(false);
     }
   };
 
@@ -69,11 +87,24 @@ export function MensajeComposer({
 
   if (!transferida) {
     return (
-      <div className="border-t border-bg-700 px-4 py-3">
+      <div className="flex flex-col gap-2 border-t border-bg-700 px-4 py-3">
+        {error && <Aviso tipo="error">{error}</Aviso>}
         <Aviso tipo="info">
           El asistente de IA tiene el control de esta conversación. Para responder
-          manualmente, primero hay que transferirla a un humano.
+          manualmente, toma la conversación: la IA dejará de contestar hasta que
+          se la devuelvas.
         </Aviso>
+        <div>
+          <Boton
+            variante="secundario"
+            onClick={() => void tomar()}
+            loading={tomando}
+            className="min-h-8"
+          >
+            <Hand size={13} aria-hidden />
+            Tomar conversación
+          </Boton>
+        </div>
       </div>
     );
   }

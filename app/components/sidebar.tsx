@@ -33,6 +33,7 @@ import { setStoredTheme, useStoredTheme } from "@/lib/theme";
 import { AvatarPerfil } from "./avatar-perfil";
 import { esGerenciaPlataforma } from "./gerencia";
 import { usePlan } from "./plan-context";
+import { ReportarProblema } from "./reportar-problema";
 import { ConfirmDialog } from "./ui";
 import { useUsuario } from "./usuario-context";
 
@@ -315,6 +316,7 @@ export function Sidebar() {
               )}
             </Link>
           )}
+          <ReportarProblema expandido={expandido} />
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}

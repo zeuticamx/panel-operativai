@@ -33,6 +33,7 @@ const COLUMNA_HERRAMIENTA: Record<Herramienta, keyof PlanOut> = {
 
 const LEYENDA_NETOS = "Los precios son Netos";
 const LEYENDA_CREDITOS = "Los créditos son llamadas del agente al uso de herramientas.";
+const LEYENDA_LEADS= "Los leads son conversaciones que pasan a travez de Meta.";
 
 const noop = () => () => {};
 
@@ -189,6 +190,7 @@ export default function SuscripcionPage() {
                 mensuales entran
               </p>
               <p className="mt-1 font-mono text-[11px] text-text-600">{LEYENDA_CREDITOS}</p>
+              <p className="mt-1 font-mono text-[11px] text-text-600">{LEYENDA_LEADS}</p>
             </header>
 
             {catalogo.loading && !catalogo.data ? (

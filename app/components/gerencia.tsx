@@ -29,6 +29,7 @@ const TABS = [
   { href: "/gerencia/planes", label: "Planes", exacto: false },
   { href: "/gerencia/consumo", label: "Consumo", exacto: false },
   { href: "/gerencia/cohortes", label: "Retención", exacto: false },
+  { href: "/gerencia/incidencias", label: "Reportes", exacto: false },
   { href: "/gerencia/auditoria", label: "Bitácora", exacto: false },
   { href: "/gerencia/equipo", label: "Equipo", exacto: false },
 ];

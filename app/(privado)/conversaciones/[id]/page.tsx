@@ -189,6 +189,7 @@ export default function ConversacionDetallePage() {
         <MensajeComposer
           status={data.status}
           enviarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/mensajes`}
+          tomarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/tomar`}
           volverIaUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/volver-a-ia`}
           onCambio={() => recargar(true)}
         />

@@ -206,6 +206,13 @@ export default function LoginPage() {
           />
         </Campo>
 
+        <Link
+          href="/recuperar"
+          className="-mt-2 self-end text-xs text-text-400 underline-offset-2 hover:text-text-100 hover:underline"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+
         {error && <Aviso tipo="error">{error}</Aviso>}
 
         <Boton

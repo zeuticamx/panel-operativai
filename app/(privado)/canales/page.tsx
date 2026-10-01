@@ -12,6 +12,7 @@ import type {
   CanalOut,
   ConectarMetaOut,
   ConectarWhatsAppOut,
+  DesconectarCanalOut,
   IniciarNeuroApiConnectOut,
   PaginaDisponible,
 } from "@/lib/types";
@@ -205,8 +206,17 @@ function Contenido() {
     setDesconectando(true);
     setErrorFlujo(null);
     try {
-      await apiFetch(`/api/canales/${desconectar}`, { method: "DELETE" });
-      setAviso(`${etiquetaCanal(desconectar)} desconectado.`);
+      const r = await apiFetch<DesconectarCanalOut>(`/api/canales/${desconectar}`, {
+        method: "DELETE",
+      });
+      // NeuroAPI no tiene endpoint de baja: el agente ya no contesta, pero la
+      // línea sigue vinculada a la app hasta que se retire el acceso en Meta.
+      setAviso(
+        r?.proveedor === "neuroapi"
+          ? `${etiquetaCanal(desconectar)} desconectado: tu agente ya no responde en este número. ` +
+              "Para desvincularlo por completo, retira el acceso de la app en tu Meta Business Manager."
+          : `${etiquetaCanal(desconectar)} desconectado.`,
+      );
       setDesconectar(null);
       canales.recargar(true);
     } catch (e) {

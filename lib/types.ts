@@ -158,6 +158,15 @@ export interface ConectarWhatsAppOut {
   phone_number_id: string;
 }
 
+/**
+ * DELETE /api/canales/{channel_type}. `proveedor` es el bsp_provider de la
+ * línea ("meta", "neuroapi", "kontesta"), o null si no tenía credenciales.
+ */
+export interface DesconectarCanalOut {
+  desconectado: string;
+  proveedor: string | null;
+}
+
 /** POST /api/canales/whatsapp/neuroapi/iniciar — crea una NeuroAPI Connect Session. */
 export interface IniciarNeuroApiConnectOut {
   connect_url: string;

@@ -15,7 +15,7 @@
  * todo lo que sí es observable: qué se le pide al backend y qué se muestra
  * en pantalla según la respuesta.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import CanalesPage from "@/app/(privado)/canales/page";
@@ -110,6 +110,43 @@ test("al volver con ?whatsapp_neuroapi=retorno se avisa y se recarga el estado r
     // Una al montar useApi + una del recargar(true) del efecto de retorno.
     expect(llamadasACanales.length).toBeGreaterThanOrEqual(2);
   });
+});
+
+async function desconectarWhatsApp(proveedor: string | null) {
+  (global.fetch as jest.Mock).mockImplementation((url: string, opciones?: RequestInit) => {
+    const responder = (data: unknown) =>
+      Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify(data) });
+    if (url.includes("/api/canales/whatsapp") && opciones?.method === "DELETE") {
+      return responder({ desconectado: "whatsapp", proveedor });
+    }
+    if (url.endsWith("/api/canales")) {
+      return responder(
+        SIN_CANALES.map((c) =>
+          c.channel_type === "whatsapp" ? { ...c, is_active: true, phone_number_id: "1414669871722989" } : c,
+        ),
+      );
+    }
+    return responder(null);
+  });
+
+  render(<CanalesPage />);
+
+  await userEvent.click(await screen.findByRole("button", { name: /^desconectar$/i }));
+  const dialogo = await screen.findByRole("dialog");
+  await userEvent.click(within(dialogo).getByRole("button", { name: /^desconectar$/i }));
+}
+
+test("al desconectar una línea de NeuroAPI se pide retirar el acceso en Meta", async () => {
+  await desconectarWhatsApp("neuroapi");
+
+  expect(await screen.findByText(/meta business manager/i)).toBeInTheDocument();
+});
+
+test("al desconectar una línea que no es de NeuroAPI no se menciona Meta Business Manager", async () => {
+  await desconectarWhatsApp("meta");
+
+  expect(await screen.findByText(/desconectado\.$/i)).toBeInTheDocument();
+  expect(screen.queryByText(/meta business manager/i)).not.toBeInTheDocument();
 });
 
 test("si el webhook llega después del retorno, el portal lo detecta sin recargar a mano", async () => {

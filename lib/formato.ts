@@ -41,6 +41,30 @@ export function formatoFechaHora(iso: string): string {
   });
 }
 
+/**
+ * Fecha y hora exactas (con segundos) en una zona horaria IANA concreta,
+ * con la abreviatura de la zona: "02 oct 2026, 14:35:07 GMT-6". Si la zona
+ * no es válida cae a la del navegador en vez de romper la tabla.
+ */
+export function formatoFechaHoraZona(iso: string, zona: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const opciones: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  };
+  try {
+    return d.toLocaleString(LOCALE, { ...opciones, timeZone: zona });
+  } catch {
+    return d.toLocaleString(LOCALE, opciones);
+  }
+}
+
 /** Fecha corta para listas: hora si es hoy, "dd mmm" si no. */
 export function formatoCorto(iso: string, now: number = Date.now()): string {
   const d = new Date(iso);

@@ -37,6 +37,18 @@ export function rutaParaAlerta(alerta: AlertaOut): string | null {
   return `/calendario?fecha=${y}-${m}-${dia}&reserva=${reservaId}`;
 }
 
+/** "14:32" en la hora del navegador; vacío si la fecha no es válida. */
+export function horaDeAlerta(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Alertas de conversaciones transferidas que nadie ha atendido todavía. */
+export function transferenciasPendientes(alertas: AlertaOut[]): AlertaOut[] {
+  return alertas.filter((a) => a.tipo === "conversacion_transferida" && !a.leido);
+}
+
 // Cuántas alertas se conservan en memoria durante la sesión. Es un feed en
 // vivo, no el historial completo (para eso está GET /tenants/{id}/alertas):
 // sin este tope, dejar el panel abierto varias horas iría acumulando la
@@ -130,11 +142,17 @@ export function useWebsocketAlertas(
         ].slice(0, MAX_ALERTAS),
       );
       const ruta = rutaParaAlerta(alerta);
+      const transferida = alerta.tipo === "conversacion_transferida";
       showToast(
         alerta.titulo,
-        alerta.mensaje,
+        transferida ? `${alerta.mensaje} · ${horaDeAlerta(alerta.creado_en)}` : alerta.mensaje,
         alerta.tipo,
-        ruta ? { label: "Ver detalle", onClick: () => routerRef.current.push(ruta) } : undefined,
+        ruta
+          ? {
+              label: transferida ? "Atender" : "Ver detalle",
+              onClick: () => routerRef.current.push(ruta),
+            }
+          : undefined,
       );
     });
 

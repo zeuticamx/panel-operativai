@@ -213,7 +213,7 @@ export default function PerfilVendedorPage() {
               </header>
 
               {/* Stats 2x2 */}
-              <section className="grid grid-cols-2 gap-3" aria-label="Métricas del vendedor">
+              <section data-tour="vendedor.metricas" className="grid grid-cols-2 gap-3" aria-label="Métricas del vendedor">
                 <StatCard
                   label="Leads activos"
                   value={ranking ? fmtInt.format(ranking.abiertos) : "—"}
@@ -253,7 +253,7 @@ export default function PerfilVendedorPage() {
 
               {/* Tabs */}
               <div>
-                <nav className="flex gap-1 border-b border-bg-700" aria-label="Secciones del vendedor">
+                <nav data-tour="vendedor.secciones" className="flex gap-1 border-b border-bg-700" aria-label="Secciones del vendedor">
                   {TABS.map((t) => (
                     <button
                       key={t.id}

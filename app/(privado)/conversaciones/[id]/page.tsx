@@ -15,6 +15,7 @@ import { MensajeComposer } from "@/app/components/mensaje-composer";
 import { Badge } from "@/app/components/badge";
 import { CanalBadge, StatusBadge } from "@/app/components/status";
 import { CopyButton } from "@/app/components/copy-button";
+import { BotonAyuda } from "@/app/components/recorrido";
 import { Aviso, Boton, Cargando } from "@/app/components/ui";
 import { useUsuario } from "@/app/components/usuario-context";
 
@@ -95,7 +96,7 @@ export default function ConversacionDetallePage() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-700 font-mono text-xs text-text-400">
               {iniciales(data.usuario_nombre, data.usuario_handle)}
             </div>
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div data-tour="conversacion.cabecera" className="flex min-w-0 flex-1 flex-col">
               <div className="flex min-w-0 items-center gap-2">
                 <h1 className="truncate text-sm font-medium text-text-100">{nombre}</h1>
                 <StatusBadge status={data.status} />
@@ -158,7 +159,8 @@ export default function ConversacionDetallePage() {
         </Boton>
 
         {/* Única pantalla privada con header propio en vez de PageHeader,
-            así que la campana se agrega a mano. */}
+            así que la campana y la ayuda se agregan a mano. */}
+        <BotonAyuda />
         <CentroNotificaciones />
       </header>
 
@@ -169,7 +171,7 @@ export default function ConversacionDetallePage() {
       )}
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-2xl p-6">
+        <div data-tour="conversacion.hilo" className="mx-auto w-full max-w-2xl p-6">
           {error ? (
             <Aviso tipo="error">{error}</Aviso>
           ) : !data ? (
@@ -186,13 +188,15 @@ export default function ConversacionDetallePage() {
       </div>
 
       {data && (
-        <MensajeComposer
-          status={data.status}
-          enviarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/mensajes`}
-          tomarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/tomar`}
-          volverIaUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/volver-a-ia`}
-          onCambio={() => recargar(true)}
-        />
+        <div data-tour="conversacion.composer">
+          <MensajeComposer
+            status={data.status}
+            enviarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/mensajes`}
+            tomarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/tomar`}
+            volverIaUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/volver-a-ia`}
+            onCambio={() => recargar(true)}
+          />
+        </div>
       )}
     </>
   );

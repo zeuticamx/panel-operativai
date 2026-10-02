@@ -93,7 +93,7 @@ export default function CalendarioAuditoriaPage() {
                 </p>
               </div>
 
-              <section className="flex flex-wrap items-end gap-3 rounded-md border border-bg-700 bg-bg-900 p-3">
+              <section data-tour="auditoria.filtros" className="flex flex-wrap items-end gap-3 rounded-md border border-bg-700 bg-bg-900 p-3">
                 <label className="flex flex-col gap-1 text-xs text-text-400">
                   Desde
                   <input
@@ -180,7 +180,7 @@ export default function CalendarioAuditoriaPage() {
               )}
               {auditoria.error && <Aviso tipo="error">{auditoria.error}</Aviso>}
 
-              <section className="overflow-x-auto rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="auditoria.tabla" className="overflow-x-auto rounded-md border border-bg-700 bg-bg-900">
                 {auditoria.loading && !auditoria.data ? (
                   <Cargando />
                 ) : eventos.length === 0 ? (

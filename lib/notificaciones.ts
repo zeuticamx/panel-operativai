@@ -84,7 +84,7 @@ export function showToast(
 ): void {
   const color = COLOR_POR_TIPO[tipo as TipoAlerta] ?? "#334155"; // bg-700 del portal, si el tipo no se reconoce
 
-  if (tipo === "reserva_creada") reproducirSonidoSutil();
+  if (tipo === "reserva_creada" || tipo === "conversacion_transferida") reproducirSonidoSutil();
 
   toast(titulo, {
     description: mensaje,

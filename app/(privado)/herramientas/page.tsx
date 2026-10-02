@@ -24,7 +24,9 @@ import type {
 } from "@/lib/types";
 import { formatoFechaHora } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { useUsuario } from "@/app/components/usuario-context";
 import { Badge } from "@/app/components/badge";
+import { ConsumoCreditos } from "./consumo-creditos";
 import { CopyButton } from "@/app/components/copy-button";
 import {
   Aviso,
@@ -71,6 +73,7 @@ type Formulario =
   | { modo: "editar"; herramienta: HerramientaOut };
 
 export default function HerramientasPage() {
+  const { usuario } = useUsuario();
   const herramientas = useApi<HerramientaOut[]>("/api/herramientas");
   const info = useApi<HerramientaInfoOut>("/api/herramientas/info");
 
@@ -246,7 +249,7 @@ export default function HerramientasPage() {
               </Boton>
             </section>
           ) : (
-            <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+            <section data-tour="herramientas.lista" className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
               {lista.map((h, i) => {
                 const { icono: Icono, etiqueta } = metaHerramienta(h);
                 const trabajando = ocupada === h.tool_key;
@@ -350,6 +353,13 @@ export default function HerramientasPage() {
                 );
               })}
             </section>
+          )}
+
+          {/* Auditoría de créditos: solo el propietario (el backend también lo exige) */}
+          {usuario?.role === "owner" && (
+            <ConsumoCreditos
+              herramientas={lista.map((h) => ({ clave: h.tool_key, nombre: h.display_name }))}
+            />
           )}
         </div>
       </div>

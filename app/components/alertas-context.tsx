@@ -1,8 +1,10 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { getAccessToken } from "@/lib/auth";
 import {
+  transferenciasPendientes,
   useWebsocketAlertas,
   type UseWebsocketAlertasResult,
 } from "@/lib/use-websocket-alertas";
@@ -31,6 +33,20 @@ const Ctx = createContext<UseWebsocketAlertasResult>(VACIO);
 export function AlertasProvider({ children }: { children: ReactNode }) {
   const { usuario } = useUsuario();
   const estado = useWebsocketAlertas(usuario?.tenant_id ?? null, getAccessToken());
+  const pathname = usePathname();
+  const { alertas, marcarComoLeida } = estado;
+
+  // Abrir la conversación transferida es "atenderla": se marca leída para que
+  // el badge del sidebar baje solo, sin que haya que ir a la campana.
+  useEffect(() => {
+    const m = pathname.match(/^\/conversaciones\/([^/]+)$/);
+    if (!m) return;
+    const id = decodeURIComponent(m[1]);
+    for (const a of transferenciasPendientes(alertas)) {
+      if (a.datos?.conversation_id === id) marcarComoLeida(a.id).catch(() => {});
+    }
+  }, [pathname, alertas, marcarComoLeida]);
+
   return <Ctx.Provider value={estado}>{children}</Ctx.Provider>;
 }
 

@@ -60,6 +60,7 @@ export function CentroNotificaciones() {
       <Dialog.Trigger asChild>
         <button
           type="button"
+          data-tour="pagina.notificaciones"
           aria-label={
             noLeidosCount > 0 ? `Notificaciones, ${noLeidosCount} sin leer` : "Notificaciones"
           }

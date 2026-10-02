@@ -201,6 +201,36 @@ export interface HerramientaInfoOut {
   correo_servicio: string;
 }
 
+// ---- Auditoría de consumo de créditos (schemas.py: ConsumoItemOut…) ----
+export interface ConsumoItemOut {
+  id: string;
+  herramienta: string;
+  /** Decimal serializado como string. */
+  creditos: string;
+  bolsa: "plan" | "comprados" | null;
+  /** ISO con el offset de la zona horaria del negocio. */
+  creado_en: string;
+  /** Enmascarado ("+521 •••• 4567"); null = N/A. */
+  whatsapp: string | null;
+  canal: string | null;
+}
+
+export interface ConsumoPaginaOut {
+  items: ConsumoItemOut[];
+  total: number;
+  limite: number;
+  offset: number;
+  zona_horaria: string;
+}
+
+export interface ConsumoResumenOut {
+  total_creditos: string;
+  por_herramienta: { herramienta: string; creditos: string }[];
+  /** dia: "YYYY-MM-DD" en la zona del negocio. */
+  por_dia: { dia: string; creditos: string }[];
+  zona_horaria: string;
+}
+
 export type HerramientaTipo = "google_sheets" | "google_docs";
 
 export interface HerramientaOut {

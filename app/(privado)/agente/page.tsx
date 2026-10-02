@@ -163,7 +163,7 @@ export default function AgentePage() {
 
           <div className="grid gap-4 lg:grid-cols-3">
             {/* Columna principal: prompt */}
-            <section className="flex flex-col gap-4 rounded-md border border-bg-700 bg-bg-800 p-4 lg:col-span-2">
+            <section data-tour="agente.identidad" className="flex flex-col gap-4 rounded-md border border-bg-700 bg-bg-800 p-4 lg:col-span-2">
               <Campo id="agent_name" label="Nombre del agente" hint="Cómo se presenta ante tus clientes">
                 <input
                   id="agent_name"
@@ -219,7 +219,7 @@ export default function AgentePage() {
             </section>
 
             {/* Columna lateral: parámetros */}
-            <section className="flex flex-col gap-5 rounded-md border border-bg-700 bg-bg-800 p-4">
+            <section data-tour="agente.modelo" className="flex flex-col gap-5 rounded-md border border-bg-700 bg-bg-800 p-4">
               {/* Activo */}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col">

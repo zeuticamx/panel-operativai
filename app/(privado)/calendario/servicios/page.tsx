@@ -91,7 +91,7 @@ export default function CalendarioServiciosPage() {
               {catalogo.error && <Aviso tipo="error">{catalogo.error}</Aviso>}
 
               {gerencia && (
-                <section className="flex flex-wrap items-end gap-2 rounded-md border border-bg-700 bg-bg-900 p-3">
+                <section data-tour="servicios.form" className="flex flex-wrap items-end gap-2 rounded-md border border-bg-700 bg-bg-900 p-3">
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="serv-nombre" className="text-xs text-text-400">
                       Nombre
@@ -145,7 +145,7 @@ export default function CalendarioServiciosPage() {
                 </section>
               )}
 
-              <section className="rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="servicios.lista" className="rounded-md border border-bg-700 bg-bg-900">
                 {catalogo.loading && !catalogo.data ? (
                   <Cargando />
                 ) : (catalogo.data ?? []).length === 0 ? (

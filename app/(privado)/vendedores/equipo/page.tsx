@@ -200,7 +200,7 @@ export default function EquipoPage() {
           ) : (
             <>
               {/* Servicios */}
-              <section className="rounded-md border border-bg-700 bg-bg-900 p-4">
+              <section data-tour="equipo.servicios" className="rounded-md border border-bg-700 bg-bg-900 p-4">
                 <header className="mb-3">
                   <h2 className="text-sm font-medium text-text-100">Servicios del negocio</h2>
                   <p className="font-mono text-[11px] text-text-600">
@@ -233,7 +233,7 @@ export default function EquipoPage() {
               </section>
 
               {/* Estrategia */}
-              <section className="rounded-md border border-bg-700 bg-bg-900 p-4">
+              <section data-tour="equipo.reparto" className="rounded-md border border-bg-700 bg-bg-900 p-4">
                 <header className="mb-3 flex items-center gap-2">
                   <Shuffle size={14} className="text-text-400" aria-hidden />
                   <div>
@@ -312,7 +312,7 @@ export default function EquipoPage() {
                   )}
                 </section>
               ) : (
-                <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+                <section data-tour="equipo.lista" className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                   <header className="flex items-center justify-between border-b border-bg-700 px-4 py-3">
                     <div>
                       <h2 className="text-sm font-medium text-text-100">Equipo</h2>

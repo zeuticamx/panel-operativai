@@ -160,7 +160,7 @@ export default function CalendarioCorteDiarioPage() {
                 </p>
               </div>
 
-              <section className="flex flex-wrap items-end gap-3 rounded-md border border-bg-700 bg-bg-900 p-3">
+              <section data-tour="corte.filtros" className="flex flex-wrap items-end gap-3 rounded-md border border-bg-700 bg-bg-900 p-3">
                 <label className="flex flex-col gap-1 text-xs text-text-400">
                   Fecha
                   <input
@@ -210,7 +210,7 @@ export default function CalendarioCorteDiarioPage() {
                 />
               </div>
 
-              <section className="overflow-x-auto rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="corte.tabla" className="overflow-x-auto rounded-md border border-bg-700 bg-bg-900">
                 {corte.loading && !corte.data ? (
                   <Cargando />
                 ) : !corte.data || corte.data.servicios.length === 0 ? (

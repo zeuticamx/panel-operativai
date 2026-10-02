@@ -32,6 +32,8 @@ import { bloqueoDePantalla } from "@/lib/herramientas-plan";
 import { setStoredTheme, useStoredTheme } from "@/lib/theme";
 import { AvatarPerfil } from "./avatar-perfil";
 import { esGerenciaPlataforma } from "./gerencia";
+import { transferenciasPendientes } from "@/lib/use-websocket-alertas";
+import { useAlertas } from "./alertas-context";
 import { usePlan } from "./plan-context";
 import { ReportarProblema } from "./reportar-problema";
 import { ConfirmDialog } from "./ui";
@@ -64,6 +66,8 @@ export function Sidebar() {
   const isLight = theme === "light";
   const { usuario } = useUsuario();
   const { acceso } = usePlan();
+  const { alertas } = useAlertas();
+  const pendientes = transferenciasPendientes(alertas).length;
   const fotoUrl = useFotoPerfil(usuario?.foto_version);
   const nombrePerfil =
     [usuario?.nombres, usuario?.apellido_paterno].filter(Boolean).join(" ") || usuario?.email || "";
@@ -162,7 +166,7 @@ export function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-0.5 px-2" aria-label="Principal">
+        <nav data-tour="nav.principal" className="flex flex-1 flex-col gap-0.5 px-2" aria-label="Principal">
           {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             // Fuera del plan el link sigue ahí (lleva a la vista que explica
@@ -183,6 +187,15 @@ export function Sidebar() {
               >
                 <Icon size={16} className="shrink-0" aria-hidden />
                 {expandido && <span className="flex-1">{label}</span>}
+                {href === "/conversaciones" && pendientes > 0 && (
+                  <span
+                    role="status"
+                    aria-label={`${pendientes} conversaciones esperando atención humana`}
+                    className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] leading-none font-medium text-white"
+                  >
+                    {pendientes > 9 ? "9+" : pendientes}
+                  </span>
+                )}
                 {expandido && bloqueado && (
                   <Lock size={12} className="shrink-0 text-text-600" aria-label="No incluido en tu plan" />
                 )}

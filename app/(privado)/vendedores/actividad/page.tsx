@@ -152,7 +152,7 @@ export default function ActividadPage() {
                     />
                   </div>
 
-                  <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+                  <section data-tour="actividad.por-vendedor" className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                     <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
                       <Route size={14} className="text-text-400" aria-hidden />
                       <div>
@@ -267,7 +267,7 @@ export default function ActividadPage() {
               )}
 
               {/* Visitas recientes */}
-              <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="actividad.visitas" className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                 <header className="flex flex-wrap items-center gap-2 border-b border-bg-700 px-4 py-3">
                   <div className="mr-auto">
                     <h2 className="text-sm font-medium text-text-100">Visitas recientes</h2>

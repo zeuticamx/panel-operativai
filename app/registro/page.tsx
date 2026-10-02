@@ -216,7 +216,7 @@ export default function RegistroPage() {
           </button>
         }
       >
-        <form onSubmit={handleCodigo} className="mt-8 flex flex-col gap-4" noValidate>
+        <form data-tour="auth.form" onSubmit={handleCodigo} className="mt-8 flex flex-col gap-4" noValidate>
           <Campo id="codigo" label="Código de verificación">
             <input
               id="codigo"
@@ -284,7 +284,7 @@ export default function RegistroPage() {
         </>
       }
     >
-      <form onSubmit={handleDatos} className="mt-8 flex flex-col gap-4" noValidate>
+      <form data-tour="auth.form" onSubmit={handleDatos} className="mt-8 flex flex-col gap-4" noValidate>
         <Campo id="nombre_negocio" label="Nombre del negocio" error={errorNegocio}>
           <input
             id="nombre_negocio"

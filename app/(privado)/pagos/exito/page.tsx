@@ -104,7 +104,7 @@ function Contenido() {
             </>
           )}
 
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <div data-tour="pagos.acciones" className="mt-2 flex flex-wrap items-center justify-center gap-2">
             <Link
               href="/dashboard"
               className="rounded-md bg-bg-800 px-3 py-1.5 text-xs font-medium text-text-100 hover:bg-bg-700"

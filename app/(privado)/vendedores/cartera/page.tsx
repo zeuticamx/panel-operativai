@@ -164,7 +164,7 @@ function Cartera() {
             />
           </div>
 
-          <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+          <section data-tour="cartera.lista" className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
             <header className="flex flex-wrap items-center gap-2 border-b border-bg-700 px-4 py-3">
               <div className="mr-auto">
                 <h2 className="text-sm font-medium text-text-100">Cartera de campo</h2>

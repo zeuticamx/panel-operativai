@@ -218,7 +218,7 @@ export default function PreferenciasPage() {
           ) : (
             <>
               {/* Foto */}
-              <section className="flex flex-col gap-3 rounded-md border border-bg-700 bg-bg-900 p-4">
+              <section data-tour="preferencias.foto" className="flex flex-col gap-3 rounded-md border border-bg-700 bg-bg-900 p-4">
                 <header>
                   <h2 className="text-sm font-medium text-text-100">Foto de perfil</h2>
                   <p className="font-mono text-[11px] text-text-600">
@@ -262,7 +262,7 @@ export default function PreferenciasPage() {
               </section>
 
               {/* Datos */}
-              <form
+              <form data-tour="preferencias.perfil"
                 onSubmit={guardar}
                 noValidate
                 className="flex flex-col gap-4 rounded-md border border-bg-700 bg-bg-900 p-4"
@@ -400,7 +400,7 @@ export default function PreferenciasPage() {
               </form>
 
               {/* Apariencia (la misma que el desplegable del sidebar) */}
-              <section className="flex items-center justify-between gap-3 rounded-md border border-bg-700 bg-bg-900 p-4">
+              <section data-tour="preferencias.tema" className="flex items-center justify-between gap-3 rounded-md border border-bg-700 bg-bg-900 p-4">
                 <span className="flex items-center gap-2 text-sm text-text-100">
                   {theme === "light" ? <Sun size={14} aria-hidden /> : <Moon size={14} aria-hidden />}
                   Tema {theme === "light" ? "claro" : "oscuro"}

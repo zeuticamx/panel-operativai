@@ -90,7 +90,7 @@ export default function ConversacionesPage() {
       />
 
       {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-bg-700 bg-bg-900 px-4 py-2">
+      <div data-tour="conversaciones.filtros" className="flex flex-wrap items-center gap-2 border-b border-bg-700 bg-bg-900 px-4 py-2">
         <div className="relative min-w-0 flex-1 basis-56">
           <Search
             size={13}
@@ -184,7 +184,7 @@ export default function ConversacionesPage() {
         )}
 
         {data && data.length > 0 && (
-          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+          <div data-tour="conversaciones.lista" className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
             {data.map((c) => (
               <ConversationRow key={c.id} conversacion={c} now={now} />
             ))}
@@ -194,7 +194,7 @@ export default function ConversacionesPage() {
 
       {/* Paginación */}
       {(pagina > 0 || haySiguiente) && (
-        <div className="flex items-center justify-between border-t border-bg-700 bg-bg-900 px-4 py-2">
+        <div data-tour="conversaciones.paginacion" className="flex items-center justify-between border-t border-bg-700 bg-bg-900 px-4 py-2">
           <Boton
             variante="secundario"
             onClick={() => setPagina((p) => Math.max(0, p - 1))}

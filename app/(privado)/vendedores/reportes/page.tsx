@@ -197,7 +197,7 @@ export default function ReportesPage() {
               <ModuloApagado tenantId={servicios.tenantId} onActivado={() => servicios.recargar()} />
             )
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div data-tour="reportes.graficas" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <ReporteCard
                 titulo="Embudo por etapa"
                 descripcion="leads actuales de los dados de alta en el rango"

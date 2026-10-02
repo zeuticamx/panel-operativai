@@ -291,7 +291,7 @@ export default function VendedoresPage() {
               <AlertasStats />
 
               {/* Embudo visual */}
-              <section className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
+              <section data-tour="vendedores.embudo" className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
                 <header className="mb-3">
                   <h2 className="text-sm font-medium text-text-100">
                     Embudo visual
@@ -314,7 +314,7 @@ export default function VendedoresPage() {
               </section>
 
               {/* Ranking */}
-              <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="vendedores.ranking" className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                 <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
                   <Trophy size={14} className="text-text-400" aria-hidden />
                   <div>
@@ -407,7 +407,7 @@ export default function VendedoresPage() {
               </section>
 
               {/* Leads */}
-              <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="vendedores.clientes" className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                 <header className="flex flex-wrap items-center gap-2 border-b border-bg-700 px-4 py-3">
                   <div className="mr-auto">
                     <h2 className="text-sm font-medium text-text-100">

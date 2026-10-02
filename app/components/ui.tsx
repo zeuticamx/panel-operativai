@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BotonAyuda } from "./recorrido";
 
 // Import diferido: ui.tsx también lo usan las pantallas públicas (login,
 // registro), que no dibujan PageHeader. Importándolo de forma normal, el
@@ -151,10 +152,19 @@ export function PageHeader({
     <header className="flex min-h-12 flex-wrap items-center justify-between gap-3 border-b border-bg-700 px-6 py-3">
       <div className="flex min-w-0 items-center gap-3">
         <h1 className="truncate text-sm font-medium text-text-100">{titulo}</h1>
-        {sub && <span className="font-mono text-xs text-text-600">{sub}</span>}
+        {sub && (
+          <span data-tour="pagina.secciones" className="font-mono text-xs text-text-600">
+            {sub}
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {acciones}
+        {acciones && (
+          <div data-tour="pagina.acciones" className="flex flex-wrap items-center gap-2">
+            {acciones}
+          </div>
+        )}
+        <BotonAyuda />
         <CentroNotificaciones />
       </div>
     </header>

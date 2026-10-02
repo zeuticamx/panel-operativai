@@ -243,7 +243,7 @@ function Contenido() {
               {proveedores.error && <Aviso tipo="error">{proveedores.error}</Aviso>}
               {reservas.error && <Aviso tipo="error">{reservas.error}</Aviso>}
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div data-tour="calendario.metricas" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <StatCard
                   label="Reservas del día"
                   value={reservas.data ? fmtInt.format(activas.length) : "—"}
@@ -269,7 +269,7 @@ function Contenido() {
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 rounded-md border border-bg-700 bg-bg-900 px-3 py-2">
+              <div data-tour="calendario.fecha" className="flex flex-wrap items-center gap-2 rounded-md border border-bg-700 bg-bg-900 px-3 py-2">
                 <Boton
                   variante="fantasma"
                   onClick={() => setFecha((f) => sumarDias(f, -1))}

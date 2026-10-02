@@ -274,7 +274,7 @@ function Contenido() {
           )}
 
           {/* Estado por canal */}
-          <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+          <section data-tour="canales.lista" className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
             {CANALES.map((tipo, i) => {
               const c = porTipo.get(tipo);
               const conectado = Boolean(c?.is_active);

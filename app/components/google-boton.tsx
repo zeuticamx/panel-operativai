@@ -83,7 +83,7 @@ export function GoogleBoton({
   if (!GOOGLE_CLIENT_ID) return null;
 
   return (
-    <div
+    <div data-tour="auth.google"
       ref={contenedorRef}
       className={cn("flex justify-center", disabled && "pointer-events-none opacity-50", className)}
     />

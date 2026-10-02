@@ -89,7 +89,7 @@ export default function CalendarioProveedoresPage() {
               {proveedores.error && <Aviso tipo="error">{proveedores.error}</Aviso>}
 
               {gerencia && (
-                <section className="flex flex-wrap items-end gap-2 rounded-md border border-bg-700 bg-bg-900 p-3">
+                <section data-tour="proveedores.form" className="flex flex-wrap items-end gap-2 rounded-md border border-bg-700 bg-bg-900 p-3">
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="prov-nombre" className="text-xs text-text-400">
                       Nombre
@@ -127,7 +127,7 @@ export default function CalendarioProveedoresPage() {
                 </section>
               )}
 
-              <section className="rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="proveedores.lista" className="rounded-md border border-bg-700 bg-bg-900">
                 {proveedores.loading && !proveedores.data ? (
                   <Cargando />
                 ) : (proveedores.data ?? []).length === 0 ? (

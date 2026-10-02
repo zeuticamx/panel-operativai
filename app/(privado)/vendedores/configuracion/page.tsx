@@ -135,7 +135,7 @@ export default function ConfiguracionEmbudoPage() {
               </Aviso>
 
               {/* Etapas */}
-              <section className="rounded-md border border-bg-700 bg-bg-900 p-4">
+              <section data-tour="configuracion.etapas" className="rounded-md border border-bg-700 bg-bg-900 p-4">
                 <header className="mb-3 flex items-center gap-2">
                   <Layers size={14} className="text-text-400" aria-hidden />
                   <div>
@@ -167,7 +167,7 @@ export default function ConfiguracionEmbudoPage() {
               </section>
 
               {/* Transiciones */}
-              <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+              <section data-tour="configuracion.transiciones" className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
                 <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
                   <GitBranch size={14} className="text-text-400" aria-hidden />
                   <div>

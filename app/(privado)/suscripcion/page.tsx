@@ -182,7 +182,7 @@ export default function SuscripcionPage() {
           </div>
 
           {/* Planes */}
-          <section className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
+          <section data-tour="suscripcion.planes" className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
             <header className="mb-3">
               <h2 className="text-sm font-medium text-text-100">Planes</h2>
               <p className="font-mono text-[11px] text-text-600">
@@ -221,7 +221,7 @@ export default function SuscripcionPage() {
           </section>
 
           {/* Créditos */}
-          <section className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
+          <section data-tour="suscripcion.creditos" className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">
             <header className="mb-3 flex items-center gap-2">
               <Coins size={14} className="text-text-400" aria-hidden />
               <div>
@@ -269,7 +269,7 @@ export default function SuscripcionPage() {
           </section>
 
           {/* Historial */}
-          <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+          <section data-tour="suscripcion.historial" className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
             <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
               <CreditCard size={14} className="text-text-400" aria-hidden />
               <div>

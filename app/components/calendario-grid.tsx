@@ -74,7 +74,7 @@ export function CalendarioGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-bg-700">
+    <div data-tour="calendario.agenda" className="overflow-x-auto rounded-md border border-bg-700">
       <table className="w-full min-w-[640px] border-collapse text-xs">
         <thead>
           <tr className="border-b border-bg-700 bg-bg-800">

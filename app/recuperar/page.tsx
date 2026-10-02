@@ -199,7 +199,7 @@ export default function RecuperarPage() {
           </button>
         }
       >
-        <form onSubmit={handleRestablecer} className="mt-8 flex flex-col gap-4" noValidate>
+        <form data-tour="auth.form" onSubmit={handleRestablecer} className="mt-8 flex flex-col gap-4" noValidate>
           <Campo
             id="codigo"
             label="Código"
@@ -311,7 +311,7 @@ export default function RecuperarPage() {
         </>
       }
     >
-      <form onSubmit={handleCorreo} className="mt-8 flex flex-col gap-4" noValidate>
+      <form data-tour="auth.form" onSubmit={handleCorreo} className="mt-8 flex flex-col gap-4" noValidate>
         <Campo id="email" label="Correo de tu cuenta">
           <input
             id="email"

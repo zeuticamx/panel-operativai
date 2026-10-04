@@ -57,7 +57,7 @@ export function VendedoresTabs() {
               "rounded px-2.5 py-1 text-xs font-medium",
               activo
                 ? "bg-bg-800 text-text-100"
-                : "text-text-400 hover:bg-bg-800 hover:text-text-100",
+                : "text-text-400 hover:bg-hover hover:text-text-100",
             )}
           >
             {t.label}

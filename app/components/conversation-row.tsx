@@ -42,7 +42,7 @@ export function ConversationRow({
     <Link
       href={`${hrefBase}/${c.id}${hrefQuery}`}
       className={cn(
-        "flex w-full items-center gap-3 border-b border-bg-800 px-3 text-left hover:bg-bg-800 focus:outline-none focus-visible:bg-bg-800",
+        "flex w-full items-center gap-3 border-b border-bg-800 px-3 text-left hover:bg-hover focus:outline-none focus-visible:bg-bg-800",
         compact ? "py-2" : "py-2.5",
         active && "bg-bg-800",
       )}

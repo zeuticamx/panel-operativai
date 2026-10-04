@@ -161,7 +161,7 @@ export function ReservaDetalle({
                 <button
                   type="button"
                   onClick={() => setHistorialAbierto(true)}
-                  className="cursor-pointer rounded p-1 text-text-400 hover:bg-bg-800 hover:text-text-100"
+                  className="cursor-pointer rounded p-1 text-text-400 hover:bg-hover hover:text-text-100"
                   aria-label="Ver historial de la cita"
                   title="Ver historial de la cita"
                 >

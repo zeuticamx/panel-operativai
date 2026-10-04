@@ -171,7 +171,7 @@ export default function DashboardPage() {
                 </div>
                 <Link
                   href="/conversaciones"
-                  className="inline-flex items-center gap-1 rounded border border-bg-700 px-2 py-1 text-[11px] font-medium text-text-100 hover:bg-bg-800"
+                  className="inline-flex items-center gap-1 rounded border border-bg-700 px-2 py-1 text-[11px] font-medium text-text-100 hover:bg-hover"
                 >
                   Ver todas
                   <ArrowRight size={12} aria-hidden />
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                   </p>
                   <Link
                     href="/canales"
-                    className="mt-2 inline-flex items-center gap-1 rounded-md border border-bg-700 px-3 py-1.5 text-xs font-medium text-text-100 hover:bg-bg-800"
+                    className="mt-2 inline-flex items-center gap-1 rounded-md border border-bg-700 px-3 py-1.5 text-xs font-medium text-text-100 hover:bg-hover"
                   >
                     Conectar un canal
                     <ArrowRight size={12} aria-hidden />

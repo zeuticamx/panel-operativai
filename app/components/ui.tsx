@@ -63,9 +63,9 @@ type Variante = "primario" | "secundario" | "peligro" | "fantasma";
 
 const VARIANTE: Record<Variante, string> = {
   primario: "bg-success text-bg-950 hover:opacity-90",
-  secundario: "border border-bg-700 text-text-100 hover:bg-bg-800",
+  secundario: "border border-bg-700 text-text-100 hover:bg-hover",
   peligro: "bg-danger text-white hover:opacity-90",
-  fantasma: "text-text-400 hover:bg-bg-800 hover:text-text-100",
+  fantasma: "text-text-400 hover:bg-hover hover:text-text-100",
 };
 
 /** Clases de Boton, para un <Link> que tiene que verse igual que un botón. */
@@ -149,9 +149,9 @@ export function PageHeader({
   acciones?: ReactNode;
 }) {
   return (
-    <header className="flex min-h-12 flex-wrap items-center justify-between gap-3 border-b border-bg-700 px-6 py-3">
+    <header className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-bg-700 bg-bg-900 px-4 py-2.5 md:px-6">
       <div className="flex min-w-0 items-center gap-3">
-        <h1 className="truncate text-sm font-medium text-text-100">{titulo}</h1>
+        <h1 className="truncate text-base font-semibold text-text-100">{titulo}</h1>
         {sub && (
           <span data-tour="pagina.secciones" className="font-mono text-xs text-text-600">
             {sub}

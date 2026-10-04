@@ -209,7 +209,7 @@ export default function CalendarioAuditoriaPage() {
                           <tr
                             key={e.id}
                             onClick={() => setHistorialDe(e)}
-                            className="cursor-pointer border-b border-bg-700 last:border-b-0 hover:bg-bg-800"
+                            className="cursor-pointer border-b border-bg-700 last:border-b-0 hover:bg-hover"
                             title="Ver historial completo de esta cita"
                           >
                             <td className="px-3 py-2 tabular-nums text-text-400">

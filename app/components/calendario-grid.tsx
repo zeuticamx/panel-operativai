@@ -185,7 +185,7 @@ export function CalendarioGrid({
                       <button
                         type="button"
                         onClick={() => onSlotClick(p.id, horas, minutos)}
-                        className="h-8 w-full cursor-pointer rounded hover:bg-bg-800 focus:outline-none focus:ring-2 focus:ring-bg-600"
+                        className="h-8 w-full cursor-pointer rounded hover:bg-hover focus:outline-none focus:ring-2 focus:ring-bg-600"
                         aria-label={`Reservar con ${p.nombre} a las ${etiquetaFila(horas, minutos)}`}
                       />
                     </td>

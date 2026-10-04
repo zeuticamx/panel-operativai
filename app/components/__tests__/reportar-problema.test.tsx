@@ -59,7 +59,8 @@ beforeEach(() => {
 // Acceso visible
 // ============================================================
 describe("acceso", () => {
-  it("el sidebar tiene el botón, expandido", () => {
+  it("el panel de cuenta del sidebar tiene el botón, expandido", async () => {
+    const user = userEvent.setup();
     (useUsuario as jest.Mock).mockReturnValue({
       usuario: { id: "u", email: "a@b.com", role: "owner", tenant_id: "t", es_gerencia_plataforma: false },
       loading: false,
@@ -67,6 +68,9 @@ describe("acceso", () => {
     });
     render(<Sidebar />);
 
+    // Cerrado, el panel no se ve; se abre desde el avatar del rail.
+    expect(screen.queryByRole("button", { name: "Reportar un problema" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cuenta" }));
     expect(screen.getByRole("button", { name: "Reportar un problema" })).toBeVisible();
     expect(screen.getByText("Reportar un problema")).toBeInTheDocument();
   });

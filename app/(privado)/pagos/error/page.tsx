@@ -79,7 +79,7 @@ function Contenido() {
             </Link>
             <Link
               href="/dashboard"
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-text-400 hover:bg-bg-800 hover:text-text-100"
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-text-400 hover:bg-hover hover:text-text-100"
             >
               Ir al dashboard
             </Link>

@@ -196,7 +196,7 @@ export function ProveedorHorarioModal({
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="cursor-pointer rounded p-1 text-text-400 hover:bg-bg-800 hover:text-text-100"
+                className="cursor-pointer rounded p-1 text-text-400 hover:bg-hover hover:text-text-100"
                 aria-label="Cerrar"
               >
                 <X size={16} />

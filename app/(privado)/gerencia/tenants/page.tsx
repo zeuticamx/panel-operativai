@@ -209,7 +209,7 @@ export default function TenantsGerenciaPage() {
                 </thead>
                 <tbody>
                   {items.map((t) => (
-                    <tr key={t.tenant_id} className="border-t border-bg-700 hover:bg-bg-900">
+                    <tr key={t.tenant_id} className="border-t border-bg-700 hover:bg-hover">
                       <td className="max-w-[16rem] px-3 py-2">
                         <Link
                           href={`/gerencia/tenants/${t.tenant_id}`}

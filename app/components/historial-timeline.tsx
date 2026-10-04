@@ -174,7 +174,7 @@ function Punto({
   const cliente = h.cliente_nombre ?? h.cliente_handle ?? "Cliente sin nombre";
 
   return (
-    <li className="group relative -mx-2 flex gap-3 rounded-md px-2 pt-2 pb-4 hover:bg-bg-800/60 focus-within:bg-bg-800/60">
+    <li className="group relative -mx-2 flex gap-3 rounded-md px-2 pt-2 pb-4 hover:bg-hover/60 focus-within:bg-bg-800/60">
       {!ultimo && (
         <span
           aria-hidden

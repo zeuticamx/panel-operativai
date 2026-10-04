@@ -280,7 +280,7 @@ function Superposicion({
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar recorrido"
-            className="-mt-1 -mr-1 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-400 hover:bg-bg-800 hover:text-text-100"
+            className="-mt-1 -mr-1 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-400 hover:bg-hover hover:text-text-100"
           >
             <X size={14} aria-hidden />
           </button>
@@ -314,7 +314,7 @@ function Superposicion({
 }
 
 const BOTON_FANTASMA =
-  "inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-text-400 hover:bg-bg-800 hover:text-text-100 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-text-400 hover:bg-hover hover:text-text-100 disabled:cursor-not-allowed disabled:opacity-40";
 const BOTON_PRIMARIO =
   "inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-md bg-text-100 px-2.5 text-xs font-medium text-bg-950 hover:opacity-90";
 
@@ -349,7 +349,7 @@ function PastillaPausa({ onReanudar, onCerrar }: { onReanudar: () => void; onCer
         type="button"
         onClick={onCerrar}
         aria-label="Cerrar recorrido"
-        className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-text-400 hover:bg-bg-800 hover:text-text-100"
+        className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-text-400 hover:bg-hover hover:text-text-100"
       >
         <X size={12} aria-hidden />
       </button>
@@ -379,7 +379,7 @@ function useAutoInicio(recorrido: Recorrido | null, usuarioClave: string | null)
 }
 
 const CLASE_BOTON_HEADER =
-  "relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-400 hover:bg-bg-800 hover:text-text-100";
+  "relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-400 hover:bg-hover hover:text-text-100";
 
 /**
  * Botón "?" del header. No se dibuja en /gerencia ni en vistas sin recorrido.

@@ -56,7 +56,8 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
           <BannerVerComo />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
             <Sidebar />
-            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            {/* pb-16: deja libre la barra inferior móvil del Sidebar. */}
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0">
               <GuardaPlan>{children}</GuardaPlan>
             </main>
             <ChatWidget />

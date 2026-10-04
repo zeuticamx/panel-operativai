@@ -167,7 +167,7 @@ export default function CalendarioServiciosPage() {
                       {(catalogo.data ?? []).map((s) => (
                         <tr
                           key={s.id}
-                          className="border-b border-bg-700 last:border-b-0 hover:bg-bg-800"
+                          className="border-b border-bg-700 last:border-b-0 hover:bg-hover"
                         >
                           <td className="px-3 py-2 text-text-100">{s.nombre}</td>
                           <td className="px-3 py-2 text-right tabular-nums text-text-400">

@@ -48,7 +48,7 @@ export function ChatWidget() {
   if (!CHAT_IFRAME_SRC) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
+    <div className="fixed right-4 bottom-20 z-50 md:bottom-4 flex flex-col items-end gap-3">
       <div
         className={cn(
           "h-[min(70vh,560px)] w-[min(90vw,20rem)] overflow-hidden rounded-lg border border-bg-700 bg-bg-900 shadow-xl transition-opacity duration-150 sm:w-80 md:w-96",

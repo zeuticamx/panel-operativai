@@ -137,7 +137,7 @@ export function ReportarProblema({ expandido = true }: { expandido?: boolean }) 
       <button
         type="button"
         onClick={() => cambiarApertura(true)}
-        className="flex w-full cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 text-sm text-text-400 hover:bg-bg-800 hover:text-text-100"
+        className="flex w-full cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 text-sm text-text-400 hover:bg-hover hover:text-text-100"
         aria-label="Reportar un problema"
         title={expandido ? undefined : "Reportar un problema"}
       >
@@ -167,7 +167,7 @@ export function ReportarProblema({ expandido = true }: { expandido?: boolean }) 
               </div>
               <Dialog.Close
                 disabled={enviando}
-                className="cursor-pointer rounded p-1 text-text-400 hover:bg-bg-800 hover:text-text-100 disabled:opacity-50"
+                className="cursor-pointer rounded p-1 text-text-400 hover:bg-hover hover:text-text-100 disabled:opacity-50"
                 aria-label="Cerrar"
               >
                 <X size={16} aria-hidden />
@@ -241,7 +241,7 @@ export function ReportarProblema({ expandido = true }: { expandido?: boolean }) 
                         type="button"
                         onClick={quitarArchivo}
                         disabled={enviando}
-                        className="cursor-pointer rounded p-0.5 hover:bg-bg-800 hover:text-text-100"
+                        className="cursor-pointer rounded p-0.5 hover:bg-hover hover:text-text-100"
                         aria-label="Quitar imagen"
                       >
                         <X size={12} aria-hidden />

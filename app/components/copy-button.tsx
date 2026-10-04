@@ -20,7 +20,7 @@ export function CopyButton({ text, label = "Copiar" }: { text: string; label?: s
     <button
       type="button"
       onClick={handleCopy}
-      className="flex items-center gap-1 rounded p-1 text-text-600 hover:bg-bg-800 hover:text-text-100"
+      className="flex items-center gap-1 rounded p-1 text-text-600 hover:bg-hover hover:text-text-100"
       aria-label={copied ? "Copiado" : label}
       title={copied ? "Copiado" : label}
     >

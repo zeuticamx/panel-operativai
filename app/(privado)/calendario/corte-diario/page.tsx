@@ -234,7 +234,7 @@ export default function CalendarioCorteDiarioPage() {
                     </thead>
                     <tbody>
                       {corte.data.servicios.map((s) => (
-                        <tr key={s.id} className="border-b border-bg-700 last:border-b-0 hover:bg-bg-800">
+                        <tr key={s.id} className="border-b border-bg-700 last:border-b-0 hover:bg-hover">
                           <td className="px-3 py-2 tabular-nums text-text-400">
                             {formatoHora(s.hora_inicio)}
                           </td>

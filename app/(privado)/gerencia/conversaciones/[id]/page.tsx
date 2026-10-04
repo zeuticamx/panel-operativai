@@ -63,7 +63,7 @@ export default function ConversacionDetalleGerenciaPage() {
       <header className="flex min-h-12 items-center gap-3 border-b border-bg-700 px-4 py-2.5">
         <Link
           href={`/gerencia/conversaciones?tenant_id=${tenantId}`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-400 hover:bg-bg-800 hover:text-text-100"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-400 hover:bg-hover hover:text-text-100"
           aria-label="Volver a conversaciones"
         >
           <ArrowLeft size={16} aria-hidden />

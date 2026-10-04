@@ -64,7 +64,7 @@ export function CentroNotificaciones() {
           aria-label={
             noLeidosCount > 0 ? `Notificaciones, ${noLeidosCount} sin leer` : "Notificaciones"
           }
-          className="relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-400 hover:bg-bg-800 hover:text-text-100"
+          className="relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-400 hover:bg-hover hover:text-text-100"
         >
           <Bell size={16} aria-hidden />
           {noLeidosCount > 0 && (
@@ -92,7 +92,7 @@ export function CentroNotificaciones() {
                 de ahí cerraría el ciclo entre los dos módulos. */}
             <Dialog.Close
               aria-label="Cerrar"
-              className="inline-flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-md px-2 text-text-400 transition-colors hover:bg-bg-800 hover:text-text-100"
+              className="inline-flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-md px-2 text-text-400 transition-colors hover:bg-hover hover:text-text-100"
             >
               <X size={14} aria-hidden />
             </Dialog.Close>

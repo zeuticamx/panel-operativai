@@ -1,6 +1,6 @@
 /**
- * El acceso al perfil en el sidebar: al pie, con indicador mientras falten
- * datos, sin tocar la navegación principal.
+ * El acceso al perfil en el panel de cuenta del sidebar, con indicador
+ * mientras falten datos, sin tocar la navegación principal.
  */
 import { render, screen, within } from "@testing-library/react";
 
@@ -66,7 +66,7 @@ it("ya no hay tarjeta del negocio bajo el logo: el correo solo aparece en el acc
   expect(correos[0].closest("a")).toHaveAttribute("href", "/preferencias");
 });
 
-it("la navegación principal no cambia", () => {
+it("la navegación principal agrupa operación diaria antes que configuración", () => {
   conUsuario({ perfil_completo: false });
   render(<Sidebar />);
 
@@ -77,11 +77,11 @@ it("la navegación principal no cambia", () => {
   expect(destinos).toEqual([
     "/dashboard",
     "/conversaciones",
+    "/calendario",
     "/canales",
     "/agente",
     "/herramientas",
     "/vendedores",
-    "/calendario",
     "/suscripcion",
   ]);
 });

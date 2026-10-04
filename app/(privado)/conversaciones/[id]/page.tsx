@@ -85,7 +85,7 @@ export default function ConversacionDetallePage() {
       <header className="flex min-h-12 items-center gap-3 border-b border-bg-700 px-4 py-2.5">
         <Link
           href="/conversaciones"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-400 hover:bg-bg-800 hover:text-text-100"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-text-400 hover:bg-hover hover:text-text-100"
           aria-label="Volver a conversaciones"
         >
           <ArrowLeft size={16} aria-hidden />

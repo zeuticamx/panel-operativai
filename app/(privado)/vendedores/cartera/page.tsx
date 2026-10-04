@@ -296,7 +296,7 @@ function Cartera() {
                               setSeleccionado(c);
                             }
                           }}
-                          className="cursor-pointer border-b border-bg-700 last:border-b-0 hover:bg-bg-800 focus:bg-bg-800 focus:outline-none"
+                          className="cursor-pointer border-b border-bg-700 last:border-b-0 hover:bg-hover focus:bg-bg-800 focus:outline-none"
                         >
                           <td className="px-4 py-2">
                             <div className="flex flex-col">

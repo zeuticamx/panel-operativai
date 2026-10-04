@@ -23,8 +23,8 @@ export function StatCard({
   loading?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-bg-700 bg-bg-800 px-4 py-3">
-      <span className="font-mono text-[11px] text-text-600">{label}</span>
+    <div className="flex flex-col gap-1 rounded-lg border border-bg-700 bg-bg-800 px-4 py-3 shadow-card">
+      <span className="text-xs font-medium text-text-400">{label}</span>
       <span
         className={cn(
           "text-2xl font-semibold tabular-nums transition-opacity",

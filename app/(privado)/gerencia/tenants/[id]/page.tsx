@@ -172,7 +172,7 @@ export default function DetalleTenantPage() {
               </span>
               <Link
                 href={`/gerencia/conversaciones?tenant_id=${t.tenant_id}`}
-                className="ml-auto inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-bg-700 px-3 py-1.5 text-xs font-medium text-text-100 hover:bg-bg-800"
+                className="ml-auto inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-bg-700 px-3 py-1.5 text-xs font-medium text-text-100 hover:bg-hover"
               >
                 <MessageSquare size={13} aria-hidden />
                 Ver conversaciones

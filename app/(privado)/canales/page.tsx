@@ -487,7 +487,7 @@ function Contenido() {
                           <li key={p.page_id}>
                             <label
                               htmlFor={inputId}
-                              className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-bg-800"
+                              className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-hover"
                             >
                               <input
                                 id={inputId}

@@ -135,7 +135,7 @@ export function BloqueoPlanModal({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
         <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-bg-700 bg-bg-900 p-6 shadow-xl">
           <Dialog.Close
-            className="absolute top-3 right-3 cursor-pointer rounded p-1 text-text-600 hover:bg-bg-800 hover:text-text-100"
+            className="absolute top-3 right-3 cursor-pointer rounded p-1 text-text-600 hover:bg-hover hover:text-text-100"
             aria-label="Cerrar"
           >
             <X size={14} />
@@ -201,7 +201,7 @@ export function FranjaPlanInactivo({ acceso }: { acceso: AccesoPlanOut }) {
       <button
         type="button"
         onClick={cerrar}
-        className="shrink-0 cursor-pointer rounded p-0.5 text-text-600 hover:bg-bg-800 hover:text-text-100"
+        className="shrink-0 cursor-pointer rounded p-0.5 text-text-600 hover:bg-hover hover:text-text-100"
         aria-label="Ocultar aviso"
       >
         <X size={13} />

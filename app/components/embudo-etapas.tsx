@@ -117,7 +117,7 @@ function LeadCard({
       className={cn(
         "flex flex-col gap-1 rounded-md border border-bg-700 bg-bg-900 p-2.5 transition-colors",
         onSelect &&
-          "cursor-pointer hover:border-bg-600 hover:bg-bg-800 focus:bg-bg-800 focus:outline-none",
+          "cursor-pointer hover:border-bg-600 hover:bg-hover focus:bg-bg-800 focus:outline-none",
       )}
     >
       <span className="truncate text-xs text-text-100">{nombre}</span>

@@ -147,7 +147,7 @@ export default function CalendarioProveedoresPage() {
                       {(proveedores.data ?? []).map((p) => (
                         <tr
                           key={p.id}
-                          className="border-b border-bg-700 last:border-b-0 hover:bg-bg-800"
+                          className="border-b border-bg-700 last:border-b-0 hover:bg-hover"
                         >
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">

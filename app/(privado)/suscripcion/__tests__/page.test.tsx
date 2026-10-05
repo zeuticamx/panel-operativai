@@ -48,6 +48,7 @@ const SUSCRIPCION: SuscripcionOut = {
   creditos_gastados: "10",
   suscripcion_recurrente: false,
   cancela_al_vencer: false,
+  portal_disponible: false,
 };
 
 const PLAN_PRO: PlanOut = { ...PLAN_STARTER, nombre: "pro", precio_monthly: "499.00" };

@@ -181,6 +181,9 @@ export default function ConversacionDetallePage() {
               mensajes={data.mensajes}
               nombreAgente={usuario?.nombre_negocio ? `Agente · ${usuario.nombre_negocio}` : "Agente"}
               nombreCliente={data.usuario_nombre?.trim() || "Cliente"}
+              adjuntoUrl={(a) =>
+                `/api/conversaciones/${encodeURIComponent(data.id)}/adjuntos/${encodeURIComponent(a)}`
+              }
             />
           )}
           <div ref={finRef} />
@@ -194,6 +197,11 @@ export default function ConversacionDetallePage() {
             enviarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/mensajes`}
             tomarUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/tomar`}
             volverIaUrl={`/api/conversaciones/${encodeURIComponent(data.id)}/volver-a-ia`}
+            adjuntosUrl={
+              data.channel_type === "whatsapp"
+                ? `/api/conversaciones/${encodeURIComponent(data.id)}/adjuntos`
+                : undefined
+            }
             onCambio={() => recargar(true)}
           />
         </div>

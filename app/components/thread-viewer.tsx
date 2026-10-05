@@ -1,6 +1,9 @@
 import type { MensajeOut } from "@/lib/types";
 import { formatoFechaHora, formatoHora } from "@/lib/formato";
 import { MessageBubble } from "./message-bubble";
+import { AdjuntoMensaje } from "./adjunto-mensaje";
+
+const ETIQUETA_AUTOMATICA = /^\[(Imagen|Documento: .*)\]$/;
 
 /** Clave de día local para agrupar mensajes con un separador de fecha. */
 function claveDia(iso: string) {
@@ -20,10 +23,13 @@ export function ThreadViewer({
   mensajes,
   nombreAgente = "Agente",
   nombreCliente = "Cliente",
+  adjuntoUrl,
 }: {
   mensajes: MensajeOut[];
   nombreAgente?: string;
   nombreCliente?: string;
+  /** Ruta autenticada de un adjunto del hilo, dado su id. */
+  adjuntoUrl?: (adjuntoId: string) => string;
 }) {
   if (mensajes.length === 0) {
     return (
@@ -63,7 +69,21 @@ export function ThreadViewer({
                       : m.role
               }
             >
-              <span title={formatoFechaHora(m.created_at)}>{m.content}</span>
+              {adjuntoUrl &&
+                (m.adjuntos ?? []).map((a) => (
+                  <div key={a.id} className="mb-1.5 last:mb-0">
+                    <AdjuntoMensaje adjunto={a} url={adjuntoUrl(a.id)} />
+                  </div>
+                ))}
+              {/* Con archivo, la etiqueta automática ("[Imagen]") sobra: solo
+                  se muestra una leyenda escrita de verdad. */}
+              {!(
+                adjuntoUrl &&
+                m.adjuntos?.length &&
+                (ETIQUETA_AUTOMATICA.test(m.content) || m.adjuntos.some((a) => a.nombre === m.content))
+              ) && (
+                <span title={formatoFechaHora(m.created_at)}>{m.content}</span>
+              )}
             </MessageBubble>
           </div>
         );

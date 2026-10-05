@@ -287,6 +287,14 @@ export interface ConversacionOut {
   minutos_restantes_ventana: number | null;
 }
 
+/** Imagen o documento de un mensaje (sin el contenido binario). */
+export interface AdjuntoOut {
+  id: string;
+  mime: string;
+  nombre: string;
+  bytes: number;
+}
+
 export interface MensajeOut {
   id: string;
   role: string;
@@ -294,6 +302,7 @@ export interface MensajeOut {
   created_at: string;
   /** Solo role='human': nombre o correo de quien mandó la respuesta manual. */
   enviado_por: string | null;
+  adjuntos: AdjuntoOut[];
 }
 
 /** Body de POST .../conversaciones/{id}/mensajes */
@@ -770,6 +779,13 @@ export interface SuscripcionOut {
   suscripcion_recurrente: boolean;
   /** Se pidió cancelar: sigue vigente hasta fecha_renovacion y después se pausa. */
   cancela_al_vencer: boolean;
+  /** Hay Customer de Stripe: se puede abrir el Customer Portal (POST /api/pagos/portal-cliente). */
+  portal_disponible: boolean;
+}
+
+/** Respuesta de POST /api/pagos/portal-cliente: URL de un solo uso, vence en minutos. */
+export interface PortalClienteOut {
+  url: string;
 }
 
 // ------------------------------------------------------------
@@ -934,7 +950,13 @@ export interface RevocarPruebaIn {
 }
 
 // Eliminación definitiva de un negocio — espejo de schemas.EliminacionTenantOut.
-export type CodigoBloqueoEliminacion = "cuenta_activa" | "suscripcion_vigente" | "cuenta_propia";
+export type CodigoBloqueoEliminacion =
+  | "cuenta_activa"
+  | "suscripcion_vigente"
+  | "cuenta_propia"
+  // Solo en el borrado de cuenta por el propio dueño:
+  | "adeudo_pendiente"
+  | "adeudo_no_verificable";
 
 export interface BloqueoEliminacionOut {
   codigo: CodigoBloqueoEliminacion;
@@ -1445,4 +1467,27 @@ export interface ReporteGerenciaOut {
 
 export interface ReporteEstadoIn {
   estado: EstadoReporte;
+}
+
+// ------------------------------------------------------------
+// Borrado de cuenta por el propio dueño (backend/routers/cuenta.py)
+// ------------------------------------------------------------
+/** GET /api/cuenta/eliminacion */
+export interface EliminacionCuentaOut {
+  eliminable: boolean;
+  bloqueos: BloqueoEliminacionOut[];
+  /** Suscripción ya cancelada con días pagados: se pierden al borrar. */
+  pagado_hasta: string | null;
+  creditos_disponibles: string; // Decimal
+  usuarios_portal: number;
+  conversaciones: number;
+  /** Cómo se re-autentica: contraseña, o Google en cuentas sin contraseña. */
+  verificacion: "password" | "google";
+}
+
+/** Body de POST /api/cuenta/eliminar */
+export interface EliminarCuentaIn {
+  confirmacion: string;
+  password: string | null;
+  google_credential: string | null;
 }

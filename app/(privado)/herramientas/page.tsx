@@ -286,9 +286,11 @@ export default function HerramientasPage() {
                         )}
                       </div>
 
-                      <p className="text-xs leading-relaxed text-text-400">{h.description}</p>
+                      <p className="text-xs leading-relaxed break-words text-text-400">
+                        {h.description}
+                      </p>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-text-600">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] break-all text-text-600">
                         {h.url_original ? (
                           <a
                             href={h.url_original}
@@ -309,7 +311,7 @@ export default function HerramientasPage() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:justify-start">
                       {!h.gestionada && (
                         <Boton
                           variante="fantasma"

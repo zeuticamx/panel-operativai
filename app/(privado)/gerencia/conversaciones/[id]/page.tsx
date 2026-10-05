@@ -131,6 +131,11 @@ export default function ConversacionDetalleGerenciaPage() {
             <ThreadViewer
               mensajes={data.mensajes}
               nombreCliente={data.usuario_nombre?.trim() || "Cliente"}
+              adjuntoUrl={
+                base
+                  ? (a) => `${base}/${encodeURIComponent(data.id)}/adjuntos/${encodeURIComponent(a)}`
+                  : undefined
+              }
             />
           )}
           <div ref={finRef} />
@@ -143,6 +148,11 @@ export default function ConversacionDetalleGerenciaPage() {
           enviarUrl={`${base}/${encodeURIComponent(data.id)}/mensajes`}
           tomarUrl={`${base}/${encodeURIComponent(data.id)}/tomar`}
           volverIaUrl={`${base}/${encodeURIComponent(data.id)}/volver-a-ia`}
+          adjuntosUrl={
+            data.channel_type === "whatsapp"
+              ? `${base}/${encodeURIComponent(data.id)}/adjuntos`
+              : undefined
+          }
           onCambio={() => recargar(true)}
         />
       )}

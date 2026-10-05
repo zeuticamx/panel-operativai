@@ -15,6 +15,7 @@ import { setStoredTheme, useStoredTheme } from "@/lib/theme";
 import type { CampoPerfilObligatorio, GeneroPerfil, PerfilIn, PerfilOut } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 import { AvatarPerfil } from "@/app/components/avatar-perfil";
+import { BorrarCuenta } from "@/app/components/borrar-cuenta";
 import {
   Aviso,
   Boton,
@@ -411,6 +412,8 @@ export default function PreferenciasPage() {
                   onChange={(claro) => setStoredTheme(claro ? "light" : "dark")}
                 />
               </section>
+
+              {usuario?.role === "owner" && !soloLectura && <BorrarCuenta />}
             </>
           )}
         </div>

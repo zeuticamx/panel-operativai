@@ -18,6 +18,7 @@ import { fmtInt, formatoFechaHora, formatoMonto } from "@/lib/formato";
 import { HERRAMIENTAS_INFO } from "@/lib/herramientas-plan";
 import { cn } from "@/lib/utils";
 import { esGerencia } from "@/app/components/modulo-vendedores";
+import { PortalStripe } from "@/app/components/portal-stripe";
 import { StatCard } from "@/app/components/stat-card";
 import { Aviso, Boton, Cargando, PageHeader } from "@/app/components/ui";
 import { useUsuario } from "@/app/components/usuario-context";
@@ -180,6 +181,13 @@ export default function SuscripcionPage() {
               hint="histórico"
             />
           </div>
+
+          {usuario?.role === "owner" && !usuario.impersonado_por && s?.portal_disponible && (
+            <PortalStripe
+              fechaRenovacion={s.fecha_renovacion}
+              cancelaAlVencer={s.cancela_al_vencer}
+            />
+          )}
 
           {/* Planes */}
           <section data-tour="suscripcion.planes" className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">

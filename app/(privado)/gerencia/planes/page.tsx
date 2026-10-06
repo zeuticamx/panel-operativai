@@ -103,6 +103,7 @@ export default function PlanesPage() {
                     <th className="px-3 py-2 text-right font-normal">anual (neto)</th>
                     <th className="px-3 py-2 text-right font-normal">créditos/mes</th>
                     <th className="px-3 py-2 text-right font-normal">vendedores</th>
+                    <th className="px-3 py-2 text-right font-normal">proveedores</th>
                     <th className="px-3 py-2 text-right font-normal">leads/mes</th>
                     <th className="px-3 py-2 font-normal">servicios</th>
                     <th className="px-3 py-2 font-normal">price stripe</th>
@@ -138,6 +139,9 @@ export default function PlanesPage() {
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums text-text-400">
                         {p.max_vendedores === null ? "sin tope" : fmtInt.format(p.max_vendedores)}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-text-400">
+                        {p.max_proveedores === null ? "sin tope" : fmtInt.format(p.max_proveedores)}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums text-text-400">
                         {p.max_leads_mensuales === null
@@ -198,7 +202,7 @@ export default function PlanesPage() {
                   {lista.length === 0 && (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-3 py-8 text-center font-mono text-[11px] text-text-600"
                       >
                         todavía no hay ningún plan en el catálogo
@@ -273,6 +277,7 @@ function FormularioPlan({
   const [stripePriceId, setStripePriceId] = useState("");
   const [creditos, setCreditos] = useState("100");
   const [maxVendedores, setMaxVendedores] = useState("");
+  const [maxProveedores, setMaxProveedores] = useState("");
   const [maxLeads, setMaxLeads] = useState("");
   const [orden, setOrden] = useState("0");
   const [agenteIa, setAgenteIa] = useState(true);
@@ -295,6 +300,7 @@ function FormularioPlan({
     setStripePriceId(plan?.stripe_price_id ?? "");
     setCreditos(plan?.creditos_incluidos_mensual ?? "100");
     setMaxVendedores(plan?.max_vendedores?.toString() ?? "");
+    setMaxProveedores(plan?.max_proveedores?.toString() ?? "");
     setMaxLeads(plan?.max_leads_mensuales?.toString() ?? "");
     setOrden(plan?.orden?.toString() ?? "0");
     setAgenteIa(plan?.agente_ia_activo ?? true);
@@ -314,6 +320,7 @@ function FormularioPlan({
     numeroOpcionalValido(precioAnnual) &&
     numeroOpcionalValido(creditos) &&
     numeroOpcionalValido(maxVendedores) &&
+    numeroOpcionalValido(maxProveedores) &&
     numeroOpcionalValido(maxLeads) &&
     numeroOpcionalValido(orden);
   const priceValido = PATRON_PRICE_STRIPE.test(stripePriceId.trim());
@@ -334,6 +341,7 @@ function FormularioPlan({
           stripe_price_id: aOpcional(stripePriceId),
           creditos_incluidos_mensual: aOpcional(creditos) ?? undefined,
           max_vendedores: aOpcional(maxVendedores) === null ? null : Number(maxVendedores),
+          max_proveedores: aOpcional(maxProveedores) === null ? null : Number(maxProveedores),
           max_leads_mensuales: aOpcional(maxLeads) === null ? null : Number(maxLeads),
           orden: aOpcional(orden) === null ? undefined : Number(orden),
           agente_ia_activo: agenteIa,
@@ -354,6 +362,7 @@ function FormularioPlan({
           stripe_price_id: stripePriceId.trim(),
           creditos_incluidos_mensual: aOpcional(creditos),
           max_vendedores: aOpcional(maxVendedores) === null ? null : Number(maxVendedores),
+          max_proveedores: aOpcional(maxProveedores) === null ? null : Number(maxProveedores),
           max_leads_mensuales: aOpcional(maxLeads) === null ? null : Number(maxLeads),
           orden: aOpcional(orden) === null ? null : Number(orden),
           agente_ia_activo: agenteIa,
@@ -507,6 +516,23 @@ function FormularioPlan({
                   min={0}
                   value={maxVendedores}
                   onChange={(e) => setMaxVendedores(e.target.value)}
+                  disabled={guardando}
+                  placeholder="sin tope"
+                  className={inputClass}
+                />
+              </Campo>
+              <Campo
+                id="plan-max-proveedores"
+                label="Máx. proveedores"
+                hint="de la agenda, activos · vacío = sin tope"
+              >
+                <input
+                  id="plan-max-proveedores"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={maxProveedores}
+                  onChange={(e) => setMaxProveedores(e.target.value)}
                   disabled={guardando}
                   placeholder="sin tope"
                   className={inputClass}

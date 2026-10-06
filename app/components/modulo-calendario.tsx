@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import type { ServiciosOut } from "@/lib/types";
+import { puedeVerRuta } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { Aviso, Boton } from "./ui";
 import { esGerencia } from "./modulo-vendedores";
@@ -24,9 +25,14 @@ const TABS = [
 
 export function CalendarioTabs() {
   const pathname = usePathname();
+  const { usuario } = useUsuario();
+  // Un proveedor solo tiene la agenda (lib/roles.ts): sin otras pestañas a
+  // las que ir, la barra no aporta nada.
+  const tabs = TABS.filter((t) => puedeVerRuta(usuario, t.href));
+  if (tabs.length <= 1) return <span>tu agenda</span>;
   return (
     <nav className="flex gap-1" aria-label="Secciones de calendario">
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const activo = t.exacto ? pathname === t.href : pathname.startsWith(t.href);
         return (
           <Link

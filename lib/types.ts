@@ -386,6 +386,17 @@ export interface VendedorActualizarIn {
   activo?: boolean;
 }
 
+/**
+ * Fichas activas contra el tope del plan: GET /api/tenants/{id}/vendedores/cupo
+ * (planes.max_vendedores) y /calendario/proveedores/cupo (planes.max_proveedores).
+ */
+export interface CupoOut {
+  plan: string | null;
+  /** null = sin tope. */
+  maximo: number | null;
+  activos: number;
+}
+
 /** Respuesta de POST /api/vendedores/{id}/reasignar-pendientes */
 export interface ReasignacionOut {
   vendedor_id: string;
@@ -749,6 +760,8 @@ export interface PlanOut {
   precio_annual: string | null;
   /** null = sin tope (enterprise). */
   max_vendedores: number | null;
+  /** Proveedores activos del calendario. null = sin tope. */
+  max_proveedores?: number | null;
   max_leads_mensuales: number | null;
   creditos_incluidos_mensual: string;
   agente_ia_activo: boolean;
@@ -1155,6 +1168,8 @@ export interface PlanGerenciaOut {
   precio_annual: string | null;
   /** null = sin tope (plan tipo enterprise). */
   max_vendedores: number | null;
+  /** Proveedores activos del calendario. null = sin tope. */
+  max_proveedores: number | null;
   max_leads_mensuales: number | null;
   creditos_incluidos_mensual: string;
   agente_ia_activo: boolean;
@@ -1176,6 +1191,7 @@ export interface PlanCrearIn {
   precio_monthly: string;
   precio_annual?: string | null;
   max_vendedores?: number | null;
+  max_proveedores?: number | null;
   max_leads_mensuales?: number | null;
   creditos_incluidos_mensual?: string;
   agente_ia_activo?: boolean;
@@ -1194,6 +1210,7 @@ export interface PlanActualizarIn {
   precio_monthly?: string | null;
   precio_annual?: string | null;
   max_vendedores?: number | null;
+  max_proveedores?: number | null;
   max_leads_mensuales?: number | null;
   creditos_incluidos_mensual?: string | null;
   agente_ia_activo?: boolean | null;
@@ -1221,6 +1238,8 @@ export interface ProveedorOut {
   activo: boolean;
   orden: number;
   creado_en: string;
+  /** Cuenta del portal ligada (rol "proveedor"). null = sin acceso. */
+  portal_user_id?: string | null;
 }
 
 export interface ProveedorCrearIn {
@@ -1490,4 +1509,83 @@ export interface EliminarCuentaIn {
   confirmacion: string;
   password: string | null;
   google_credential: string | null;
+}
+
+// ------------------------------------------------------------
+// Equipo: cuentas de member/vendedor por invitación (routers/equipo.py)
+// ------------------------------------------------------------
+/** portal_users.role. Ver lib/roles.ts para qué ve cada uno. */
+export type RolPortal = "owner" | "superadmin" | "member" | "vendedor" | "proveedor";
+export type RolInvitable = "member" | "vendedor" | "proveedor";
+
+/** Body de POST /api/equipo/invitaciones */
+export interface InvitacionCrearIn {
+  email: string;
+  role: RolInvitable;
+  /** Obligatorio para "vendedor", prohibido para los demás. */
+  vendedor_id?: string | null;
+  /** Obligatorio para "proveedor" (ficha del calendario), prohibido para los demás. */
+  proveedor_id?: string | null;
+}
+
+/** GET /api/equipo/invitaciones (solo las que siguen sin aceptar ni revocar) */
+export interface InvitacionOut {
+  id: string;
+  email: string;
+  role: RolInvitable;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  proveedor_id: string | null;
+  proveedor_nombre: string | null;
+  creada_en: string;
+  expira_en: string;
+  /** Listada para reenviarla, pero su enlace ya no sirve. */
+  vencida: boolean;
+}
+
+/** Solo al crear o reenviar: el enlace no se guarda en claro, no vuelve a venir. */
+export interface InvitacionCreadaOut extends InvitacionOut {
+  enlace: string;
+  correo_enviado: boolean;
+}
+
+/** GET /api/equipo/usuarios */
+export interface UsuarioEquipoOut {
+  id: string;
+  email: string;
+  role: string;
+  activo: boolean;
+  nombre: string | null;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  proveedor_id: string | null;
+  proveedor_nombre: string | null;
+  ultimo_acceso: string | null;
+  es_tu_cuenta: boolean;
+}
+
+/** Body de PATCH /api/equipo/usuarios/{id} */
+export interface UsuarioEquipoActualizarIn {
+  activo: boolean;
+}
+
+/** Body de POST /api/auth/invitacion/revisar */
+export interface InvitacionTokenIn {
+  token: string;
+}
+
+/** POST /api/auth/invitacion/revisar */
+export interface InvitacionInfoOut {
+  email: string;
+  role: RolInvitable;
+  nombre_negocio: string;
+  vendedor_nombre: string | null;
+  proveedor_nombre: string | null;
+  expira_en: string;
+}
+
+/** Body de POST /api/auth/invitacion/aceptar (responde TokenOut) */
+export interface AceptarInvitacionIn extends InvitacionTokenIn {
+  password: string;
+  acepta_terminos: boolean;
 }

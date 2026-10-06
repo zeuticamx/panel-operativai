@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bot,
+  Briefcase,
   CalendarDays,
   CreditCard,
   LayoutDashboard,
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { clearTokens } from "@/lib/auth";
 import { iniciales, useFotoPerfil } from "@/lib/foto-perfil";
 import { bloqueoDePantalla } from "@/lib/herramientas-plan";
+import { inicioDeRol, puedeVerRuta } from "@/lib/roles";
 import { setStoredTheme, useStoredTheme } from "@/lib/theme";
 import { AvatarPerfil } from "./avatar-perfil";
 import { esGerenciaPlataforma } from "./gerencia";
@@ -48,6 +50,8 @@ const NAV_GRUPOS: { titulo: string; items: Item[] }[] = [
   {
     titulo: "Operación",
     items: [
+      // Solo la ve el vendedor (lib/roles.ts): su portal es esta pantalla.
+      { icon: Briefcase, label: "Mi cartera", corto: "Cartera", href: "/mi-cartera" },
       { icon: LayoutDashboard, label: "Dashboard", corto: "Inicio", href: "/dashboard" },
       { icon: MessagesSquare, label: "Conversaciones", corto: "Chats", href: "/conversaciones" },
       { icon: CalendarDays, label: "Calendario", corto: "Agenda", href: "/calendario" },
@@ -73,10 +77,12 @@ const NAV_PLATAFORMA: Item = { icon: ShieldCheck, label: "Plataforma", href: "/g
 
 const TODOS = [...NAV_GRUPOS.flatMap((g) => g.items), NAV_SUSCRIPCION];
 
-// Barra inferior móvil: los cuatro destinos de uso diario, al alcance del
-// pulgar; el resto vive en "Más".
-const MOVIL_HREFS = ["/dashboard", "/conversaciones", "/calendario", "/agente"];
-const MOVIL = MOVIL_HREFS.map((href) => TODOS.find((i) => i.href === href)!);
+// Barra inferior móvil: hasta cuatro destinos de uso diario, al alcance del
+// pulgar; el resto vive en "Más". En orden de preferencia: se toman los
+// primeros cuatro que el rol puede ver (un member no tiene /agente, así que
+// le toca /vendedores).
+const MOVIL_PREFERIDOS = ["/mi-cartera", "/dashboard", "/conversaciones", "/calendario", "/agente", "/vendedores"];
+const MOVIL_MAX = 4;
 
 function esActivo(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
@@ -116,6 +122,19 @@ export function Sidebar() {
   const faltaPerfil = usuario !== null && usuario.perfil_completo === false;
   const esPlataforma = esGerenciaPlataforma(usuario);
   const inicialesPerfil = usuario ? iniciales(usuario.nombres, usuario.apellido_paterno, usuario.email) : "";
+
+  // Lo que el rol no puede abrir no se ofrece (lib/roles.ts). Mientras
+  // carga /auth/yo el rail queda vacío un instante: mejor eso que enseñarle
+  // a un vendedor, aunque sea un momento, el menú completo del negocio.
+  const visible = (i: Item) => usuario !== null && puedeVerRuta(usuario, i.href);
+  const grupos = NAV_GRUPOS.map((g) => ({ ...g, items: g.items.filter(visible) })).filter(
+    (g) => g.items.length > 0,
+  );
+  const suscripcion = visible(NAV_SUSCRIPCION) ? NAV_SUSCRIPCION : null;
+  const todos = TODOS.filter(visible);
+  const movilHrefs = MOVIL_PREFERIDOS.filter((href) => todos.some((i) => i.href === href)).slice(0, MOVIL_MAX);
+  const movil = movilHrefs.map((href) => todos.find((i) => i.href === href)!);
+  const inicio = inicioDeRol(usuario);
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", isLight);
@@ -192,7 +211,7 @@ export function Sidebar() {
   };
 
   const restoMovil = [
-    ...TODOS.filter((i) => !MOVIL_HREFS.includes(i.href)),
+    ...todos.filter((i) => !movilHrefs.includes(i.href)),
     ...(esPlataforma ? [NAV_PLATAFORMA] : []),
   ];
   const masActivo =
@@ -203,7 +222,7 @@ export function Sidebar() {
       {/* ---------- Rail de escritorio ---------- */}
       <aside className="hidden w-[88px] shrink-0 flex-col border-r border-bg-700 bg-bg-900 px-2 py-3 md:flex">
         <Link
-          href="/dashboard"
+          href={inicio}
           aria-label="OperativAI, ir al inicio"
           className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl"
         >
@@ -216,7 +235,7 @@ export function Sidebar() {
           className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto"
           aria-label="Principal"
         >
-          {NAV_GRUPOS.map((grupo, i) => (
+          {grupos.map((grupo, i) => (
             <div key={grupo.titulo} className="flex flex-col gap-0.5">
               {i > 0 && <div className="mx-3 my-2 h-px bg-bg-700" aria-hidden />}
               <span className="my-1 text-center text-[10px] tracking-wider text-text-600 uppercase">
@@ -226,7 +245,7 @@ export function Sidebar() {
             </div>
           ))}
           <div className="flex-1" />
-          {railLink(NAV_SUSCRIPCION)}
+          {suscripcion && railLink(suscripcion)}
           {/* Solo para el nivel gerencia de plataforma. El backend lo
               vuelve a comprobar en cada endpoint: esconder el link es
               para no ofrecer una puerta que no abre, no la seguridad. */}
@@ -258,9 +277,11 @@ export function Sidebar() {
       {/* ---------- Barra inferior móvil ---------- */}
       <nav
         aria-label="Principal móvil"
-        className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-5 gap-1 border-t border-bg-700 bg-bg-900 px-1 py-1.5 md:hidden"
+        // Una columna por destino más la de "Más": depende del rol.
+        style={{ gridTemplateColumns: `repeat(${movil.length + 1}, minmax(0, 1fr))` }}
+        className="fixed inset-x-0 bottom-0 z-40 grid h-16 gap-1 border-t border-bg-700 bg-bg-900 px-1 py-1.5 md:hidden"
       >
-        {MOVIL.map(({ icon: Icon, label, corto, href }) => {
+        {movil.map(({ icon: Icon, label, corto, href }) => {
           const active = esActivo(pathname, href);
           return (
             <Link

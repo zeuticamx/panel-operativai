@@ -6,6 +6,7 @@ import { ShieldAlert } from "lucide-react";
 import { Cargando } from "@/app/components/ui";
 import { esGerenciaPlataforma } from "@/app/components/gerencia";
 import { useUsuario } from "@/app/components/usuario-context";
+import { inicioDeRol } from "@/lib/roles";
 
 /**
  * Guarda de la sección de plataforma.
@@ -25,7 +26,7 @@ export default function GerenciaLayout({ children }: { children: ReactNode }) {
   const permitido = esGerenciaPlataforma(usuario);
 
   useEffect(() => {
-    if (!loading && usuario && !permitido) router.replace("/dashboard");
+    if (!loading && usuario && !permitido) router.replace(inicioDeRol(usuario));
   }, [loading, usuario, permitido, router]);
 
   if (loading || !usuario) return <Cargando texto="verificando nivel de acceso…" />;

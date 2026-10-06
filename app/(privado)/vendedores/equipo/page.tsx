@@ -3,20 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Bot, Edit, Plus, RefreshCw, Shuffle, UserRound, Users, X } from "lucide-react";
+import { Edit, KeyRound, Plus, RefreshCw, Send, Shuffle, UserRound, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
   ConfigAsignacionOut,
+  CupoOut,
   EstrategiaAsignacion,
+  InvitacionCreadaOut,
   ReasignacionOut,
-  ServiciosOut,
   VendedorOut,
 } from "@/lib/types";
 import { ESTRATEGIA_INFO, fmtInt, formatoFechaHora } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { EditarVendedor } from "@/app/components/editar-vendedor";
+import {
+  DialogoEnlace,
+  DialogoInvitar,
+  reenviarInvitacion,
+  useInvitaciones,
+} from "@/app/components/invitaciones";
 import {
   ModuloApagado,
   VendedoresTabs,
@@ -29,7 +36,6 @@ import {
   Campo,
   Cargando,
   ConfirmDialog,
-  Interruptor,
   PageHeader,
   inputClass,
 } from "@/app/components/ui";
@@ -47,35 +53,30 @@ export default function EquipoPage() {
 
   const config = useApi<ConfigAsignacionOut>(base ? `${base}/config-vendedores` : null);
   const vendedores = useApi<VendedorOut[]>(base ? `${base}/vendedores` : null);
+  const cupo = useApi<CupoOut>(base ? `${base}/vendedores/cupo` : null);
+  // Quién tiene una invitación sin aceptar, para no ofrecer "Dar acceso" dos veces.
+  const invitaciones = useInvitaciones(gerencia && activo);
 
   const [aviso, setAviso] = useState<string | null>(null);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [nuevo, setNuevo] = useState(false);
-  const [apagarModulo, setApagarModulo] = useState(false);
   const [aReasignar, setReasignar] = useState<VendedorOut | null>(null);
   const [editando, setEditando] = useState<VendedorOut | null>(null);
+  const [darAcceso, setDarAcceso] = useState<VendedorOut | null>(null);
+  const [enlace, setEnlace] = useState<InvitacionCreadaOut | null>(null);
 
   const lista = vendedores.data ?? [];
   const activos = lista.filter((v) => v.activo);
+  const c = cupo.data;
+  // Con el tope del plan alcanzado no se ofrece sumar otro activo: el
+  // backend lo rechazaría con 402 (services/acceso_plan.exigir_cupo_vendedor).
+  const cupoLleno = c !== undefined && c !== null && c.maximo !== null && c.activos >= c.maximo;
+  const invitacionDe = (v: VendedorOut) => invitaciones.data?.find((i) => i.vendedor_id === v.id);
 
-  // ---- Servicios --------------------------------------------------------
-  const patchServicios = async (cambio: Partial<ServiciosOut>) => {
-    if (!servicios.tenantId) return;
-    setErrorAccion(null);
-    setAviso(null);
-    setOcupado("servicios");
-    try {
-      await apiFetch<ServiciosOut>(`/api/tenants/${servicios.tenantId}/servicios`, {
-        method: "PATCH",
-        json: cambio,
-      });
-      await servicios.recargar(true);
-    } catch (e) {
-      setErrorAccion(mensajeDeError(e, "No se pudo cambiar el servicio."));
-    } finally {
-      setOcupado(null);
-    }
+  const recargarEquipo = () => {
+    void vendedores.recargar(true);
+    void cupo.recargar(true);
   };
 
   // ---- Estrategia -------------------------------------------------------
@@ -108,7 +109,7 @@ export default function EquipoPage() {
         method: "PATCH",
         json: { activo: !v.activo },
       });
-      await vendedores.recargar(true);
+      recargarEquipo();
       if (v.activo && v.clientes_activos > 0) {
         setAviso(
           `${v.nombre} ya no recibe leads nuevos. Sigue teniendo ${v.clientes_activos} abiertos: usa "Repartir sus leads" si quieres moverlos.`,
@@ -147,8 +148,21 @@ export default function EquipoPage() {
     }
   };
 
+  const reenviar = async (v: VendedorOut, invitacionId: string) => {
+    setErrorAccion(null);
+    setAviso(null);
+    setOcupado(v.id);
+    try {
+      setEnlace(await reenviarInvitacion(invitacionId));
+      await invitaciones.recargar(true);
+    } catch (e) {
+      setErrorAccion(mensajeDeError(e, "No se pudo reenviar la invitación."));
+    } finally {
+      setOcupado(null);
+    }
+  };
+
   const cargandoInicial = servicios.loading && !servicios.data;
-  const s = servicios.data;
   const estrategiaActual = config.data?.estrategia_asignacion;
 
   return (
@@ -172,7 +186,12 @@ export default function EquipoPage() {
                 Actualizar
               </Boton>
               {gerencia && (
-                <Boton variante="primario" onClick={() => setNuevo(true)}>
+                <Boton
+                  variante="primario"
+                  onClick={() => setNuevo(true)}
+                  disabled={cupoLleno}
+                  title={cupoLleno ? "Llegaste al tope de vendedores activos de tu plan" : undefined}
+                >
                   <Plus size={13} aria-hidden />
                   Nuevo vendedor
                 </Boton>
@@ -199,39 +218,6 @@ export default function EquipoPage() {
             )
           ) : (
             <>
-              {/* Servicios */}
-              <section data-tour="equipo.servicios" className="rounded-md border border-bg-700 bg-bg-900 p-4">
-                <header className="mb-3">
-                  <h2 className="text-sm font-medium text-text-100">Servicios del negocio</h2>
-                  <p className="font-mono text-[11px] text-text-600">
-                    funcionan por separado: puedes tener uno, el otro o los dos
-                  </p>
-                </header>
-                <div className="flex flex-col divide-y divide-bg-700">
-                  <FilaServicio
-                    icono={Bot}
-                    titulo="Agente de IA"
-                    descripcion="Contesta a los clientes en automático. Si lo apagas, cada lead nuevo dispara un aviso directo al vendedor asignado."
-                    checked={s?.agente_ia_activo ?? true}
-                    disabled={!gerencia || ocupado === "servicios"}
-                    onChange={(v) => patchServicios({ agente_ia_activo: v })}
-                  />
-                  <FilaServicio
-                    icono={Users}
-                    titulo="Gestión de vendedores"
-                    descripcion="Embudo de venta y reparto de leads. Al apagarlo, los datos se conservan pero el equipo deja de recibir clientes."
-                    checked={s?.gestion_vendedores_activo ?? false}
-                    disabled={!gerencia || ocupado === "servicios"}
-                    onChange={(v) => (v ? patchServicios({ gestion_vendedores_activo: true }) : setApagarModulo(true))}
-                  />
-                </div>
-                {!gerencia && (
-                  <p className="mt-3 font-mono text-[11px] text-text-600">
-                    solo el dueño del negocio puede cambiar esto
-                  </p>
-                )}
-              </section>
-
               {/* Estrategia */}
               <section data-tour="equipo.reparto" className="rounded-md border border-bg-700 bg-bg-900 p-4">
                 <header className="mb-3 flex items-center gap-2">
@@ -318,11 +304,24 @@ export default function EquipoPage() {
                       <h2 className="text-sm font-medium text-text-100">Equipo</h2>
                       <p className="font-mono text-[11px] text-text-600">
                         {fmtInt.format(activos.length)} activos de {fmtInt.format(lista.length)}
+                        {c && c.maximo !== null && ` · tu plan permite ${fmtInt.format(c.maximo)} activos`}
                       </p>
                     </div>
                   </header>
+                  {gerencia && cupoLleno && (
+                    <div className="border-b border-bg-700 px-4 py-3">
+                      <Aviso tipo="info">
+                        Llegaste al tope de vendedores activos de tu plan. Desactiva a alguien o{" "}
+                        <Link href="/suscripcion" className="underline underline-offset-2">
+                          mejora tu plan
+                        </Link>{" "}
+                        para sumar más.
+                      </Aviso>
+                    </div>
+                  )}
                   {lista.map((v, i) => {
                     const trabajando = ocupado === v.id;
+                    const invitacion = invitacionDe(v);
                     return (
                       <article
                         key={v.id}
@@ -356,8 +355,17 @@ export default function EquipoPage() {
                             ) : (
                               <Badge tone="warning">inactivo</Badge>
                             )}
-                            {v.portal_user_id && (
-                              <Badge title="Tiene cuenta en el portal">con acceso</Badge>
+                            {v.portal_user_id ? (
+                              <Badge title="Entra a la app de vendedores con su propia cuenta">con acceso</Badge>
+                            ) : (
+                              invitacion && (
+                                <Badge
+                                  tone={invitacion.vencida ? "warning" : "info"}
+                                  title={`Invitación enviada a ${invitacion.email}`}
+                                >
+                                  {invitacion.vencida ? "invitación vencida" : "invitación enviada"}
+                                </Badge>
+                              )
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 font-mono text-[11px] text-text-600">
@@ -382,6 +390,31 @@ export default function EquipoPage() {
                               <Edit size={13} aria-hidden />
                               Editar
                             </Boton>
+                            {/* Acceso a la app: solo a fichas activas y sin cuenta. Quitar
+                                el acceso se hace en Preferencias › Usuarios del negocio. */}
+                            {v.activo && !v.portal_user_id && (
+                              invitacion ? (
+                                <Boton
+                                  variante="fantasma"
+                                  onClick={() => reenviar(v, invitacion.id)}
+                                  disabled={trabajando}
+                                  title={`Enlace nuevo para ${invitacion.email}; el anterior deja de servir`}
+                                >
+                                  <Send size={13} aria-hidden />
+                                  Reenviar invitación
+                                </Boton>
+                              ) : (
+                                <Boton
+                                  variante="fantasma"
+                                  onClick={() => setDarAcceso(v)}
+                                  disabled={trabajando}
+                                  title="Invitarlo a la app de vendedores con su propio usuario"
+                                >
+                                  <KeyRound size={13} aria-hidden />
+                                  Dar acceso
+                                </Boton>
+                              )
+                            )}
                             {v.clientes_activos > 0 && (
                               <Boton
                                 variante="fantasma"
@@ -397,6 +430,8 @@ export default function EquipoPage() {
                               variante="secundario"
                               onClick={() => alternarActivo(v)}
                               loading={trabajando}
+                              disabled={!v.activo && cupoLleno}
+                              title={!v.activo && cupoLleno ? "Tu plan no permite más vendedores activos" : undefined}
                             >
                               {v.activo ? "Desactivar" : "Activar"}
                             </Boton>
@@ -419,26 +454,25 @@ export default function EquipoPage() {
             setNuevo(false);
             setErrorAccion(null);
             setAviso(`${v.nombre} ya forma parte del equipo.`);
-            vendedores.recargar(true);
+            recargarEquipo();
           }}
         />
       )}
 
-      <ConfirmDialog
-        open={apagarModulo}
+      <DialogoInvitar
+        open={darAcceso !== null}
         onOpenChange={(o) => {
-          if (!o && ocupado !== "servicios") setApagarModulo(false);
+          if (!o) setDarAcceso(null);
         }}
-        titulo="¿Apagar la gestión de vendedores?"
-        descripcion="El equipo deja de recibir clientes nuevos y esta sección se oculta. El embudo y el historial se conservan; al volver a activarlo todo sigue donde estaba."
-        confirmar="Apagar"
-        peligro
-        loading={ocupado === "servicios"}
-        onConfirm={async () => {
-          await patchServicios({ gestion_vendedores_activo: false });
-          setApagarModulo(false);
+        role="vendedor"
+        ficha={darAcceso ? { id: darAcceso.id, nombre: darAcceso.nombre } : undefined}
+        onCreada={(inv) => {
+          setDarAcceso(null);
+          setEnlace(inv);
+          void invitaciones.recargar(true);
         }}
       />
+      <DialogoEnlace invitacion={enlace} onCerrar={() => setEnlace(null)} />
 
       <ConfirmDialog
         open={aReasignar !== null}
@@ -487,49 +521,6 @@ export default function EquipoPage() {
         />
       )}
     </>
-  );
-}
-
-// ------------------------------------------------------------
-function FilaServicio({
-  icono: Icono,
-  titulo,
-  descripcion,
-  checked,
-  disabled,
-  onChange,
-}: {
-  icono: typeof Bot;
-  titulo: string;
-  descripcion: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
-          checked
-            ? "border-success/40 bg-success-bg text-success"
-            : "border-bg-700 bg-bg-800 text-text-400",
-        )}
-      >
-        <Icono size={16} aria-hidden />
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-sm font-medium text-text-100">{titulo}</span>
-        <p className="text-xs leading-relaxed text-text-400">{descripcion}</p>
-      </div>
-      <Interruptor
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        label={titulo}
-        className="mt-1"
-      />
-    </div>
   );
 }
 

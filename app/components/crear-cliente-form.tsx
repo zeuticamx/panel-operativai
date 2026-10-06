@@ -63,7 +63,7 @@ export function CrearClienteForm({
       if (montoEstimado.trim()) body.monto_estimado = Number(montoEstimado);
       if (nota.trim()) body.nota = nota.trim();
 
-      const cliente = await apiFetch<PipelineOut>("/api/clientes", {
+      const cliente = await apiFetch<PipelineOut>("/api/pipeline", {
         method: "POST",
         json: body,
       });

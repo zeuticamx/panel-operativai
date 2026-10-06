@@ -25,6 +25,7 @@ export function ReservaDetalle({
   servicios,
   onReprogramar,
   onCambiado,
+  acciones = "todas",
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -34,6 +35,12 @@ export function ReservaDetalle({
   servicios: ServicioOut[];
   onReprogramar: (reserva: ReservaOut) => void;
   onCambiado: (mensaje: string) => void;
+  /**
+   * Qué puede hacer quien mira (espejo de routers/calendario.py):
+   * "todas" gerencia; "propias" el proveedor sobre sus citas (cancelar y
+   * marcar, no mover ni cambiar de barbero); "ninguna" un colaborador.
+   */
+  acciones?: "todas" | "propias" | "ninguna";
 }) {
   const [confirmCancelar, setConfirmCancelar] = useState(false);
   const [procesando, setProcesando] = useState<"cancelar" | "completada" | "no_asistio" | null>(
@@ -158,15 +165,18 @@ export function ReservaDetalle({
               </Dialog.Title>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone={info.tone}>{info.label}</Badge>
-                <button
-                  type="button"
-                  onClick={() => setHistorialAbierto(true)}
-                  className="cursor-pointer rounded p-1 text-text-400 hover:bg-hover hover:text-text-100"
-                  aria-label="Ver historial de la cita"
-                  title="Ver historial de la cita"
-                >
-                  <History size={14} />
-                </button>
+                {/* La bitácora es de gerencia: el proveedor no la ve (403). */}
+                {acciones !== "propias" && (
+                  <button
+                    type="button"
+                    onClick={() => setHistorialAbierto(true)}
+                    className="cursor-pointer rounded p-1 text-text-400 hover:bg-hover hover:text-text-100"
+                    aria-label="Ver historial de la cita"
+                    title="Ver historial de la cita"
+                  >
+                    <History size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -205,12 +215,14 @@ export function ReservaDetalle({
               </Aviso>
             )}
 
-            {activa ? (
+            {activa && acciones !== "ninguna" ? (
               <div className="mt-5 flex flex-wrap justify-end gap-2">
-                <Boton variante="fantasma" onClick={() => onReprogramar(reserva)}>
-                  Reprogramar
-                </Boton>
-                {otrosProveedores.length > 0 && (
+                {acciones === "todas" && (
+                  <Boton variante="fantasma" onClick={() => onReprogramar(reserva)}>
+                    Reprogramar
+                  </Boton>
+                )}
+                {acciones === "todas" && otrosProveedores.length > 0 && (
                   <Boton variante="fantasma" onClick={abrirReasignar}>
                     Cambiar barbero
                   </Boton>
@@ -231,7 +243,14 @@ export function ReservaDetalle({
                 </Boton>
               </div>
             ) : (
-              <div className="mt-5 flex justify-end">
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                {/* Una cita que el sistema dio por no asistida al pasar su hora
+                    (jobs/reservas_background.py) se corrige si sí se atendió. */}
+                {reserva.estado === "no_asistio" && acciones !== "ninguna" && (
+                  <Boton variante="secundario" onClick={abrirCompletar}>
+                    Sí vino: marcar completada
+                  </Boton>
+                )}
                 <Dialog.Close asChild>
                   <Boton variante="secundario">Cerrar</Boton>
                 </Dialog.Close>

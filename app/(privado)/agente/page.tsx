@@ -215,6 +215,9 @@ export default function AgentePage() {
                 <span className="font-mono text-[11px] text-text-600">
                   Tono, reglas, qué puede y qué no puede decir. Mínimo {PROMPT_MIN} caracteres.
                 </span>
+                <span className="font-mono text-[11px] text-text-600">
+                  Puedes pedirle a tu IA favorita que te ayude a redactar las instrucciones y las pegas aqui.
+                </span>
               </div>
             </section>
 

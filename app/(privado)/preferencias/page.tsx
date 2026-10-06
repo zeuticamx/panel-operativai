@@ -16,6 +16,9 @@ import type { CampoPerfilObligatorio, GeneroPerfil, PerfilIn, PerfilOut } from "
 import { useApi } from "@/lib/use-api";
 import { AvatarPerfil } from "@/app/components/avatar-perfil";
 import { BorrarCuenta } from "@/app/components/borrar-cuenta";
+import { esGerencia } from "@/app/components/modulo-vendedores";
+import { ServiciosNegocio } from "@/app/components/servicios-negocio";
+import { UsuariosNegocio } from "@/app/components/usuarios-negocio";
 import {
   Aviso,
   Boton,
@@ -70,8 +73,8 @@ function nulo(v: string): string | null {
 }
 
 /**
- * Preferencias: el perfil personal de quien entra (no del negocio) y la
- * apariencia del portal. Nada de acá es obligatorio para usar el portal;
+ * Preferencias: el perfil personal de quien entra, la apariencia del portal
+ * y (solo gerencia) los servicios del negocio. Nada del perfil es obligatorio para usar el portal;
  * mientras falten datos, el backend manda un recordatorio diario durante
  * los primeros 20 días de la cuenta (jobs/perfil_background.py).
  */
@@ -194,7 +197,16 @@ export default function PreferenciasPage() {
 
   return (
     <>
-      <PageHeader titulo="Preferencias" sub={<span>tu perfil y la apariencia del portal</span>} />
+      <PageHeader
+        titulo="Preferencias"
+        sub={
+          <span>
+            {esGerencia(usuario)
+              ? "tu perfil, la apariencia del portal y tu negocio"
+              : "tu perfil y la apariencia del portal"}
+          </span>
+        }
+      />
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
@@ -412,6 +424,11 @@ export default function PreferenciasPage() {
                   onChange={(claro) => setStoredTheme(claro ? "light" : "dark")}
                 />
               </section>
+
+              {/* Lo del negocio, no de la persona: solo gerencia (el backend
+                  lo vuelve a exigir en cada endpoint). */}
+              {esGerencia(usuario) && <ServiciosNegocio soloLectura={soloLectura} />}
+              {esGerencia(usuario) && <UsuariosNegocio soloLectura={soloLectura} />}
 
               {usuario?.role === "owner" && !soloLectura && <BorrarCuenta />}
             </>

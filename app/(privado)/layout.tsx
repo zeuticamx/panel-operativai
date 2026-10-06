@@ -10,6 +10,7 @@ import { BannerVerComo } from "@/app/components/banner-ver-como";
 import { Sidebar } from "@/app/components/sidebar";
 import { ChatWidget } from "@/app/components/chat-widget";
 import { GuardaPlan, PlanProvider } from "@/app/components/plan-context";
+import { GuardaRol } from "@/app/components/guarda-rol";
 import { UsuarioProvider } from "@/app/components/usuario-context";
 
 const noop = () => () => {};
@@ -58,7 +59,11 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
             <Sidebar />
             {/* pb-16: deja libre la barra inferior móvil del Sidebar. */}
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0">
-              <GuardaPlan>{children}</GuardaPlan>
+              {/* Rol antes que plan: a un vendedor no se le ofrece mejorar el
+                  plan de una pantalla que igual no puede abrir. */}
+              <GuardaRol>
+                <GuardaPlan>{children}</GuardaPlan>
+              </GuardaRol>
             </main>
             <ChatWidget />
           </div>

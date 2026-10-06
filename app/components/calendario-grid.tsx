@@ -52,7 +52,8 @@ export function CalendarioGrid({
    * presente con un arreglo vacío significa "no atiende ese día".
    */
   ventanasPorProveedor: Record<string, Array<[number, number]>>;
-  onSlotClick: (proveedorId: string, horas: number, minutos: number) => void;
+  /** Sin esto las franjas libres no se pueden tocar (quien mira no crea citas). */
+  onSlotClick?: (proveedorId: string, horas: number, minutos: number) => void;
   onReservaClick: (reserva: ReservaOut) => void;
 }) {
   const filas = generarFilas();
@@ -182,12 +183,16 @@ export function CalendarioGrid({
 
                   return (
                     <td key={p.id} className="border-r border-bg-700 p-0.5 last:border-r-0">
-                      <button
-                        type="button"
-                        onClick={() => onSlotClick(p.id, horas, minutos)}
-                        className="h-8 w-full cursor-pointer rounded hover:bg-hover focus:outline-none focus:ring-2 focus:ring-bg-600"
-                        aria-label={`Reservar con ${p.nombre} a las ${etiquetaFila(horas, minutos)}`}
-                      />
+                      {onSlotClick ? (
+                        <button
+                          type="button"
+                          onClick={() => onSlotClick(p.id, horas, minutos)}
+                          className="h-8 w-full cursor-pointer rounded hover:bg-hover focus:outline-none focus:ring-2 focus:ring-bg-600"
+                          aria-label={`Reservar con ${p.nombre} a las ${etiquetaFila(horas, minutos)}`}
+                        />
+                      ) : (
+                        <span className="block h-8 w-full" aria-hidden />
+                      )}
                     </td>
                   );
                 })}

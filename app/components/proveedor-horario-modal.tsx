@@ -6,8 +6,26 @@ import { X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import { DIAS_SEMANA, formatoFechaHora } from "@/lib/formato";
+
+/** "YYYY-MM-DD" local, sin pasar por UTC. */
+function fechaLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** "2026-01-05" -> "lun 5 ene" */
+function fechaCorta(fecha: string): string {
+  return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-MX", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+/** Cuántos días hacia adelante se listan los días libres. */
+const DIAS_LIBRES_HORIZONTE = 120;
 import type {
   DescansoOut,
+  ExcepcionOut,
   HorarioSemanalIn,
   HorarioSemanalOut,
   ProveedorOut,
@@ -30,17 +48,24 @@ const DIA_DEFAULT: DiaEditable = { activo: false, horaInicio: "09:00", horaFin: 
  * (varios bloques el mismo día) y excepciones puntuales, pero esta primera
  * versión del portal solo edita un bloque por día — cubre el caso común y
  * no bloquea agregar más adelante una vista más avanzada.
+ *
+ * Abajo, los días libres (excepciones con disponible=false). Con
+ * `soloDisponibilidad` es la vista del propio proveedor: ve su horario sin
+ * poder cambiarlo (eso lo fija el dueño) y maneja sus descansos y días
+ * libres — lo mismo que le deja routers/calendario.py.
  */
 export function ProveedorHorarioModal({
   open,
   onOpenChange,
   tenantId,
   proveedor,
+  soloDisponibilidad = false,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   tenantId: string;
   proveedor: ProveedorOut | null;
+  soloDisponibilidad?: boolean;
 }) {
   const rutaHorarios = proveedor
     ? `/api/tenants/${tenantId}/calendario/proveedores/${proveedor.id}/horarios`
@@ -50,6 +75,20 @@ export function ProveedorHorarioModal({
     : null;
   const horarios = useApi<HorarioSemanalOut[]>(open ? rutaHorarios : null);
   const descansos = useApi<DescansoOut[]>(open ? rutaDescansos : null);
+  const [hoy] = useState(() => fechaLocal(new Date()));
+  const [limite] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + DIAS_LIBRES_HORIZONTE);
+    return fechaLocal(d);
+  });
+  const excepciones = useApi<ExcepcionOut[]>(
+    open && proveedor
+      ? `/api/tenants/${tenantId}/calendario/proveedores/${proveedor.id}/excepciones?desde=${hoy}&hasta=${limite}`
+      : null,
+  );
+  const [diaLibreNuevo, setDiaLibreNuevo] = useState("");
+  const [guardandoDiaLibre, setGuardandoDiaLibre] = useState(false);
+  const [errorDiaLibre, setErrorDiaLibre] = useState<string | null>(null);
 
   const [dias, setDias] = useState<DiaEditable[]>(() => DIAS_SEMANA.map(() => ({ ...DIA_DEFAULT })));
   const [guardando, setGuardando] = useState(false);
@@ -91,6 +130,8 @@ export function ProveedorHorarioModal({
       setConflictos(null);
       setFormDescanso({});
       setErrorDescanso(null);
+      setErrorDiaLibre(null);
+      setDiaLibreNuevo("");
     }
   }
 
@@ -137,6 +178,34 @@ export function ProveedorHorarioModal({
       descansos.recargar(true);
     } catch (e) {
       setErrorDescanso(mensajeDeError(e, "No se pudo eliminar el descanso."));
+    }
+  };
+
+  const marcarDiaLibre = async () => {
+    if (!diaLibreNuevo) return;
+    setErrorDiaLibre(null);
+    setGuardandoDiaLibre(true);
+    try {
+      await apiFetch(`/api/tenants/${tenantId}/calendario/proveedores/${proveedor.id}/excepciones`, {
+        method: "POST",
+        json: { fecha: diaLibreNuevo, disponible: false },
+      });
+      setDiaLibreNuevo("");
+      excepciones.recargar(true);
+    } catch (e) {
+      setErrorDiaLibre(mensajeDeError(e, "No se pudo marcar el día libre."));
+    } finally {
+      setGuardandoDiaLibre(false);
+    }
+  };
+
+  const quitarExcepcion = async (id: string) => {
+    setErrorDiaLibre(null);
+    try {
+      await apiFetch(`/api/tenants/${tenantId}/calendario/excepciones/${id}`, { method: "DELETE" });
+      excepciones.recargar(true);
+    } catch (e) {
+      setErrorDiaLibre(mensajeDeError(e, "No se pudo quitar el día."));
     }
   };
 
@@ -191,7 +260,7 @@ export function ProveedorHorarioModal({
         <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-bg-700 bg-bg-900 p-5 shadow-xl">
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-sm font-medium text-text-100">
-              Horario de {proveedor.nombre}
+              {soloDisponibilidad ? "Tu disponibilidad" : `Horario de ${proveedor.nombre}`}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
@@ -204,6 +273,12 @@ export function ProveedorHorarioModal({
             </Dialog.Close>
           </div>
 
+          {soloDisponibilidad && (
+            <p className="mt-1 font-mono text-[11px] text-text-600">
+              tu horario lo fija el negocio; tú marcas tus descansos y días libres
+            </p>
+          )}
+
           {horarios.loading ? (
             <Cargando />
           ) : (
@@ -214,6 +289,7 @@ export function ProveedorHorarioModal({
                     <input
                       type="checkbox"
                       checked={dias[i].activo}
+                      disabled={soloDisponibilidad}
                       onChange={(e) => cambiarDia(i, { activo: e.target.checked })}
                     />
                     {nombreDia}
@@ -221,7 +297,7 @@ export function ProveedorHorarioModal({
                   <input
                     type="time"
                     className={inputClass}
-                    disabled={!dias[i].activo}
+                    disabled={soloDisponibilidad || !dias[i].activo}
                     value={dias[i].horaInicio}
                     onChange={(e) => cambiarDia(i, { horaInicio: e.target.value })}
                   />
@@ -231,7 +307,7 @@ export function ProveedorHorarioModal({
                   <input
                     type="time"
                     className={inputClass}
-                    disabled={!dias[i].activo}
+                    disabled={soloDisponibilidad || !dias[i].activo}
                     value={dias[i].horaFin}
                     onChange={(e) => cambiarDia(i, { horaFin: e.target.value })}
                   />
@@ -328,6 +404,61 @@ export function ProveedorHorarioModal({
             </Aviso>
           )}
 
+          {!horarios.loading && (
+            <div className="mt-4 flex flex-col gap-2 border-t border-bg-700 pt-4">
+              <p className="text-xs font-medium text-text-100">Días libres</p>
+              {(excepciones.data ?? []).length > 0 && (
+                <ul className="flex flex-col gap-1">
+                  {(excepciones.data ?? []).map((ex) => {
+                    // Un horario especial lo fija el negocio: el proveedor lo ve, no lo quita.
+                    const quitable = !soloDisponibilidad || !ex.disponible;
+                    return (
+                      <li key={ex.id} className="flex items-center justify-between text-[11px] text-text-100">
+                        <span className="capitalize">
+                          {fechaCorta(ex.fecha)}
+                          <span className="ml-2 normal-case text-text-600">
+                            {ex.disponible
+                              ? `horario especial ${ex.hora_inicio?.slice(0, 5)} – ${ex.hora_fin?.slice(0, 5)}`
+                              : "día libre"}
+                          </span>
+                        </span>
+                        {quitable && (
+                          <button
+                            type="button"
+                            onClick={() => quitarExcepcion(ex.id)}
+                            className="cursor-pointer rounded p-0.5 text-text-600 hover:bg-bg-700 hover:text-text-100"
+                            aria-label={`Quitar el ${fechaCorta(ex.fecha)}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  min={hoy}
+                  value={diaLibreNuevo}
+                  onChange={(e) => setDiaLibreNuevo(e.target.value)}
+                  className={`${inputClass} w-40`}
+                  aria-label="Fecha del día libre"
+                />
+                <Boton
+                  variante="secundario"
+                  onClick={marcarDiaLibre}
+                  loading={guardandoDiaLibre}
+                  disabled={!diaLibreNuevo}
+                >
+                  Marcar día libre
+                </Boton>
+              </div>
+              {errorDiaLibre && <Aviso tipo="error">{errorDiaLibre}</Aviso>}
+            </div>
+          )}
+
           {error && (
             <Aviso tipo="error" className="mt-3">
               {error}
@@ -358,9 +489,11 @@ export function ProveedorHorarioModal({
                 Cerrar
               </Boton>
             </Dialog.Close>
-            <Boton variante="primario" loading={guardando} onClick={guardar}>
-              Guardar horario
-            </Boton>
+            {!soloDisponibilidad && (
+              <Boton variante="primario" loading={guardando} onClick={guardar}>
+                Guardar horario
+              </Boton>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

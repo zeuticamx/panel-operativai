@@ -1,10 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, Plus, Send } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
-import type { ProveedorActualizarIn, ProveedorCrearIn, ProveedorOut } from "@/lib/types";
+import { fmtInt } from "@/lib/formato";
+import type {
+  CupoOut,
+  InvitacionCreadaOut,
+  ProveedorActualizarIn,
+  ProveedorCrearIn,
+  ProveedorOut,
+} from "@/lib/types";
+import { Badge } from "@/app/components/badge";
+import {
+  DialogoEnlace,
+  DialogoInvitar,
+  reenviarInvitacion,
+  useInvitaciones,
+} from "@/app/components/invitaciones";
 import { CalendarioTabs, ModuloCalendarioApagado } from "@/app/components/modulo-calendario";
 import { esGerencia, useServicios } from "@/app/components/modulo-vendedores";
 import { ProveedorHorarioModal } from "@/app/components/proveedor-horario-modal";
@@ -21,6 +36,31 @@ export default function CalendarioProveedoresPage() {
     activo && servicios.tenantId ? `/api/tenants/${servicios.tenantId}/calendario` : null;
 
   const proveedores = useApi<ProveedorOut[]>(base ? `${base}/proveedores` : null);
+  // El cupo y las invitaciones son de gerencia: el backend se los niega al resto.
+  const cupo = useApi<CupoOut>(base && gerencia ? `${base}/proveedores/cupo` : null);
+  const invitaciones = useInvitaciones(gerencia && activo);
+  const [darAcceso, setDarAcceso] = useState<ProveedorOut | null>(null);
+  const [enlace, setEnlace] = useState<InvitacionCreadaOut | null>(null);
+  const [reenviando, setReenviando] = useState<string | null>(null);
+
+  const c = cupo.data;
+  // Con el tope del plan alcanzado no se ofrece sumar otro activo: el backend
+  // respondería 402 (services/acceso_plan.exigir_cupo_proveedor).
+  const cupoLleno = c !== undefined && c !== null && c.maximo !== null && c.activos >= c.maximo;
+  const invitacionDe = (p: ProveedorOut) => invitaciones.data?.find((i) => i.proveedor_id === p.id);
+
+  const reenviar = async (invitacionId: string) => {
+    setError(null);
+    setReenviando(invitacionId);
+    try {
+      setEnlace(await reenviarInvitacion(invitacionId));
+      await invitaciones.recargar(true);
+    } catch (e) {
+      setError(mensajeDeError(e, "No se pudo reenviar la invitación."));
+    } finally {
+      setReenviando(null);
+    }
+  };
 
   const [nombreNuevo, setNombreNuevo] = useState("");
   const [colorNuevo, setColorNuevo] = useState("#6366f1");
@@ -41,6 +81,7 @@ export default function CalendarioProveedoresPage() {
       });
       setNombreNuevo("");
       proveedores.recargar(true);
+      cupo.recargar(true);
     } catch (e) {
       setError(mensajeDeError(e, "No se pudo crear el proveedor."));
     } finally {
@@ -54,6 +95,7 @@ export default function CalendarioProveedoresPage() {
     try {
       await apiFetch<ProveedorOut>(`${base}/proveedores/${id}`, { method: "PATCH", json: cambios });
       proveedores.recargar(true);
+      cupo.recargar(true);
     } catch (e) {
       setError(mensajeDeError(e, "No se pudo actualizar el proveedor."));
     }
@@ -119,12 +161,28 @@ export default function CalendarioProveedoresPage() {
                     variante="primario"
                     onClick={crear}
                     loading={creando}
-                    disabled={!nombreNuevo.trim()}
+                    disabled={!nombreNuevo.trim() || cupoLleno}
+                    title={cupoLleno ? "Llegaste al tope de proveedores activos de tu plan" : undefined}
                   >
                     <Plus size={13} aria-hidden />
                     Agregar
                   </Boton>
+                  {c && c.maximo !== null && (
+                    <span className="ml-auto self-center font-mono text-[11px] text-text-600">
+                      {fmtInt.format(c.activos)} de {fmtInt.format(c.maximo)} activos en tu plan
+                    </span>
+                  )}
                 </section>
+              )}
+
+              {gerencia && cupoLleno && (
+                <Aviso tipo="info">
+                  Llegaste al tope de proveedores activos de tu plan. Desactiva a alguien o{" "}
+                  <Link href="/suscripcion" className="underline underline-offset-2">
+                    mejora tu plan
+                  </Link>{" "}
+                  para sumar más.
+                </Aviso>
               )}
 
               <section data-tour="proveedores.lista" className="rounded-md border border-bg-700 bg-bg-900">
@@ -140,6 +198,7 @@ export default function CalendarioProveedoresPage() {
                       <tr className="border-b border-bg-700 font-mono text-[11px] text-text-600">
                         <th className="px-3 py-2 text-left font-normal">Proveedor</th>
                         <th className="px-3 py-2 text-left font-normal">Activo</th>
+                        {gerencia && <th className="px-3 py-2 text-left font-normal">Acceso</th>}
                         <th className="px-3 py-2 text-right font-normal">Horario</th>
                       </tr>
                     </thead>
@@ -191,10 +250,21 @@ export default function CalendarioProveedoresPage() {
                             <Interruptor
                               checked={p.activo}
                               onChange={(v) => actualizar(p.id, { activo: v })}
-                              disabled={!gerencia}
+                              disabled={!gerencia || (!p.activo && cupoLleno)}
                               label={`Activar o desactivar a ${p.nombre}`}
                             />
                           </td>
+                          {gerencia && (
+                            <td className="px-3 py-2">
+                              <AccesoProveedor
+                                proveedor={p}
+                                invitacion={invitacionDe(p)}
+                                reenviando={reenviando}
+                                onDarAcceso={() => setDarAcceso(p)}
+                                onReenviar={reenviar}
+                              />
+                            </td>
+                          )}
                           <td className="px-3 py-2 text-right">
                             <Boton variante="fantasma" onClick={() => setHorarioDe(p)}>
                               Horario
@@ -219,6 +289,69 @@ export default function CalendarioProveedoresPage() {
           proveedor={horarioDe}
         />
       )}
+
+      <DialogoInvitar
+        open={darAcceso !== null}
+        onOpenChange={(o) => {
+          if (!o) setDarAcceso(null);
+        }}
+        role="proveedor"
+        ficha={darAcceso ? { id: darAcceso.id, nombre: darAcceso.nombre } : undefined}
+        onCreada={(inv) => {
+          setDarAcceso(null);
+          setEnlace(inv);
+          void invitaciones.recargar(true);
+        }}
+      />
+      <DialogoEnlace invitacion={enlace} onCerrar={() => setEnlace(null)} />
     </>
+  );
+}
+
+/**
+ * Acceso del proveedor al portal: ya entra con su cuenta, tiene una
+ * invitación esperando (reenviable), o se le puede dar. Quitarlo se hace en
+ * Preferencias › Usuarios del negocio, igual que con los vendedores.
+ */
+function AccesoProveedor({
+  proveedor,
+  invitacion,
+  reenviando,
+  onDarAcceso,
+  onReenviar,
+}: {
+  proveedor: ProveedorOut;
+  invitacion: { id: string; email: string; vencida: boolean } | undefined;
+  reenviando: string | null;
+  onDarAcceso: () => void;
+  onReenviar: (invitacionId: string) => void;
+}) {
+  if (proveedor.portal_user_id) {
+    return <Badge title="Entra al portal con su propia cuenta">con acceso</Badge>;
+  }
+  if (invitacion) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Badge tone={invitacion.vencida ? "warning" : "info"} title={`Invitación enviada a ${invitacion.email}`}>
+          {invitacion.vencida ? "invitación vencida" : "invitación enviada"}
+        </Badge>
+        <Boton
+          variante="fantasma"
+          onClick={() => onReenviar(invitacion.id)}
+          loading={reenviando === invitacion.id}
+          title="Enlace nuevo; el anterior deja de servir"
+          aria-label={`Reenviar la invitación de ${proveedor.nombre}`}
+        >
+          <Send size={13} aria-hidden />
+        </Boton>
+      </div>
+    );
+  }
+  if (!proveedor.activo) return <span className="font-mono text-[11px] text-text-600">—</span>;
+  return (
+    <Boton variante="fantasma" onClick={onDarAcceso} title="Invitarlo al portal con su propio usuario">
+      <KeyRound size={13} aria-hidden />
+      Dar acceso
+    </Boton>
   );
 }

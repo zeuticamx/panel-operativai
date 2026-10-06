@@ -7,6 +7,7 @@ import { ArrowLeft, RefreshCw, UserSearch } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import { useConversacionLive } from "@/lib/use-conversacion-live";
+import { esProveedor } from "@/lib/roles";
 import type { ContactoOut, ConversacionDetalleOut } from "@/lib/types";
 import { estadoVentanaMeta, etiquetaIdentificador, formatoFechaHora, iniciales } from "@/lib/formato";
 import { CentroNotificaciones } from "@/app/components/centro-notificaciones";
@@ -54,9 +55,11 @@ export default function ConversacionDetallePage() {
   const ventana = data ? estadoVentanaMeta(data.minutos_restantes_ventana) : null;
 
   // WhatsApp queda fuera: no tiene API de perfil, el nombre llega en el
-  // propio mensaje. Solo tiene sentido ofrecerlo si aún no hay nombre.
+  // propio mensaje. Solo tiene sentido ofrecerlo si aún no hay nombre. El
+  // proveedor atiende el chat pero no edita el contacto (403 en el backend).
   const puedePedirPerfil =
     data !== null &&
+    !esProveedor(usuario) &&
     data.channel_type !== "whatsapp" &&
     !data.usuario_nombre?.trim();
 

@@ -2,10 +2,11 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { apiFetch } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import { fmtInt, ventanasDelDia } from "@/lib/formato";
+import { esProveedor } from "@/lib/roles";
 import type {
   DescansoOut,
   ExcepcionOut,
@@ -18,6 +19,7 @@ import { CalendarioGrid } from "@/app/components/calendario-grid";
 import { useAlertas } from "@/app/components/alertas-context";
 import { CalendarioTabs, ModuloCalendarioApagado } from "@/app/components/modulo-calendario";
 import { esGerencia, useServicios } from "@/app/components/modulo-vendedores";
+import { ProveedorHorarioModal } from "@/app/components/proveedor-horario-modal";
 import { ReservaDetalle } from "@/app/components/reserva-detalle";
 import { ReservaForm, type ModoReservaForm } from "@/app/components/reserva-form";
 import { StatCard } from "@/app/components/stat-card";
@@ -111,6 +113,9 @@ function Contenido() {
   const { usuario } = useUsuario();
   const servicios = useServicios();
   const gerencia = esGerencia(usuario);
+  // El proveedor con cuenta ve solo su columna (el backend ya le filtra
+  // proveedores y reservas) y maneja su disponibilidad desde acá.
+  const proveedor = esProveedor(usuario);
   const alertas = useAlertas();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,6 +148,8 @@ function Contenido() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [modoForm, setModoForm] = useState<ModoReservaForm | null>(null);
   const [reservaVista, setReservaVista] = useState<ReservaOut | null>(null);
+  const [disponibilidadAbierta, setDisponibilidadAbierta] = useState(false);
+  const yo = proveedor ? (proveedores.data?.[0] ?? null) : null;
 
   // Un aviso de reserva creada/cancelada (n8n o el propio portal en otra
   // pestaña) refresca la grilla sin que el usuario tenga que hacerlo a
@@ -199,28 +206,39 @@ function Contenido() {
         sub={<CalendarioTabs />}
         acciones={
           activo &&
-          gerencia && (
-            <Boton
-              variante="primario"
-              onClick={() =>
-                proveedores.data?.[0] &&
-                setModoForm({
-                  tipo: "crear",
-                  proveedorId: proveedores.data[0].id,
-                  horaInicioLocal: `${fecha}T09:00`,
-                })
-              }
-              disabled={!proveedores.data?.length}
-              title={
-                !proveedores.data?.length
-                  ? "Agrega un proveedor primero"
-                  : "Crear una reserva manual"
-              }
-            >
-              <Plus size={13} aria-hidden />
-              Nueva reserva
-            </Boton>
-          )
+          (proveedor ? (
+            <span data-tour="calendario.disponibilidad">
+              <Boton variante="secundario" onClick={() => setDisponibilidadAbierta(true)} disabled={!yo}>
+                <CalendarClock size={13} aria-hidden />
+                Mi disponibilidad
+              </Boton>
+            </span>
+          ) : (
+            gerencia && (
+              <span data-tour="calendario.nueva">
+                <Boton
+                  variante="primario"
+                  onClick={() =>
+                    proveedores.data?.[0] &&
+                    setModoForm({
+                      tipo: "crear",
+                      proveedorId: proveedores.data[0].id,
+                      horaInicioLocal: `${fecha}T09:00`,
+                    })
+                  }
+                  disabled={!proveedores.data?.length}
+                  title={
+                    !proveedores.data?.length
+                      ? "Agrega un proveedor primero"
+                      : "Crear una reserva manual"
+                  }
+                >
+                  <Plus size={13} aria-hidden />
+                  Nueva reserva
+                </Boton>
+              </span>
+            )
+          ))
         }
       />
 
@@ -257,11 +275,13 @@ function Contenido() {
                   loading={reservas.loading && !reservas.data}
                   hint="pendientes de atender"
                 />
-                <StatCard
-                  label="Proveedores activos"
-                  value={proveedores.data ? fmtInt.format(proveedores.data.length) : "—"}
-                  loading={proveedores.loading && !proveedores.data}
-                />
+                {!proveedor && (
+                  <StatCard
+                    label="Proveedores activos"
+                    value={proveedores.data ? fmtInt.format(proveedores.data.length) : "—"}
+                    loading={proveedores.loading && !proveedores.data}
+                  />
+                )}
                 <StatCard
                   label="Servicios activos"
                   value={catalogo.data ? fmtInt.format(catalogo.data.length) : "—"}
@@ -303,7 +323,7 @@ function Contenido() {
                 proveedores={proveedores.data ?? []}
                 reservas={listaReservas}
                 ventanasPorProveedor={ventanasPorProveedor}
-                onSlotClick={abrirCrear}
+                onSlotClick={gerencia ? abrirCrear : undefined}
                 onReservaClick={setReservaVista}
               />
             </>
@@ -336,6 +356,17 @@ function Contenido() {
             setModoForm({ tipo: "reprogramar", reserva: r });
           }}
           onCambiado={alGuardar}
+          acciones={gerencia ? "todas" : proveedor ? "propias" : "ninguna"}
+        />
+      )}
+
+      {servicios.tenantId && proveedor && (
+        <ProveedorHorarioModal
+          open={disponibilidadAbierta}
+          onOpenChange={setDisponibilidadAbierta}
+          tenantId={servicios.tenantId}
+          proveedor={yo}
+          soloDisponibilidad
         />
       )}
     </>

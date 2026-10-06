@@ -24,7 +24,7 @@ export interface Recorrido {
 export const RUTAS_SIN_RECORRIDO = ["/", "/conectar/callback", "/condiciones", "/privacidad", "/login"];
 
 /** Pantallas sin sesión con recorrido: el botón flota porque no tienen PageHeader. */
-export const RUTAS_PUBLICAS = ["/registro", "/recuperar"];
+export const RUTAS_PUBLICAS = ["/registro", "/recuperar", "/invitacion"];
 
 export function esRutaGerencia(pathname: string): boolean {
   return pathname === "/gerencia" || pathname.startsWith("/gerencia/");
@@ -72,7 +72,7 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     AYUDA,
   ],
   "/conversaciones": [
-    intro("Conversaciones", "Todos los chats que atiende tu agente, en todos tus canales."),
+    intro("Conversaciones", "Los chats que atiende tu agente, en todos tus canales. Si eres proveedor de la agenda, ves los de tus clientes."),
     { ancla: "conversaciones.filtros", titulo: "Buscar y filtrar", texto: "Busca por nombre o número y filtra por canal o estado. «Transferidas a humano» muestra los chats que esperan a una persona." },
     { ancla: "conversaciones.lista", titulo: "Lista de chats", texto: "Cada fila muestra el último mensaje y cuánto queda de la ventana de 24 h de Meta. Haz clic para abrirla." },
     { ancla: "conversaciones.paginacion", titulo: "Más resultados", texto: "Avanza o retrocede entre páginas de conversaciones." },
@@ -142,11 +142,11 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     AYUDA,
   ],
   "/vendedores/equipo": [
-    intro("Tu equipo de ventas", "Quién vende y cómo se reparten los leads."),
+    intro("Tu equipo de ventas", "Quién vende y cómo se reparten los leads. Para apagar o encender este módulo, ve a Preferencias."),
     PESTANAS_VENDEDORES,
-    { ancla: "equipo.servicios", titulo: "Servicios del negocio", texto: "Enciende o apaga el agente de IA y la gestión de vendedores." },
     { ancla: "equipo.reparto", titulo: "Reparto de leads", texto: "Cómo se asigna automáticamente cada lead nuevo." },
-    { ancla: "equipo.lista", titulo: "Equipo", texto: "Agrega, edita o desactiva vendedores." },
+    { ancla: "equipo.lista", titulo: "Equipo", texto: "Agrega, edita o desactiva vendedores. Tu plan marca cuántos pueden estar activos a la vez." },
+    { ancla: "equipo.lista", titulo: "Acceso a la app", texto: "Con «Dar acceso» le llega al vendedor un enlace para crear su propia contraseña. Entra a la app de vendedores y solo ve sus clientes." },
     AYUDA,
   ],
   "/vendedores/reportes": [
@@ -159,10 +159,11 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
   "/calendario": [
     intro("Calendario", "Las citas que tu agente agenda por chat, y las que agregas tú."),
     PESTANAS_CALENDARIO,
-    { ancla: "pagina.acciones", titulo: "Nueva reserva", texto: "Agenda a mano una cita que llegó por teléfono o en persona." },
+    { ancla: "calendario.nueva", titulo: "Nueva reserva", texto: "Agenda a mano una cita que llegó por teléfono o en persona." },
+    { ancla: "calendario.disponibilidad", titulo: "Tu disponibilidad", texto: "Marca tus descansos y días libres. Tu horario base lo fija el negocio." },
     { ancla: "calendario.metricas", titulo: "Resumen del día", texto: "Reservas, confirmadas, proveedores y servicios activos." },
     { ancla: "calendario.fecha", titulo: "Elegir día", texto: "Muévete entre días o vuelve a hoy." },
-    { ancla: "calendario.agenda", titulo: "Agenda", texto: "Una columna por proveedor. Haz clic en una cita para ver su detalle." },
+    { ancla: "calendario.agenda", titulo: "Agenda", texto: "Una columna por proveedor. Haz clic en una cita para ver su detalle, marcarla o cancelarla. Las que pasan sin marcarse quedan como «no asistió»; si sí vino, lo corriges ahí mismo." },
     AYUDA,
   ],
   "/calendario/servicios": [
@@ -176,7 +177,8 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     intro("Proveedores", "Las personas que atienden las citas."),
     PESTANAS_CALENDARIO,
     { ancla: "proveedores.form", titulo: "Agregar proveedor", texto: "Da de alta a quien atiende las citas." },
-    { ancla: "proveedores.lista", titulo: "Tu equipo", texto: "Configura el horario de cada proveedor o desactívalo." },
+    { ancla: "proveedores.lista", titulo: "Tu equipo", texto: "Configura el horario de cada proveedor o desactívalo. Tu plan marca cuántos pueden estar activos a la vez." },
+    { ancla: "proveedores.lista", titulo: "Acceso al portal", texto: "Con «Dar acceso» le llega un enlace para crear su contraseña. Verá solo su agenda y los chats de sus clientes." },
     AYUDA,
   ],
   "/calendario/corte-diario": [
@@ -193,6 +195,13 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     { ancla: "auditoria.tabla", titulo: "Historial", texto: "Cada cambio con su autor y fecha. Abre una fila para ver su historial completo." },
     AYUDA,
   ],
+  "/mi-cartera": [
+    intro("Tu cartera", "Aquí ves a tus clientes. Para moverlos de etapa o registrar visitas, usa la app de vendedores."),
+    { ancla: "mi-cartera.leads", titulo: "Tus leads", texto: "Los clientes que escribieron por chat y te asignaron, con la etapa en la que van." },
+    { ancla: "mi-cartera.campo", titulo: "Clientes de campo", texto: "Los negocios que visitas, con su prioridad y estado." },
+    NOTIFICACIONES,
+    AYUDA,
+  ],
   "/suscripcion": [
     intro("Suscripción", "Tu plan, tus créditos y tus pagos."),
     { ancla: "suscripcion.planes", titulo: "Planes", texto: "Compara los planes y cambia el tuyo." },
@@ -201,10 +210,12 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     AYUDA,
   ],
   "/preferencias": [
-    intro("Preferencias", "Tu perfil personal y la apariencia del portal."),
+    intro("Preferencias", "Tu perfil personal y la apariencia del portal. Si eres el dueño, también los servicios y los usuarios de tu negocio."),
     { ancla: "preferencias.foto", titulo: "Foto de perfil", texto: "Sube o quita tu foto." },
     { ancla: "preferencias.perfil", titulo: "Tus datos", texto: "Completa tu nombre y datos para que el equipo te identifique." },
     { ancla: "preferencias.tema", titulo: "Tema", texto: "Cambia entre tema claro y oscuro." },
+    { ancla: "preferencias.servicios", titulo: "Servicios del negocio", texto: "Solo el dueño: enciende o apaga el agente de IA y la gestión de vendedores. Funcionan por separado." },
+    { ancla: "preferencias.usuarios", titulo: "Usuarios del negocio", texto: "Invita colaboradores con su propio correo y contraseña, y quítale el acceso a quien ya no deba entrar (también a vendedores y proveedores)." },
     AYUDA,
   ],
   "/pagos/exito": [
@@ -221,6 +232,11 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     intro("Crea tu cuenta", "En unos minutos tu agente de IA estará listo."),
     { ancla: "auth.form", titulo: "Tus datos", texto: "Tu correo, una contraseña y el nombre de tu negocio. Te enviaremos un código para verificar el correo." },
     { ancla: "auth.google", titulo: "Registro con Google", texto: "También puedes crear la cuenta con Google." },
+    AYUDA_PUBLICA,
+  ],
+  "/invitacion": [
+    intro("Te invitaron a un equipo", "Crea tu acceso para entrar al negocio que te invitó."),
+    { ancla: "auth.form", titulo: "Elige tu contraseña", texto: "Tu correo ya viene de la invitación. Elige una contraseña: nadie más la conoce, ni el dueño del negocio." },
     AYUDA_PUBLICA,
   ],
   "/recuperar": [

@@ -459,6 +459,13 @@ function TarjetaPlan({
             ? "Vendedores ilimitados"
             : `Hasta ${fmtInt.format(plan.max_vendedores)} vendedores`}
         </Caracteristica>
+        {/* Solo cuando el plan lo limita: mientras gerencia no defina el
+            tope, "proveedores ilimitados" prometería algo no decidido. */}
+        {plan.max_proveedores != null && (
+          <Caracteristica>
+            Hasta {fmtInt.format(plan.max_proveedores)} proveedores en la agenda
+          </Caracteristica>
+        )}
         <Caracteristica>
           {fmtInt.format(Number(plan.creditos_incluidos_mensual))} créditos al mes
         </Caracteristica>

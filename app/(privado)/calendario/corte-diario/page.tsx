@@ -172,7 +172,7 @@ export default function CalendarioCorteDiarioPage() {
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-text-400">
-                  Barbero
+                  Proveedor
                   <select
                     className={`${inputClass} w-44 py-1.5`}
                     value={proveedorId}
@@ -227,7 +227,7 @@ export default function CalendarioCorteDiarioPage() {
                         <th className="px-3 py-2 text-left font-normal">Hora</th>
                         <th className="px-3 py-2 text-left font-normal">Cliente</th>
                         <th className="px-3 py-2 text-left font-normal">Servicio</th>
-                        <th className="px-3 py-2 text-left font-normal">Barbero</th>
+                        <th className="px-3 py-2 text-left font-normal">Proveedor</th>
                         <th className="px-3 py-2 text-left font-normal">Método de pago</th>
                         <th className="px-3 py-2 text-right font-normal">Precio</th>
                       </tr>

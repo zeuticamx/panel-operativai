@@ -89,7 +89,7 @@ export default function CalendarioAuditoriaPage() {
                 <h2 className="text-sm font-medium text-text-100">Bitácora de reservas</h2>
                 <p className="text-xs text-text-400">
                   Registro auditable e inmutable de cada movimiento: alta, reprogramación, cambio
-                  de barbero, cancelación y finalización. Solo lectura.
+                  de proveedor, cancelación y finalización. Solo lectura.
                 </p>
               </div>
 
@@ -115,7 +115,7 @@ export default function CalendarioAuditoriaPage() {
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-text-400">
-                  Barbero
+                  Proveedor
                   <select
                     className={`${inputClass} w-40 py-1.5`}
                     value={proveedorId}
@@ -196,7 +196,7 @@ export default function CalendarioAuditoriaPage() {
                         <th className="px-3 py-2 text-left font-normal">Fecha y hora</th>
                         <th className="px-3 py-2 text-left font-normal">Evento</th>
                         <th className="px-3 py-2 text-left font-normal">Cliente</th>
-                        <th className="px-3 py-2 text-left font-normal">Barbero</th>
+                        <th className="px-3 py-2 text-left font-normal">Proveedor</th>
                         <th className="px-3 py-2 text-left font-normal">Estado</th>
                         <th className="px-3 py-2 text-left font-normal">Actor</th>
                         <th className="px-3 py-2 text-left font-normal">Motivo</th>

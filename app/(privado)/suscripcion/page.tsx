@@ -33,8 +33,8 @@ const COLUMNA_HERRAMIENTA: Record<Herramienta, keyof PlanOut> = {
 };
 
 const LEYENDA_NETOS = "Los precios son Netos";
-const LEYENDA_CREDITOS = "Los créditos son llamadas del agente al uso de herramientas.";
-const LEYENDA_LEADS= "Los leads son conversaciones que pasan a travez de Meta.";
+const LEYENDA_CREDITOS = "Créditos: se utilizan al ejecutar herramientas y funciones del agente de IA.";
+const LEYENDA_LEADS= "Leads: corresponden a las conversaciones recibidas a través de Meta.";
 
 const noop = () => () => {};
 
@@ -194,8 +194,7 @@ export default function SuscripcionPage() {
             <header className="mb-3">
               <h2 className="text-sm font-medium text-text-100">Planes</h2>
               <p className="font-mono text-[11px] text-text-600">
-                el plan decide qué herramientas usas, cuántos vendedores y cuántos créditos
-                mensuales entran
+                Elige el plan que mejor se adapte a tu operación. Cada plan define las herramientas disponibles, el número de vendedores y los créditos mensuales incluidos.
               </p>
               <p className="mt-1 font-mono text-[11px] text-text-600">{LEYENDA_CREDITOS}</p>
               <p className="mt-1 font-mono text-[11px] text-text-600">{LEYENDA_LEADS}</p>

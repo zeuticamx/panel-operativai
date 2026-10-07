@@ -18,7 +18,6 @@ import {
   tiempoRelativo,
 } from "@/lib/formato";
 import { cn } from "@/lib/utils";
-import { AlertasStats } from "@/app/components/alertas-stats";
 import { CambiarEstadoLead } from "@/app/components/cambiar-estado-lead";
 import { CrearClienteForm } from "@/app/components/crear-cliente-form";
 import { EmbudoEtapas } from "@/app/components/embudo-etapas";
@@ -287,8 +286,6 @@ export default function VendedoresPage() {
                   loading={metricas.loading && !m}
                 />
               </div>
-
-              <AlertasStats />
 
               {/* Embudo visual */}
               <section data-tour="vendedores.embudo" className="flex flex-col rounded-md border border-bg-700 bg-bg-900 p-4">

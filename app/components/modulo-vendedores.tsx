@@ -35,6 +35,8 @@ const TABS = [
   // campo (negocios que se visitan). Son dos módulos distintos sobre el
   // mismo equipo, y las etiquetas tienen que dejarlo claro.
   { href: "/vendedores", label: "Embudo", exacto: true },
+  // Junta las tareas de la cartera y los seguimientos del embudo.
+  { href: "/vendedores/agenda", label: "Agenda", exacto: false },
   { href: "/vendedores/cartera", label: "Cartera", exacto: false },
   { href: "/vendedores/actividad", label: "Actividad", exacto: false },
   { href: "/vendedores/reportes", label: "Reportes", exacto: false },

@@ -52,7 +52,7 @@ const intro = (titulo: string, texto: string): PasoRecorrido => ({ titulo, texto
 const PESTANAS_VENDEDORES: PasoRecorrido = {
   ancla: "pagina.secciones",
   titulo: "Secciones de ventas",
-  texto: "Cambia entre el embudo, la cartera, la actividad del equipo, los reportes y la configuración.",
+  texto: "Cambia entre el embudo, la agenda, la cartera, la actividad del equipo, los reportes y la configuración.",
 };
 const PESTANAS_CALENDARIO: PasoRecorrido = {
   ancla: "pagina.secciones",
@@ -127,6 +127,13 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     { ancla: "actividad.visitas", titulo: "Visitas recientes", texto: "El detalle de las últimas visitas registradas." },
     AYUDA,
   ],
+  "/vendedores/agenda": [
+    intro("Agenda de ventas", "Las tareas de la cartera de campo y los seguimientos de los leads, en un solo calendario."),
+    PESTANAS_VENDEDORES,
+    { ancla: "agenda.calendario", titulo: "Arrastra para reprogramar", texto: "Mueve un pendiente a otro día u hora y queda reprogramado al instante. Si te equivocas, el aviso trae «Deshacer». Haz clic en uno para editarlo o ver cuántas veces se movió." },
+    { ancla: "agenda.por-agendar", titulo: "Por agendar", texto: "Lo vencido que ya no está a la vista y los leads sin próximo paso. Arrástralos a un día para darles fecha." },
+    AYUDA,
+  ],
   "/vendedores/cartera": [
     intro("Cartera de campo", "Los negocios que tu equipo visita en persona."),
     PESTANAS_VENDEDORES,
@@ -197,6 +204,7 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
   ],
   "/mi-cartera": [
     intro("Tu cartera", "Aquí ves a tus clientes. Para moverlos de etapa o registrar visitas, usa la app de vendedores."),
+    { ancla: "mi-cartera.agenda", titulo: "Tu agenda", texto: "Tus tareas y seguimientos. Arrástralos para cambiarles la fecha." },
     { ancla: "mi-cartera.leads", titulo: "Tus leads", texto: "Los clientes que escribieron por chat y te asignaron, con la etapa en la que van." },
     { ancla: "mi-cartera.campo", titulo: "Clientes de campo", texto: "Los negocios que visitas, con su prioridad y estado." },
     NOTIFICACIONES,
@@ -214,6 +222,7 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     { ancla: "preferencias.foto", titulo: "Foto de perfil", texto: "Sube o quita tu foto." },
     { ancla: "preferencias.perfil", titulo: "Tus datos", texto: "Completa tu nombre y datos para que el equipo te identifique." },
     { ancla: "preferencias.tema", titulo: "Tema", texto: "Cambia entre tema claro y oscuro." },
+    { ancla: "preferencias.alertas", titulo: "Alertas sin leer", texto: "Solo el dueño: cuántas alertas del negocio siguen sin revisar, por tipo. Se marcan como vistas desde la campana." },
     { ancla: "preferencias.servicios", titulo: "Servicios del negocio", texto: "Solo el dueño: enciende o apaga el agente de IA y la gestión de vendedores. Funcionan por separado." },
     { ancla: "preferencias.usuarios", titulo: "Usuarios del negocio", texto: "Invita colaboradores con su propio correo y contraseña, y quítale el acceso a quien ya no deba entrar (también a vendedores y proveedores)." },
     AYUDA,

@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import {
   AlertTriangle,
   CalendarCheck,
+  CalendarClock,
   CalendarX2,
   Headset,
   Milestone,
@@ -33,6 +34,7 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   reserva_cancelada: { label: "Reserva cancelada", icon: CalendarX2, clase: "text-amber-500" },
   conversacion_transferida: { label: "Transferida a humano", icon: Headset, clase: "text-danger" },
   perfil_incompleto: { label: "Completa tu perfil", icon: UserRound, clase: "text-blue-500" },
+  agenda_reprogramada: { label: "Agenda reprogramada", icon: CalendarClock, clase: "text-blue-500" },
 };
 
 const ORDEN: TipoAlerta[] = [
@@ -48,8 +50,10 @@ const ORDEN: TipoAlerta[] = [
 ];
 
 /**
- * Tarjeta de alertas sin leer para el dashboard de /vendedores. Sin props:
- * el tenant sale de la sesión, igual que CentroNotificaciones.
+ * Resumen de alertas sin leer, en /preferencias (antes vivía en el embudo de
+ * /vendedores, pero cuenta alertas de todo el negocio — reservas, perfil,
+ * conversaciones — y no solo de ventas). Sin props: el tenant sale de la
+ * sesión, igual que CentroNotificaciones.
  *
  * El endpoint (GET /tenants/{id}/alertas/estadisticas) requiere gerencia
  * (owner/superadmin) — para un vendedor la llamada daría 403, así que acá
@@ -67,26 +71,28 @@ export function AlertasStats() {
   if (!gerencia) return null;
 
   const e = estadisticas.data;
-  // Nada sin leer: no ocupar espacio en el dashboard con una tarjeta vacía.
-  if (!estadisticas.loading && !estadisticas.error && e && e.total === 0) {
-    return null;
-  }
-  // El resto del dashboard no depende de esto; si falla, mejor omitirla
-  // que mostrar un error encima del embudo.
+  // El resto de la página no depende de esto; si falla, mejor omitirla
+  // que mostrar un error entre las preferencias.
   if (estadisticas.error) return null;
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900">
-      <header className="flex items-center gap-3 border-b border-bg-700 px-4 py-3">
+    <section
+      data-tour="preferencias.alertas"
+      className="flex flex-col overflow-hidden rounded-md border border-bg-700 bg-bg-900"
+    >
+      <header className={cn("flex items-center gap-3 px-4 py-3", e && e.total > 0 && "border-b border-bg-700")}>
         <div className="mr-auto">
           <h2 className="text-sm font-medium text-text-100">Alertas sin leer</h2>
           <p className="font-mono text-[11px] text-text-600">
-            lo que gerencia todavía no marcó como visto
+            {e && e.total === 0
+              ? "todo al día: no queda nada por revisar"
+              : "lo que todavía no marcaste como visto en la campana"}
           </p>
         </div>
         <span
           className={cn(
-            "font-mono text-2xl font-semibold tabular-nums text-danger transition-opacity",
+            "font-mono text-2xl font-semibold tabular-nums transition-opacity",
+            e && e.total === 0 ? "text-text-600" : "text-danger",
             !e && "opacity-40",
           )}
         >

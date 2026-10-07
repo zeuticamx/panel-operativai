@@ -12,6 +12,12 @@
     "test": "jest"
   },
   "dependencies": {
+    "@fullcalendar/core": "6.1.21",
+    "@fullcalendar/daygrid": "6.1.21",
+    "@fullcalendar/interaction": "6.1.21",
+    "@fullcalendar/list": "6.1.21",
+    "@fullcalendar/react": "6.1.21",
+    "@fullcalendar/timegrid": "6.1.21",
     "@radix-ui/react-dialog": "^1.1.23",
     "@react-pdf/renderer": "^4.9.0",
     "clsx": "^2.1.1",

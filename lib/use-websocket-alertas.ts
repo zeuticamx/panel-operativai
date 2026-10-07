@@ -18,6 +18,19 @@ import type { AlertaOut } from "./types";
 export function rutaParaAlerta(alerta: AlertaOut): string | null {
   if (alerta.tipo === "perfil_incompleto") return "/preferencias";
 
+  // Solo le llega al vendedor dueño del pendiente (services/agenda.py): su
+  // agenda vive en /mi-cartera, abierta en la semana de la fecha nueva.
+  if (alerta.tipo === "agenda_reprogramada") {
+    const fecha = alerta.datos?.fecha_nueva;
+    if (typeof fecha !== "string") return "/mi-cartera";
+    const d = new Date(fecha);
+    if (Number.isNaN(d.getTime())) return "/mi-cartera";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    return `/mi-cartera?fecha=${y}-${m}-${dia}`;
+  }
+
   if (alerta.tipo === "conversacion_transferida") {
     const conversationId = alerta.datos?.conversation_id;
     if (typeof conversationId !== "string") return null;

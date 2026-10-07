@@ -437,6 +437,9 @@ export interface PipelineOut {
   motivo_perdida: string | null;
   actualizado_en: string;
   transiciones_posibles: string[];
+  /** Próximo seguimiento agendado (null = nada agendado). */
+  proximo_seguimiento?: string | null;
+  seguimiento_nota?: string | null;
 }
 
 export interface HistorialOut {
@@ -532,7 +535,8 @@ export type TipoAlerta =
   | "reserva_creada"
   | "reserva_cancelada"
   | "conversacion_transferida"
-  | "perfil_incompleto";
+  | "perfil_incompleto"
+  | "agenda_reprogramada";
 
 export interface AlertaOut {
   id: string;
@@ -641,8 +645,20 @@ export interface ClienteOut {
   estado: string;
   prioridad: string;
   notas: string | null;
+  /** Enlace opcional con el embudo: el `id` de un `users` que ya escribió por chat. */
+  user_id: string | null;
+  lead_nombre: string | null;
+  lead_handle: string | null;
   creado_en: string;
   actualizado_en: string;
+}
+
+/** Candidato para vincular, al buscar en `GET /api/clientes/leads-disponibles`. */
+export interface ContactoLeadOut {
+  user_id: string;
+  nombre: string | null;
+  handle: string | null;
+  tiene_pipeline: boolean;
 }
 
 export interface ClienteCrearIn {
@@ -699,6 +715,46 @@ export interface TareaOut {
   fecha_programada: string;
   estado: string;
   completado_en: string | null;
+  creado_en: string;
+}
+
+// ---- Agenda de ventas (GET /agenda, PUT /agenda/seguimientos/{user_id}) ----
+export type TipoPendiente = "tarea" | "seguimiento";
+
+/**
+ * Un pendiente del calendario. `id` es el de su tabla (tarea o fila del
+ * embudo); `cliente_id` es clientes.id para una tarea y users.id para un
+ * seguimiento — `tipo` dice cuál.
+ */
+export interface AgendaItemOut {
+  tipo: TipoPendiente;
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  fecha: string;
+  estado: EstadoTarea;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  cliente_id: string;
+  cliente_nombre: string | null;
+  /** Solo seguimientos: etapa del lead en el embudo. */
+  etapa: string | null;
+}
+
+export interface AgendaOut {
+  tareas_disponibles: boolean;
+  seguimientos_disponibles: boolean;
+  items: AgendaItemOut[];
+}
+
+export interface ReprogramacionOut {
+  id: string;
+  /** null = se agendó por primera vez. */
+  fecha_anterior: string | null;
+  /** null = se marcó hecho / se quitó. */
+  fecha_nueva: string | null;
+  actor_etiqueta: string;
+  vendedor_nombre: string | null;
   creado_en: string;
 }
 

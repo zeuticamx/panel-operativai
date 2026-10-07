@@ -121,3 +121,152 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Agenda de ventas (app/components/agenda-ventas.tsx, FullCalendar).
+ * FullCalendar inyecta su propia hoja de estilos en runtime; acá solo se le
+ * pasan los tokens del portal por sus variables y se dibuja la tarjeta de
+ * cada pendiente. Todo cuelga de .agenda-fc para no tocar nada fuera.
+ *
+ * Dos canales independientes en cada tarjeta:
+ *   filete izquierdo  el tipo (tarea = series-1, seguimiento = series-2)
+ *   título            el estado (rojo = vencida, tachado = completada)
+ */
+.agenda-fc {
+  --fc-border-color: var(--bg-700);
+  --fc-page-bg-color: var(--bg-900);
+  --fc-neutral-bg-color: var(--bg-800);
+  --fc-neutral-text-color: var(--text-600);
+  --fc-today-bg-color: color-mix(in srgb, var(--accent) 7%, transparent);
+  --fc-now-indicator-color: var(--danger);
+  --fc-highlight-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  --fc-list-event-hover-bg-color: var(--hover);
+  --fc-event-bg-color: var(--bg-800);
+  --fc-event-border-color: var(--bg-700);
+  --fc-event-text-color: var(--text-100);
+  --fc-small-font-size: 11px;
+  font-size: 12px;
+  color: var(--text-400);
+}
+
+.agenda-fc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.agenda-fc .fc-col-header-cell-cushion {
+  padding-block: 6px;
+  font-weight: 500;
+  color: var(--text-400);
+  text-transform: capitalize;
+}
+
+.agenda-fc .fc-daygrid-day-number {
+  font-family: var(--font-geist-mono);
+  font-size: 11px;
+  color: var(--text-600);
+}
+
+/* Hoy: el número del día en acento, no solo el fondo tenue. */
+.agenda-fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.agenda-fc .fc-timegrid-slot-label-cushion {
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  color: var(--text-600);
+}
+
+.agenda-fc .fc-list-day-cushion {
+  background: var(--bg-800);
+  color: var(--text-100);
+  text-transform: capitalize;
+}
+
+.agenda-fc .fc-list-event-time {
+  font-family: var(--font-geist-mono);
+  font-size: 11px;
+  color: var(--text-600);
+}
+
+.agenda-fc .fc-list-empty {
+  background: transparent;
+  color: var(--text-600);
+}
+
+.agenda-fc .fc-more-link {
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.agenda-fc .fc-popover {
+  background: var(--bg-900);
+  border-color: var(--bg-700);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+.agenda-fc .fc-popover-header {
+  background: var(--bg-800);
+  color: var(--text-100);
+}
+
+/* ---- Tarjeta de pendiente ---- */
+.agenda-ev {
+  --ev: var(--series-1);
+}
+
+.agenda-ev--seguimiento {
+  --ev: var(--series-2);
+}
+
+.agenda-fc .fc-event.agenda-ev:not(.fc-list-event) {
+  margin-block: 1px;
+  padding: 2px 5px;
+  border: 1px solid var(--bg-700);
+  border-left: 3px solid var(--ev);
+  border-radius: 4px;
+  background: var(--bg-800);
+  color: var(--text-100);
+  cursor: grab;
+}
+
+.agenda-fc .fc-event.agenda-ev:not(.fc-list-event):hover {
+  background: var(--hover);
+}
+
+.agenda-fc .fc-event-main {
+  color: inherit;
+}
+
+/* Lo que se está arrastrando se despega de la grilla. */
+.agenda-fc .fc-event-mirror,
+.agenda-fc .fc-event-dragging {
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  cursor: grabbing;
+}
+
+.agenda-fc .agenda-ev--vencida .agenda-ev__titulo {
+  color: var(--danger);
+}
+
+.agenda-fc .agenda-ev--completada {
+  opacity: 0.55;
+}
+
+.agenda-fc .fc-event.agenda-ev--completada:not(.fc-list-event) {
+  cursor: pointer;
+}
+
+.agenda-fc .agenda-ev--completada .agenda-ev__titulo {
+  text-decoration: line-through;
+}
+
+.agenda-fc .fc-list-event.agenda-ev {
+  cursor: pointer;
+}
+
+.agenda-fc .fc-list-event.agenda-ev .fc-list-event-dot {
+  border-color: var(--ev);
+}

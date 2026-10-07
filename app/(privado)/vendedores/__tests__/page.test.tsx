@@ -29,7 +29,6 @@ jest.mock("@/app/components/modulo-vendedores", () => ({
 jest.mock("@/app/components/centro-notificaciones", () => ({
   CentroNotificaciones: () => null,
 }));
-jest.mock("@/app/components/alertas-stats", () => ({ AlertasStats: () => null }));
 jest.mock("@/app/components/crear-cliente-form", () => ({ CrearClienteForm: () => null }));
 jest.mock("@/app/components/cambiar-estado-lead", () => ({ CambiarEstadoLead: () => null }));
 jest.mock("@/app/components/lead-drawer", () => ({ LeadDrawer: () => null }));

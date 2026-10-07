@@ -16,6 +16,12 @@ interface RutaHerramienta {
   herramienta: Herramienta;
   /** Con el plan vencido se puede seguir mirando (GET); ver deps.requiere_herramienta. */
   lecturaSinPlan?: boolean;
+  /**
+   * Otras herramientas que también abren la pantalla: con cualquiera de
+   * ellas no se tapa. Para la agenda, que junta dos módulos y el backend
+   * (routers/agenda.py) sirve lo que haya de cada uno.
+   */
+  alternativas?: Herramienta[];
 }
 
 const RUTAS: RutaHerramienta[] = [
@@ -24,6 +30,7 @@ const RUTAS: RutaHerramienta[] = [
   { prefijo: "/canales", herramienta: "agente" },
   { prefijo: "/herramientas", herramienta: "herramientas" },
   { prefijo: "/vendedores", herramienta: "vendedores" },
+  { prefijo: "/vendedores/agenda", herramienta: "vendedores", alternativas: ["crm_campo"] },
   { prefijo: "/vendedores/cartera", herramienta: "crm_campo" },
   { prefijo: "/vendedores/actividad", herramienta: "crm_campo" },
   { prefijo: "/calendario", herramienta: "calendario" },
@@ -148,6 +155,7 @@ export function bloqueoDePantalla(
   }
 
   if (!ruta) return null;
+  if (ruta.alternativas?.some((h) => acceso.herramientas.includes(h))) return null;
   const bloqueo = bloqueoLocal(acceso, ruta.herramienta);
   if (bloqueo?.codigo === "plan_requerido" && ruta.lecturaSinPlan) return null;
   return bloqueo;

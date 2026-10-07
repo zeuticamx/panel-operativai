@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ExternalLink, MapPin, Phone, UserRound, X } from "lucide-react";
+import { ExternalLink, Link2, MapPin, Phone, Search, Unlink, UserRound, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
-import { useApi } from "@/lib/use-api";
-import type { ClienteOut, TareaOut, VendedorOut, VisitaOut } from "@/lib/types";
+import { useApi, useDebounce } from "@/lib/use-api";
+import type { ClienteOut, ContactoLeadOut, TareaOut, VendedorOut, VisitaOut } from "@/lib/types";
 import {
   formatoFechaHora,
   infoEstadoCliente,
@@ -76,6 +76,54 @@ export function ClienteDrawer({
       setError(mensajeDeError(e, "No se pudo reasignar el cliente."));
     } finally {
       setGuardando(false);
+    }
+  };
+
+  // --- Vínculo con un lead del embudo ---
+  // Enlace, no fusión: las dos carteras siguen siendo tablas separadas
+  // (ver sql/38_clientes_lead.sql). Esto solo apunta hacia un `users` que
+  // ya existe porque escribió por WhatsApp/IG/FB; no crea nada.
+  const [buscarLead, setBuscarLead] = useState("");
+  const [vinculando, setVinculando] = useState(false);
+  const [errorLead, setErrorLead] = useState<string | null>(null);
+  const buscarLeadDebounced = useDebounce(buscarLead.trim(), 300);
+
+  const candidatos = useApi<ContactoLeadOut[]>(
+    puedeEditar && !cliente.user_id && buscarLeadDebounced.length >= 2
+      ? `/api/clientes/leads-disponibles?buscar=${encodeURIComponent(buscarLeadDebounced)}`
+      : null,
+  );
+
+  const vincularLead = async (contacto: ContactoLeadOut) => {
+    if (vinculando) return;
+    setVinculando(true);
+    setErrorLead(null);
+    try {
+      await apiFetch(`/api/clientes/${cliente.id}/vincular-lead`, {
+        method: "PATCH",
+        json: { user_id: contacto.user_id },
+      });
+      onCambio(
+        `${cliente.nombre_negocio} quedó vinculado a ${contacto.nombre ?? contacto.handle ?? "un lead"}.`,
+      );
+    } catch (e) {
+      setErrorLead(mensajeDeError(e, "No se pudo vincular."));
+    } finally {
+      setVinculando(false);
+    }
+  };
+
+  const desvincularLead = async () => {
+    if (vinculando) return;
+    setVinculando(true);
+    setErrorLead(null);
+    try {
+      await apiFetch(`/api/clientes/${cliente.id}/desvincular-lead`, { method: "POST" });
+      onCambio(`${cliente.nombre_negocio} ya no está vinculado a ningún lead.`);
+    } catch (e) {
+      setErrorLead(mensajeDeError(e, "No se pudo desvincular."));
+    } finally {
+      setVinculando(false);
     }
   };
 
@@ -160,6 +208,14 @@ export function ClienteDrawer({
                   geocerca de {cliente.radio_tolerancia_metros} m
                 </span>
               </Dato>
+              {cliente.user_id && (
+                <Dato label="Lead del embudo" ancho>
+                  <span className="inline-flex items-center gap-1">
+                    <Link2 size={11} aria-hidden />
+                    {cliente.lead_nombre ?? cliente.lead_handle ?? "Vinculado"}
+                  </span>
+                </Dato>
+              )}
               {cliente.notas && (
                 <Dato label="Notas" ancho>
                   <span className="leading-relaxed">{cliente.notas}</span>
@@ -203,6 +259,99 @@ export function ClienteDrawer({
                     Guardar
                   </Boton>
                 </div>
+              </section>
+            )}
+
+            {/* Vínculo con el embudo */}
+            {puedeEditar && (
+              <section className="flex flex-col gap-3 rounded-md border border-bg-700 bg-bg-950 p-3">
+                {errorLead && <Aviso tipo="error">{errorLead}</Aviso>}
+
+                {cliente.user_id ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-text-100">
+                      <Link2 size={13} aria-hidden />
+                      Vinculado a {cliente.lead_nombre ?? cliente.lead_handle ?? "un lead"}
+                    </span>
+                    <Boton variante="secundario" onClick={desvincularLead} loading={vinculando}>
+                      <Unlink size={13} aria-hidden />
+                      Desvincular
+                    </Boton>
+                  </div>
+                ) : (
+                  <>
+                    <Campo
+                      id="cliente-buscar-lead"
+                      label="Vincular con un lead del embudo"
+                      hint="busca por nombre o número de WhatsApp/IG/FB — solo contactos que ya escribieron"
+                    >
+                      <div className="relative">
+                        <Search
+                          size={13}
+                          className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-600"
+                          aria-hidden
+                        />
+                        <input
+                          id="cliente-buscar-lead"
+                          type="search"
+                          value={buscarLead}
+                          onChange={(e) => setBuscarLead(e.target.value)}
+                          placeholder="Nombre o número…"
+                          maxLength={100}
+                          disabled={vinculando}
+                          className="w-full rounded-md border border-bg-700 bg-bg-950 py-1.5 pr-3 pl-8 text-xs text-text-100 placeholder:text-text-600 focus:border-bg-600 focus:outline-none"
+                        />
+                      </div>
+                    </Campo>
+
+                    {buscarLeadDebounced.length >= 2 && (
+                      <>
+                        {candidatos.error ? (
+                          <Aviso tipo="error">{candidatos.error}</Aviso>
+                        ) : !candidatos.data ? (
+                          <p className="font-mono text-xs text-text-600">buscando…</p>
+                        ) : candidatos.data.length === 0 ? (
+                          <p className="rounded-md border border-dashed border-bg-700 px-3 py-4 text-center font-mono text-[11px] text-text-600">
+                            sin contactos que coincidan
+                          </p>
+                        ) : (
+                          <ul className="flex flex-col divide-y divide-bg-700 overflow-hidden rounded-md border border-bg-700">
+                            {candidatos.data.map((c) => (
+                              <li
+                                key={c.user_id}
+                                className="flex items-center justify-between gap-2 bg-bg-950 px-3 py-2"
+                              >
+                                <div className="flex min-w-0 flex-col">
+                                  <span className="truncate text-xs text-text-100">
+                                    {c.nombre ?? c.handle ?? "Sin nombre"}
+                                  </span>
+                                  {c.nombre && c.handle && (
+                                    <span className="font-mono text-[11px] text-text-600">
+                                      {c.handle}
+                                    </span>
+                                  )}
+                                  {!c.tiene_pipeline && (
+                                    <span className="font-mono text-[11px] text-warning">
+                                      todavía sin lead en el embudo
+                                    </span>
+                                  )}
+                                </div>
+                                <Boton
+                                  variante="secundario"
+                                  disabled={vinculando}
+                                  onClick={() => vincularLead(c)}
+                                >
+                                  <Link2 size={12} aria-hidden />
+                                  Vincular
+                                </Boton>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
               </section>
             )}
 

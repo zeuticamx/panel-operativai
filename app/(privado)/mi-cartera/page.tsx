@@ -1,6 +1,10 @@
 "use client";
 
+import { Suspense, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { Briefcase, MapPin, MessageCircle, RefreshCw } from "lucide-react";
+import { fechaDeParametro } from "@/lib/agenda";
 import { useApi } from "@/lib/use-api";
 import type { ClienteOut, PipelineOut, VendedorOut } from "@/lib/types";
 import { fmtInt, infoEstadoCliente, infoEstadoPipeline, infoPrioridad, tiempoRelativo } from "@/lib/formato";
@@ -10,17 +14,36 @@ import { usePlan } from "@/app/components/plan-context";
 import { Aviso, Boton, Cargando, PageHeader } from "@/app/components/ui";
 import { useUsuario } from "@/app/components/usuario-context";
 
+// Mismo motivo que en /vendedores/agenda: FullCalendar solo en el cliente.
+const AgendaVentas = dynamic(
+  () => import("@/app/components/agenda-ventas").then((m) => m.AgendaVentas),
+  { ssr: false, loading: () => <Cargando texto="cargando agenda…" /> },
+);
+
 /**
- * El portal del vendedor: solo lo suyo, de lectura.
+ * El portal del vendedor: solo lo suyo.
  *
  * Mover a un lead de etapa y registrar visitas se hace desde la app de
  * vendedores (el trabajo es en la calle). Acá el vendedor consulta su
- * cartera desde la computadora. El backend ya filtra: /vendedores/{id}/pipeline
- * responde 403 con el id de otro, y /clientes devuelve solo los suyos
- * (services/crm.acceso_crm).
+ * cartera desde la computadora y organiza su agenda: sus tareas y sus
+ * seguimientos se reprograman arrastrándolos. El backend ya filtra:
+ * /vendedores/{id}/pipeline responde 403 con el id de otro, y /clientes,
+ * /tareas y /agenda devuelven solo lo suyo (services/crm.acceso_crm).
  */
 export default function MiCarteraPage() {
+  // useSearchParams (?fecha= desde la alerta de agenda) necesita Suspense.
+  return (
+    <Suspense fallback={<Cargando />}>
+      <MiCartera />
+    </Suspense>
+  );
+}
+
+function MiCartera() {
   const { usuario } = useUsuario();
+  const params = useSearchParams();
+  const fechaParam = params.get("fecha");
+  const fechaAgenda = useMemo(() => fechaDeParametro(fechaParam), [fechaParam]);
   const servicios = useServicios();
   const { puedeUsar } = usePlan();
   const yo = useApi<VendedorOut>("/api/vendedores/yo");
@@ -55,7 +78,7 @@ export default function MiCarteraPage() {
       />
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
+        <div className="flex flex-col gap-4">
           {yo.error ? (
             <Aviso tipo="error">{yo.error}</Aviso>
           ) : !yo.data ? (
@@ -64,107 +87,116 @@ export default function MiCarteraPage() {
             <>
               <Aviso tipo="info">
                 Para mover a un cliente de etapa o registrar una visita, usa la app de vendedores.
+                Tus tareas y seguimientos sí los reprogramas aquí: arrástralos en la agenda.
               </Aviso>
 
-              {conEmbudo && (
-                <section
-                  data-tour="mi-cartera.leads"
-                  className="overflow-hidden rounded-md border border-bg-700 bg-bg-900"
-                >
-                  <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
-                    <MessageCircle size={14} className="text-text-400" aria-hidden />
-                    <div>
-                      <h2 className="text-sm font-medium text-text-100">Mis leads</h2>
-                      <p className="font-mono text-[11px] text-text-600">
-                        clientes que escribieron por chat y te tocaron · abiertos
-                      </p>
-                    </div>
-                  </header>
-                  {leads.error ? (
-                    <div className="p-4">
-                      <Aviso tipo="error">{leads.error}</Aviso>
-                    </div>
-                  ) : !leads.data ? (
-                    <p className="px-4 py-3 font-mono text-xs text-text-600">cargando…</p>
-                  ) : leads.data.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-xs text-text-400">
-                      No tienes leads abiertos. Te llegan solos cuando el negocio te asigna uno.
-                    </p>
-                  ) : (
-                    <ul className="divide-y divide-bg-700">
-                      {leads.data.map((l) => {
-                        const estado = infoEstadoPipeline(l.estado);
-                        return (
-                          <li key={l.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                              <span className="truncate text-sm text-text-100">
-                                {l.cliente_nombre ?? l.cliente_handle ?? "Cliente sin nombre"}
-                              </span>
-                              <span className="font-mono text-[11px] text-text-600">
-                                {l.cliente_nombre && l.cliente_handle ? `${l.cliente_handle} · ` : ""}
-                                movido {tiempoRelativo(l.actualizado_en)}
-                              </span>
-                            </div>
-                            <Badge tone={estado.tone}>{estado.label.toLowerCase()}</Badge>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+              {(conEmbudo || conCampo) && (
+                <section data-tour="mi-cartera.agenda" aria-label="Mi agenda">
+                  <AgendaVentas modo="propio" vendedorPropioId={yo.data.id} fechaInicial={fechaAgenda} />
                 </section>
               )}
 
-              {conCampo && (
-                <section
-                  data-tour="mi-cartera.campo"
-                  className="overflow-hidden rounded-md border border-bg-700 bg-bg-900"
-                >
-                  <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
-                    <MapPin size={14} className="text-text-400" aria-hidden />
-                    <div>
-                      <h2 className="text-sm font-medium text-text-100">Mis clientes de campo</h2>
-                      <p className="font-mono text-[11px] text-text-600">
-                        {clientes.data
-                          ? `${fmtInt.format(clientes.data.length)} negocios que visitas`
-                          : "negocios que visitas"}
+              <div className="grid items-start gap-4 lg:grid-cols-2">
+                {conEmbudo && (
+                  <section
+                    data-tour="mi-cartera.leads"
+                    className="overflow-hidden rounded-md border border-bg-700 bg-bg-900"
+                  >
+                    <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
+                      <MessageCircle size={14} className="text-text-400" aria-hidden />
+                      <div>
+                        <h2 className="text-sm font-medium text-text-100">Mis leads</h2>
+                        <p className="font-mono text-[11px] text-text-600">
+                          clientes que escribieron por chat y te tocaron · abiertos
+                        </p>
+                      </div>
+                    </header>
+                    {leads.error ? (
+                      <div className="p-4">
+                        <Aviso tipo="error">{leads.error}</Aviso>
+                      </div>
+                    ) : !leads.data ? (
+                      <p className="px-4 py-3 font-mono text-xs text-text-600">cargando…</p>
+                    ) : leads.data.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-xs text-text-400">
+                        No tienes leads abiertos. Te llegan solos cuando el negocio te asigna uno.
                       </p>
-                    </div>
-                  </header>
-                  {clientes.error ? (
-                    <div className="p-4">
-                      <Aviso tipo="error">{clientes.error}</Aviso>
-                    </div>
-                  ) : !clientes.data ? (
-                    <p className="px-4 py-3 font-mono text-xs text-text-600">cargando…</p>
-                  ) : clientes.data.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-xs text-text-400">
-                      Todavía no tienes clientes de campo asignados.
-                    </p>
-                  ) : (
-                    <ul className="divide-y divide-bg-700">
-                      {clientes.data.map((c) => {
-                        const estado = infoEstadoCliente(c.estado);
-                        const prioridad = infoPrioridad(c.prioridad);
-                        return (
-                          <li key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                              <span className="truncate text-sm text-text-100">{c.nombre_negocio}</span>
-                              <span className="truncate font-mono text-[11px] text-text-600">
-                                {[c.contacto_nombre, c.telefono, c.direccion].filter(Boolean).join(" · ") ||
-                                  "sin datos de contacto"}
-                              </span>
-                            </div>
-                            <div className="flex shrink-0 gap-1.5">
-                              <Badge tone={prioridad.tone}>{prioridad.label.toLowerCase()}</Badge>
+                    ) : (
+                      <ul className="divide-y divide-bg-700">
+                        {leads.data.map((l) => {
+                          const estado = infoEstadoPipeline(l.estado);
+                          return (
+                            <li key={l.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                <span className="truncate text-sm text-text-100">
+                                  {l.cliente_nombre ?? l.cliente_handle ?? "Cliente sin nombre"}
+                                </span>
+                                <span className="font-mono text-[11px] text-text-600">
+                                  {l.cliente_nombre && l.cliente_handle ? `${l.cliente_handle} · ` : ""}
+                                  movido {tiempoRelativo(l.actualizado_en)}
+                                </span>
+                              </div>
                               <Badge tone={estado.tone}>{estado.label.toLowerCase()}</Badge>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </section>
-              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </section>
+                )}
+
+                {conCampo && (
+                  <section
+                    data-tour="mi-cartera.campo"
+                    className="overflow-hidden rounded-md border border-bg-700 bg-bg-900"
+                  >
+                    <header className="flex items-center gap-2 border-b border-bg-700 px-4 py-3">
+                      <MapPin size={14} className="text-text-400" aria-hidden />
+                      <div>
+                        <h2 className="text-sm font-medium text-text-100">Mis clientes de campo</h2>
+                        <p className="font-mono text-[11px] text-text-600">
+                          {clientes.data
+                            ? `${fmtInt.format(clientes.data.length)} negocios que visitas`
+                            : "negocios que visitas"}
+                        </p>
+                      </div>
+                    </header>
+                    {clientes.error ? (
+                      <div className="p-4">
+                        <Aviso tipo="error">{clientes.error}</Aviso>
+                      </div>
+                    ) : !clientes.data ? (
+                      <p className="px-4 py-3 font-mono text-xs text-text-600">cargando…</p>
+                    ) : clientes.data.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-xs text-text-400">
+                        Todavía no tienes clientes de campo asignados.
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-bg-700">
+                        {clientes.data.map((c) => {
+                          const estado = infoEstadoCliente(c.estado);
+                          const prioridad = infoPrioridad(c.prioridad);
+                          return (
+                            <li key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                <span className="truncate text-sm text-text-100">{c.nombre_negocio}</span>
+                                <span className="truncate font-mono text-[11px] text-text-600">
+                                  {[c.contacto_nombre, c.telefono, c.direccion].filter(Boolean).join(" · ") ||
+                                    "sin datos de contacto"}
+                                </span>
+                              </div>
+                              <div className="flex shrink-0 gap-1.5">
+                                <Badge tone={prioridad.tone}>{prioridad.label.toLowerCase()}</Badge>
+                                <Badge tone={estado.tone}>{estado.label.toLowerCase()}</Badge>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </section>
+                )}
+              </div>
 
               {!conEmbudo && !conCampo && servicios.data && (
                 <section className="flex flex-col items-center gap-3 rounded-md border border-dashed border-bg-700 px-6 py-10 text-center">

@@ -60,6 +60,20 @@ describe("bloqueoDePantalla", () => {
     }
   });
 
+  it("la agenda se abre con cualquiera de sus dos módulos", () => {
+    // starter: embudo sí, CRM de campo no.
+    expect(bloqueoDePantalla(acceso(), "/vendedores/agenda")).toBeNull();
+    // Solo CRM de campo: tampoco se tapa (el backend sirve las tareas).
+    const soloCampo = acceso({ herramientas: ["agente", "crm_campo"] });
+    expect(bloqueoDePantalla(soloCampo, "/vendedores/agenda")).toBeNull();
+    // Ninguno de los dos: se tapa.
+    const ninguno = acceso({ herramientas: ["agente"] });
+    expect(bloqueoDePantalla(ninguno, "/vendedores/agenda")?.codigo).toBe("plan_insuficiente");
+    // Suspendida gana sobre las alternativas.
+    const suspendida = acceso({ estado: "suspendido", herramientas: [] });
+    expect(bloqueoDePantalla(suspendida, "/vendedores/agenda")?.codigo).toBe("cuenta_suspendida");
+  });
+
   it("pro entra a todo", () => {
     const pro = acceso({ plan: "pro", herramientas: TODAS });
     expect(bloqueoDePantalla(pro, "/calendario")).toBeNull();

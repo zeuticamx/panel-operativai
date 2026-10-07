@@ -14,6 +14,7 @@ import {
 import { setStoredTheme, useStoredTheme } from "@/lib/theme";
 import type { CampoPerfilObligatorio, GeneroPerfil, PerfilIn, PerfilOut } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
+import { AlertasStats } from "@/app/components/alertas-stats";
 import { AvatarPerfil } from "@/app/components/avatar-perfil";
 import { BorrarCuenta } from "@/app/components/borrar-cuenta";
 import { esGerencia } from "@/app/components/modulo-vendedores";
@@ -426,7 +427,9 @@ export default function PreferenciasPage() {
               </section>
 
               {/* Lo del negocio, no de la persona: solo gerencia (el backend
-                  lo vuelve a exigir en cada endpoint). */}
+                  lo vuelve a exigir en cada endpoint). AlertasStats ya se
+                  oculta sola para quien no es gerencia. */}
+              <AlertasStats />
               {esGerencia(usuario) && <ServiciosNegocio soloLectura={soloLectura} />}
               {esGerencia(usuario) && <UsuariosNegocio soloLectura={soloLectura} />}
 

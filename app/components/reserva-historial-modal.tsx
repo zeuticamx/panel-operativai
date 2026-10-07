@@ -108,7 +108,7 @@ export function ReservaHistorialModal({
                         <p className="mt-1 text-xs text-text-400">Motivo: {e.motivo}</p>
                       )}
                       <p className="mt-1 font-mono text-[11px] text-text-600">
-                        {e.origen === "portal" ? "Portal" : "Chat"} · {e.actor}
+                        {e.origen === "portal" ? "Portal" : e.origen === "sistema" ? "Sistema" : "Chat"} · {e.actor}
                       </p>
                     </li>
                   );

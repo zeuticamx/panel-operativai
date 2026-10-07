@@ -1439,7 +1439,7 @@ export interface ReservaAuditoriaOut {
   motivo: string | null;
   datos_anteriores: Record<string, unknown> | null;
   datos_nuevos: Record<string, unknown> | null;
-  origen: "portal" | "n8n";
+  origen: "portal" | "n8n" | "sistema";
   actor: string;
   actor_portal_user_id: string | null;
   actor_user_id: string | null;

@@ -26,6 +26,10 @@ const COLOR_POR_TIPO: Record<TipoAlerta, string> = {
   conversacion_transferida: "#ef4444", // red-500: pide atención humana ya
   perfil_incompleto: "#3b82f6", // blue-500: recordatorio, no problema
   agenda_reprogramada: "#3b82f6", // blue-500: aviso de agenda, no problema
+  solicitud_escritura: "#f59e0b", // amber-500: pide una decisión del dueño
+  conversacion_asignada: "#3b82f6", // blue-500: te tocó atender un chat
+  asignacion_fallida: "#ef4444", // red-500: nadie la tiene y hay que repartirla
+  mensaje_conversacion_asignada: "#3b82f6", // blue-500: el cliente escribió en tu chat
 };
 
 const DURACION_MS = 5000;
@@ -85,7 +89,9 @@ export function showToast(
 ): void {
   const color = COLOR_POR_TIPO[tipo as TipoAlerta] ?? "#334155"; // bg-700 del portal, si el tipo no se reconoce
 
-  if (tipo === "reserva_creada" || tipo === "conversacion_transferida") reproducirSonidoSutil();
+  if (tipo === "reserva_creada" || tipo === "conversacion_transferida" || tipo === "conversacion_asignada") {
+    reproducirSonidoSutil();
+  }
 
   toast(titulo, {
     description: mensaje,

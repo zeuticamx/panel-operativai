@@ -20,6 +20,7 @@ export function MensajeComposer({
   tomarUrl,
   volverIaUrl,
   adjuntosUrl,
+  asignacion,
   onCambio,
 }: {
   status: string;
@@ -28,6 +29,17 @@ export function MensajeComposer({
   volverIaUrl: string;
   /** Si viene, se ofrece adjuntar imágenes/documentos (solo WhatsApp). */
   adjuntosUrl?: string;
+  /**
+   * Quién tiene la conversación. Sin esto (la vista de gerencia de plataforma)
+   * se comporta como antes: no hay noción de asignado.
+   */
+  asignacion?: {
+    asignadoA: string | null;
+    asignadoNombre: string | null;
+    miId: string | null;
+    /** Dueño o administrador: puede contestar aunque la tenga otra persona. */
+    esGerencia: boolean;
+  };
   onCambio: () => void;
 }) {
   const [texto, setTexto] = useState("");
@@ -39,6 +51,11 @@ export function MensajeComposer({
   const [error, setError] = useState<string | null>(null);
 
   const transferida = status === "transferred";
+  const ajena =
+    asignacion !== undefined && asignacion.asignadoA !== null && asignacion.asignadoA !== asignacion.miId;
+  // Con dueño que no soy yo, solo él o la gerencia contestan (puede_operar en el backend).
+  const soloLectura = transferida && ajena && !asignacion?.esGerencia;
+  const sinDueno = transferida && asignacion !== undefined && asignacion.asignadoA === null;
 
   const elegirArchivo = (e: ChangeEvent<HTMLInputElement>) => {
     const elegido = e.target.files?.[0] ?? null;
@@ -133,6 +150,17 @@ export function MensajeComposer({
     );
   }
 
+  if (soloLectura) {
+    return (
+      <div className="border-t border-bg-700 px-4 py-3">
+        <Aviso tipo="info">
+          La conversación la tiene {asignacion?.asignadoNombre ?? "otra persona"}. Solo esa persona o el
+          dueño pueden responderla.
+        </Aviso>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2 border-t border-bg-700 px-4 py-3">
       {error && <Aviso tipo="error">{error}</Aviso>}
@@ -195,7 +223,19 @@ export function MensajeComposer({
           Enviar
         </Boton>
       </div>
-      <div>
+      <div className="flex flex-wrap gap-2">
+        {sinDueno && (
+          <Boton
+            variante="secundario"
+            onClick={() => void tomar()}
+            loading={tomando}
+            title="Quedártela: solo el dueño te la podrá quitar"
+            className="min-h-8"
+          >
+            <Hand size={13} aria-hidden />
+            Tomar conversación
+          </Boton>
+        )}
         <Boton
           variante="secundario"
           onClick={() => void volverAIa()}

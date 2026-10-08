@@ -22,9 +22,16 @@ const ESTADOS = [
   { value: "transferred", label: "Transferidas a humano" },
 ];
 
+/** Filtro de quién la tiene; el backend acepta estos dos o el id de una persona. */
+const ASIGNACIONES = [
+  { value: "mias", label: "Mías" },
+  { value: "sin_asignar", label: "Sin asignar" },
+];
+
 export default function ConversacionesPage() {
   const [canal, setCanal] = useState("");
   const [estado, setEstado] = useState("");
+  const [asignada, setAsignada] = useState("");
   const [buscar, setBuscar] = useState("");
   const [pagina, setPagina] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -40,6 +47,10 @@ export default function ConversacionesPage() {
     setEstado(v);
     setPagina(0);
   };
+  const cambiarAsignada = (v: string) => {
+    setAsignada(v);
+    setPagina(0);
+  };
   const cambiarBuscar = (v: string) => {
     setBuscar(v);
     setPagina(0);
@@ -49,11 +60,12 @@ export default function ConversacionesPage() {
     const qs = new URLSearchParams();
     if (canal) qs.set("canal", canal);
     if (estado) qs.set("estado", estado);
+    if (asignada) qs.set("asignada", asignada);
     if (buscarDebounced) qs.set("buscar", buscarDebounced.slice(0, 100));
     qs.set("limite", String(LIMITE));
     qs.set("offset", String(pagina * LIMITE));
     return `/api/conversaciones?${qs.toString()}`;
-  }, [canal, estado, buscarDebounced, pagina]);
+  }, [canal, estado, asignada, buscarDebounced, pagina]);
 
   const { data, loading, error, recargar } = useApi<ConversacionOut[]>(path);
 
@@ -65,10 +77,11 @@ export default function ConversacionesPage() {
     return () => clearInterval(id);
   }, [recargar]);
 
-  const hayFiltros = Boolean(canal || estado || buscar);
+  const hayFiltros = Boolean(canal || estado || asignada || buscar);
   const limpiar = () => {
     setCanal("");
     setEstado("");
+    setAsignada("");
     setBuscar("");
     setPagina(0);
   };
@@ -139,6 +152,23 @@ export default function ConversacionesPage() {
         >
           <option value="">Cualquier estado</option>
           {ESTADOS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor="asignada" className="sr-only">
+          Asignación
+        </label>
+        <select
+          id="asignada"
+          value={asignada}
+          onChange={(e) => cambiarAsignada(e.target.value)}
+          className={`${selectClass} w-auto py-1.5 text-xs`}
+        >
+          <option value="">Todas las asignaciones</option>
+          {ASIGNACIONES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>

@@ -73,7 +73,9 @@ function conRevision(revision: EliminacionTenantOut, tenant: TenantGerenciaOut =
       ? revision
       : ruta.startsWith("/api/gerencia/tenants/t-1?")
         ? tenant
-        : [];
+        : ruta.endsWith("/onboarding")
+          ? null
+          : [];
     return { data, loading: false, error: null, recargar: jest.fn(async () => {}) };
   });
 }
@@ -126,7 +128,8 @@ it("con suscripción vigente el botón está deshabilitado aunque esté en baja"
 
 it("mientras no llega la revisión, el botón no se habilita", () => {
   mockUseApi.mockImplementation((ruta: string) => ({
-    data: ruta.endsWith("/eliminacion") ? null : ruta.includes("?dias=") ? TENANT : [],
+    data:
+      ruta.endsWith("/eliminacion") || ruta.endsWith("/onboarding") ? null : ruta.includes("?dias=") ? TENANT : [],
     loading: ruta.endsWith("/eliminacion"),
     error: null,
     recargar: jest.fn(),

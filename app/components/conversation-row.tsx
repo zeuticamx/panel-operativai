@@ -86,6 +86,17 @@ export function ConversationRow({
                   {ventana.textoCorto}
                 </Badge>
               )}
+              {c.asignado_nombre ? (
+                <Badge tone="info" title={`Asignada a ${c.asignado_nombre}`} className="max-w-32 truncate">
+                  {c.asignado_nombre}
+                </Badge>
+              ) : (
+                c.status === "transferred" && (
+                  <Badge tone="warning" title="Nadie la tiene asignada todavía">
+                    Sin asignar
+                  </Badge>
+                )
+              )}
               <StatusBadge status={c.status} />
             </span>
           )}

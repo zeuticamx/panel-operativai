@@ -34,7 +34,8 @@ import {
 } from "@/lib/agenda";
 import { infoEstadoPipeline, tiempoRelativo } from "@/lib/formato";
 import type { AgendaItemOut, AgendaOut, PipelineOut, TipoPendiente, VendedorOut } from "@/lib/types";
-import { useApi } from "@/lib/use-api";
+import { useApi, useRefrescoAutomatico } from "@/lib/use-api";
+import { useDatosEnVivo } from "@/lib/use-websocket-alertas";
 import { cn } from "@/lib/utils";
 import { AgendaDetalle } from "./agenda-detalle";
 import { AgendaNuevo } from "./agenda-nuevo";
@@ -205,6 +206,11 @@ export function AgendaVentas({
     setAncla(() => Date.now());
     void recargarLeads(true);
   }, [recargarLeads]);
+
+  // Red de seguridad: la agenda también cambia por acciones de otras personas.
+  const recargarTodoAsync = useCallback(async () => recargarTodo(), [recargarTodo]);
+  useRefrescoAutomatico(recargarTodoAsync, 60_000, true);
+  useDatosEnVivo(["agenda", "cartera"], recargarTodo);
 
   const deshacer = useCallback(
     async (item: Movible, anterior: string | null) => {

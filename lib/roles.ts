@@ -9,7 +9,8 @@ import type { UsuarioOut } from "./types";
  *
  *   owner / superadmin  todo
  *   member              opera el negocio; no ve configuración ni pagos
- *   vendedor            solo su cartera y su perfil
+ *   vendedor            su cartera, su perfil y las conversaciones que le
+ *                       asignaron (o de sus leads, mientras nadie las tenga)
  *   proveedor           su agenda (/calendario, sin las pestañas de gestión),
  *                       las conversaciones de sus clientes y su perfil
  *
@@ -40,8 +41,11 @@ export function esProveedor(usuario: ConRol): boolean {
   return usuario?.role === "proveedor";
 }
 
-/** Lo único que abre un vendedor. */
-const RUTAS_VENDEDOR = ["/mi-cartera", "/preferencias"];
+/**
+ * Lo único que abre un vendedor. Las conversaciones se las filtra el backend
+ * a las asignadas a él y a las de sus leads sin dueño (conversacion_visible).
+ */
+const RUTAS_VENDEDOR = ["/mi-cartera", "/conversaciones", "/preferencias"];
 
 /**
  * Lo que abre un proveedor del calendario. "/calendario" es exacto: la
@@ -52,7 +56,7 @@ const RUTAS_PROVEEDOR_PREFIJO = ["/conversaciones", "/preferencias"];
 const RUTAS_PROVEEDOR_EXACTAS = ["/calendario"];
 
 /** Configuración del negocio y pagos: el backend se los niega a 'member'. */
-const RUTAS_SOLO_GERENCIA = ["/agente", "/canales", "/herramientas", "/suscripcion", "/pagos"];
+const RUTAS_SOLO_GERENCIA = ["/agente", "/canales", "/herramientas", "/suscripcion", "/pagos", "/bienvenida"];
 
 function bajo(pathname: string, prefijo: string): boolean {
   return pathname === prefijo || pathname.startsWith(prefijo + "/");

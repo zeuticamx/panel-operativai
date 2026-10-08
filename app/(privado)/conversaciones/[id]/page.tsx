@@ -13,6 +13,8 @@ import { estadoVentanaMeta, etiquetaIdentificador, formatoFechaHora, iniciales }
 import { CentroNotificaciones } from "@/app/components/centro-notificaciones";
 import { ThreadViewer } from "@/app/components/thread-viewer";
 import { MensajeComposer } from "@/app/components/mensaje-composer";
+import { esGerencia } from "@/app/components/modulo-vendedores";
+import { PanelAsignacion } from "@/app/components/panel-asignacion";
 import { Badge } from "@/app/components/badge";
 import { CanalBadge, StatusBadge } from "@/app/components/status";
 import { CopyButton } from "@/app/components/copy-button";
@@ -173,6 +175,17 @@ export default function ConversacionDetallePage() {
         </div>
       )}
 
+      {data && (
+        <PanelAsignacion
+          conversacionId={data.id}
+          asignacion={data}
+          status={data.status}
+          esGerencia={esGerencia(usuario)}
+          miId={usuario?.id ?? null}
+          onCambio={() => recargar(true)}
+        />
+      )}
+
       <div className="flex-1 overflow-y-auto">
         <div data-tour="conversacion.hilo" className="mx-auto w-full max-w-2xl p-6">
           {error ? (
@@ -205,6 +218,12 @@ export default function ConversacionDetallePage() {
                 ? `/api/conversaciones/${encodeURIComponent(data.id)}/adjuntos`
                 : undefined
             }
+            asignacion={{
+              asignadoA: data.asignado_a,
+              asignadoNombre: data.asignado_nombre,
+              miId: usuario?.id ?? null,
+              esGerencia: esGerencia(usuario),
+            }}
             onCambio={() => recargar(true)}
           />
         </div>

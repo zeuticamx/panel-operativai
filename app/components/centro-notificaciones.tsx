@@ -26,6 +26,10 @@ const TIPO_CLASES: Record<TipoAlerta, string> = {
   conversacion_transferida: "border-l-red-500 bg-red-500/10",
   perfil_incompleto: "border-l-blue-500 bg-blue-500/10",
   agenda_reprogramada: "border-l-blue-500 bg-blue-500/10",
+  solicitud_escritura: "border-l-amber-500 bg-amber-500/10",
+  conversacion_asignada: "border-l-blue-500 bg-blue-500/10",
+  asignacion_fallida: "border-l-red-500 bg-red-500/10",
+  mensaje_conversacion_asignada: "border-l-blue-500 bg-blue-500/10",
 };
 
 /**

@@ -40,8 +40,8 @@ function destinos(role: string | null): (string | null)[] {
     .map((a) => a.getAttribute("href"));
 }
 
-it("el vendedor solo ve su cartera", () => {
-  expect(destinos("vendedor")).toEqual(["/mi-cartera"]);
+it("el vendedor ve su cartera y sus chats", () => {
+  expect(destinos("vendedor")).toEqual(["/mi-cartera", "/conversaciones"]);
 });
 
 it("el colaborador ve la operación, no la configuración ni los pagos", () => {
@@ -55,11 +55,12 @@ it("mientras carga el usuario no se ofrece ningún destino", () => {
   expect(within(nav).queryAllByRole("link")).toEqual([]);
 });
 
-it("la barra móvil del vendedor tiene su cartera y el botón Más", () => {
+it("la barra móvil del vendedor tiene su cartera, sus chats y el botón Más", () => {
   destinos("vendedor");
   const movil = screen.getByRole("navigation", { name: "Principal móvil", hidden: true });
   expect(within(movil).getAllByRole("link", { hidden: true }).map((a) => a.getAttribute("href"))).toEqual([
     "/mi-cartera",
+    "/conversaciones",
   ]);
   expect(within(movil).getByRole("button", { name: /más/i, hidden: true })).toBeInTheDocument();
 });

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { RotateCcw, Sparkles } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type { AgenteConfig, ModelosOut } from "@/lib/types";
 import { fmtInt } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
-import { Aviso, Boton, Campo, Cargando, PageHeader, inputClass, selectClass } from "@/app/components/ui";
+import { Aviso, Boton, Campo, Cargando, PageHeader, claseBoton, inputClass, selectClass } from "@/app/components/ui";
 
 // Límites espejo de AgenteConfigIn en el backend. La validación real la
 // hace el servidor; aquí solo se usan para los atributos min/max del form.
@@ -134,6 +135,11 @@ export default function AgentePage() {
         }
         acciones={
           <>
+            {/* Cuestionario de bienvenida: también para negocios anteriores a él. */}
+            <Link href="/bienvenida" className={claseBoton("fantasma")}>
+              <Sparkles size={13} aria-hidden />
+              Configuración guiada
+            </Link>
             <Boton variante="fantasma" onClick={descartar} disabled={!sucio || guardando}>
               <RotateCcw size={13} aria-hidden />
               Descartar

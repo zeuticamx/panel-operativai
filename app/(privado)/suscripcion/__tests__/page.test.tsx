@@ -87,7 +87,7 @@ describe("Leyendas en /suscripcion", () => {
     render(<SuscripcionPage />);
 
     expect(
-      screen.getAllByText("Los créditos son llamadas del agente al uso de herramientas.").length,
+      screen.getAllByText("Créditos: se utilizan al ejecutar herramientas y funciones del agente de IA.").length,
     ).toBeGreaterThan(0);
   });
 

@@ -7,6 +7,14 @@ import { API_URL, apiFetch, mensajeDeError } from "./auth";
 import { showToast } from "./notificaciones";
 import type { AlertaOut } from "./types";
 
+/** Alertas que traen `conversation_id` en `datos` y llevan a esa conversación. */
+const TIPOS_DE_CONVERSACION: string[] = [
+  "conversacion_transferida",
+  "conversacion_asignada",
+  "asignacion_fallida",
+  "mensaje_conversacion_asignada",
+];
+
 /**
  * A dónde manda una alerta al hacerle clic (centro de notificaciones o
  * botón "Ver detalle" del toast) — historia de notificaciones en tiempo
@@ -31,7 +39,7 @@ export function rutaParaAlerta(alerta: AlertaOut): string | null {
     return `/mi-cartera?fecha=${y}-${m}-${dia}`;
   }
 
-  if (alerta.tipo === "conversacion_transferida") {
+  if (TIPOS_DE_CONVERSACION.includes(alerta.tipo)) {
     const conversationId = alerta.datos?.conversation_id;
     if (typeof conversationId !== "string") return null;
     return `/conversaciones/${conversationId}`;
@@ -67,6 +75,34 @@ export function transferenciasPendientes(alertas: AlertaOut[]): AlertaOut[] {
 // sin este tope, dejar el panel abierto varias horas iría acumulando la
 // lista sin límite.
 const MAX_ALERTAS = 50;
+
+const EVENTO_DATOS = "operativai:datos-actualizados";
+
+function emitirDatosActualizados(recurso: string): void {
+  window.dispatchEvent(new CustomEvent<string>(EVENTO_DATOS, { detail: recurso }));
+}
+
+/**
+ * Ejecuta `alCambiar` cuando el servidor avisa que cambiaron datos de alguno
+ * de los `recursos` ("reservas", "cartera", "agenda") o tras reconectar el
+ * socket. Reusa la conexión única de AlertasProvider.
+ */
+export function useDatosEnVivo(recursos: string[], alCambiar: () => void): void {
+  const cb = useRef(alCambiar);
+  useEffect(() => {
+    cb.current = alCambiar;
+  }, [alCambiar]);
+  const clave = recursos.join(",");
+  useEffect(() => {
+    const lista = clave.split(",");
+    const escuchar = (e: Event) => {
+      const recurso = (e as CustomEvent<string>).detail;
+      if (recurso === "*" || lista.includes(recurso)) cb.current();
+    };
+    window.addEventListener(EVENTO_DATOS, escuchar);
+    return () => window.removeEventListener(EVENTO_DATOS, escuchar);
+  }, [clave]);
+}
 
 export interface UseWebsocketAlertasResult {
   conectado: boolean;
@@ -124,13 +160,22 @@ export function useWebsocketAlertas(
     });
     socketRef.current = socket;
 
-    socket.on("connect", () => setConectado(true));
+    let yaConecto = false;
+    socket.on("connect", () => {
+      setConectado(true);
+      // Tras una reconexión se pudieron perder avisos: todo se vuelve a pedir.
+      if (yaConecto) emitirDatosActualizados("*");
+      yaConecto = true;
+    });
     socket.on("disconnect", () => setConectado(false));
-    // Conexión rechazada (token inválido/expirado sin refresh posible): no
-    // tiene sentido que socket.io siga reintentando solo, así que se apaga.
-    socket.on("connect_error", () => {
-      setConectado(false);
-      socket.disconnect();
+    // Si el servidor rechaza la conexión (token inválido/expirado), socket.io
+    // ya no reintenta solo (`socket.active` false); ante un corte de red sí
+    // reintenta, así que no se desconecta a mano.
+    socket.on("connect_error", () => setConectado(false));
+
+    // Los datos de alguna pantalla cambiaron (backend/realtime.emitir_datos).
+    socket.on("datos_actualizados", (d: { recurso?: string }) => {
+      if (d?.recurso) emitirDatosActualizados(d.recurso);
     });
 
     // Las últimas no leídas que el servidor manda al conectar, para no

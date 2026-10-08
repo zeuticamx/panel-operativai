@@ -6,11 +6,13 @@ import { Toaster } from "sonner";
 import { getAccessToken, onAuthChange } from "@/lib/auth";
 import { useStoredTheme } from "@/lib/theme";
 import { AlertasProvider } from "@/app/components/alertas-context";
+import { AccesoSoporteDueno } from "@/app/components/acceso-soporte-dueno";
 import { BannerVerComo } from "@/app/components/banner-ver-como";
 import { Sidebar } from "@/app/components/sidebar";
 import { ChatWidget } from "@/app/components/chat-widget";
 import { GuardaPlan, PlanProvider } from "@/app/components/plan-context";
 import { GuardaRol } from "@/app/components/guarda-rol";
+import { RedireccionBienvenida } from "@/app/components/redireccion-bienvenida";
 import { UsuarioProvider } from "@/app/components/usuario-context";
 
 const noop = () => () => {};
@@ -55,6 +57,8 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
             bloqueo por pantalla y modal ante un 402 (plan-context.tsx). */}
         <PlanProvider>
           <BannerVerComo />
+          <AccesoSoporteDueno />
+          <RedireccionBienvenida />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
             <Sidebar />
             {/* pb-16: deja libre la barra inferior móvil del Sidebar. */}

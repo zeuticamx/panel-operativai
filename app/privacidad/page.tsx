@@ -17,7 +17,7 @@ export default function PrivacidadPage() {
 
         <p className="mt-8 font-mono text-xs tracking-widest text-text-600 uppercase">Legal</p>
         <h1 className="mt-3 text-3xl font-medium">Aviso de privacidad</h1>
-        <p className="mt-2 text-sm text-text-400">Última actualización: 23 de septiembre de 2026</p>
+        <p className="mt-2 text-sm text-text-400">Última actualización: 8 de octubre de 2026</p>
 
         <p className="mt-8 text-sm leading-7 text-text-400">
           OperativAI es el portal donde administras el agente de IA de tu negocio: conversaciones,
@@ -49,6 +49,11 @@ export default function PrivacidadPage() {
             conexión y los mensajes que el agente atiende, para prestar el servicio.
           </li>
           <li>La configuración que guardes del agente y el registro de uso del portal.</li>
+          <li>
+            Si contestas el cuestionario de bienvenida, lo que nos dices de tu negocio: giro, qué ofreces,
+            horario, canales que usas, cómo atiendes a tus clientes y el tamaño de tu equipo. Contestarlo es
+            opcional.
+          </li>
         </ul>
         <p className="mt-3 text-sm leading-7 text-text-400">
           No recabamos datos personales sensibles a través de este portal.
@@ -59,6 +64,11 @@ export default function PrivacidadPage() {
           <li>Crear tu cuenta y autenticarte, incluso cuando entras con Google.</li>
           <li>Operar el agente de IA, sus conversaciones y los canales que conectes.</li>
           <li>Administrar tu suscripción y el equipo de tu negocio.</li>
+          <li>
+            Con las respuestas del cuestionario de bienvenida: preparar las instrucciones de tu agente,
+            activar las herramientas que te sirven y recomendarte un plan. Nuestro equipo también puede
+            consultarlas para darte soporte y ofrecerte el plan adecuado para tu negocio.
+          </li>
           <li>Atender solicitudes sobre tu cuenta y la seguridad del servicio.</li>
         </ul>
 

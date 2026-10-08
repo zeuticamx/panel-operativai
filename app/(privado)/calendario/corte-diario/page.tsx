@@ -77,14 +77,14 @@ function imprimirTicket(corte: CorteDiarioOut, nombreNegocio: string, proveedorN
       <body>
         <h1>${nombreNegocio}</h1>
         <p>Corte de caja — ${fechaLegible(corte.fecha)}</p>
-        ${proveedorNombre ? `<p>Barbero: ${proveedorNombre}</p>` : ""}
+        ${proveedorNombre ? `<p>proveedor: ${proveedorNombre}</p>` : ""}
         <div class="resumen">
           <span>${corte.total_servicios} servicio${corte.total_servicios === 1 ? "" : "s"}</span>
           <span>${formatoMonto(corte.total_cobrado)}</span>
         </div>
         <table>
           <thead>
-            <tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Barbero</th><th>Pago</th><th>Monto</th></tr>
+            <tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th>proveedor</th><th>Pago</th><th>Monto</th></tr>
           </thead>
           <tbody>${filas || `<tr><td colspan="6">Sin servicios completados este día.</td></tr>`}</tbody>
           <tfoot>

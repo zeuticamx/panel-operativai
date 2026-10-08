@@ -8,10 +8,14 @@ import {
   CalendarX2,
   Headset,
   Milestone,
+  MessageSquareMore,
+  ShieldAlert,
   Siren,
   Sparkles,
   Trophy,
+  UserCheck,
   UserRound,
+  UserX,
 } from "lucide-react";
 import { fmtInt } from "@/lib/formato";
 import { useApi } from "@/lib/use-api";
@@ -35,6 +39,10 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   conversacion_transferida: { label: "Transferida a humano", icon: Headset, clase: "text-danger" },
   perfil_incompleto: { label: "Completa tu perfil", icon: UserRound, clase: "text-blue-500" },
   agenda_reprogramada: { label: "Agenda reprogramada", icon: CalendarClock, clase: "text-blue-500" },
+  solicitud_escritura: { label: "Permiso de soporte", icon: ShieldAlert, clase: "text-amber-500" },
+  conversacion_asignada: { label: "Conversación asignada", icon: UserCheck, clase: "text-blue-500" },
+  asignacion_fallida: { label: "Sin responsable", icon: UserX, clase: "text-danger" },
+  mensaje_conversacion_asignada: { label: "Mensaje en tu chat", icon: MessageSquareMore, clase: "text-blue-500" },
 };
 
 const ORDEN: TipoAlerta[] = [

@@ -16,7 +16,7 @@ import type {
   ServicioOut,
 } from "@/lib/types";
 import { CalendarioGrid } from "@/app/components/calendario-grid";
-import { useAlertas } from "@/app/components/alertas-context";
+import { useDatosEnVivo } from "@/lib/use-websocket-alertas";
 import { CalendarioTabs, ModuloCalendarioApagado } from "@/app/components/modulo-calendario";
 import { esGerencia, useServicios } from "@/app/components/modulo-vendedores";
 import { ProveedorHorarioModal } from "@/app/components/proveedor-horario-modal";
@@ -49,7 +49,7 @@ function fechaLegible(fecha: string): string {
 /**
  * Ventanas de atención de cada proveedor visible, para la fecha elegida —
  * lo que la grilla usa para deshabilitar las franjas fuera de horario
- * (historia de usuario del barbero). `useApi` no sirve acá porque son N
+ * (historia de usuario del proveedor). `useApi` no sirve acá porque son N
  * proveedores con N pares de llamadas (horarios + excepción del día), así
  * que se resuelve a mano con un solo efecto y Promise.all.
  */
@@ -116,7 +116,6 @@ function Contenido() {
   // El proveedor con cuenta ve solo su columna (el backend ya le filtra
   // proveedores y reservas) y maneja su disponibilidad desde acá.
   const proveedor = esProveedor(usuario);
-  const alertas = useAlertas();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -134,10 +133,14 @@ function Contenido() {
   const desdeUtc = new Date(desdeIso).toISOString();
   const hastaUtc = new Date(hastaIso).toISOString();
 
-  const proveedores = useApi<ProveedorOut[]>(base ? `${base}/proveedores?activo=true` : null);
+  const proveedores = useApi<ProveedorOut[]>(
+    base ? `${base}/proveedores?activo=true` : null,
+    { refrescarCada: 60_000, alVolverAlFoco: true },
+  );
   const catalogo = useApi<ServicioOut[]>(base ? `${base}/servicios?activo=true` : null);
   const reservas = useApi<ReservaOut[]>(
     base ? `${base}/reservas?desde=${desdeUtc}&hasta=${hastaUtc}` : null,
+    { refrescarCada: 60_000, alVolverAlFoco: true },
   );
   const ventanasPorProveedor = useVentanasPorProveedor(
     base,
@@ -155,15 +158,12 @@ function Contenido() {
   // pestaña) refresca la grilla sin que el usuario tenga que hacerlo a
   // mano. Reusa el socket que ya mantiene AlertasProvider, no abre uno
   // nuevo (ver use-websocket-alertas.ts).
-  const ultimaAlerta = alertas.alertas[0];
   const recargarReservas = reservas.recargar;
-  useEffect(() => {
-    if (!ultimaAlerta) return;
-    if (ultimaAlerta.tipo === "reserva_creada" || ultimaAlerta.tipo === "reserva_cancelada") {
-      void recargarReservas(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ultimaAlerta?.id]);
+  const recargarProveedores = proveedores.recargar;
+  useDatosEnVivo(["reservas"], () => {
+    void recargarReservas(true);
+    void recargarProveedores(true);
+  });
 
   // Centra el calendario en la cita de la notificación en cuanto la grilla
   // del día ya cargó (escenario 3 de la historia de notificaciones).

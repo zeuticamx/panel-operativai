@@ -49,8 +49,9 @@ test.each([
 test.each([
   ["/mi-cartera", true],
   ["/preferencias", true],
+  ["/conversaciones", true],
+  ["/conversaciones/c-1", true],
   ["/dashboard", false],
-  ["/conversaciones", false],
   ["/vendedores", false],
   ["/vendedores/equipo", false],
   ["/calendario", false],

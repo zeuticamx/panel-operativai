@@ -79,9 +79,9 @@ export function ReservaDetalle({
       });
       setReasignarAbierto(false);
       onOpenChange(false);
-      onCambiado("Se cambió el barbero de la cita.");
+      onCambiado("Se cambió el proveedor de la cita.");
     } catch (e) {
-      setErrorReasignar(mensajeDeError(e, "No se pudo cambiar el barbero."));
+      setErrorReasignar(mensajeDeError(e, "No se pudo cambiar el proveedor."));
     } finally {
       setReasignando(false);
     }
@@ -224,7 +224,7 @@ export function ReservaDetalle({
                 )}
                 {acciones === "todas" && otrosProveedores.length > 0 && (
                   <Boton variante="fantasma" onClick={abrirReasignar}>
-                    Cambiar barbero
+                    Cambiar proveedor
                   </Boton>
                 )}
                 <Boton
@@ -274,7 +274,7 @@ export function ReservaDetalle({
       <ConfirmDialog
         open={reasignarAbierto}
         onOpenChange={setReasignarAbierto}
-        titulo="Cambiar barbero"
+        titulo="Cambiar proveedor"
         confirmar="Cambiar"
         loading={reasignando}
         onConfirm={reasignar}
@@ -282,7 +282,7 @@ export function ReservaDetalle({
           <div className="flex flex-col gap-2 text-left">
             <p>La cita conserva su horario; solo cambia quién la atiende.</p>
             <label className="flex flex-col gap-1 text-xs text-text-400">
-              Nuevo barbero
+              Nuevo proveedor
               <select
                 className={inputClass}
                 value={nuevoProveedorId}

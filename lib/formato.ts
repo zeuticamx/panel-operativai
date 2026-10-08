@@ -348,7 +348,7 @@ export const EVENTO_AUDITORIA_INFO: Record<
 > = {
   creada: { label: "Creada", tone: "info" },
   reprogramada: { label: "Reprogramada", tone: "neutral" },
-  cambio_barbero: { label: "Cambio de barbero", tone: "neutral" },
+  cambio_barbero: { label: "Cambio de proveedor", tone: "neutral" },
   cancelada: { label: "Cancelada", tone: "danger" },
   completada: { label: "Completada", tone: "success" },
   no_asistio: { label: "No asistió", tone: "warning" },

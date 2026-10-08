@@ -25,6 +25,7 @@ import { fmtInt, formatoFechaHora, formatoMonto, tiempoRelativo } from "@/lib/fo
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { CopyButton } from "@/app/components/copy-button";
+import { OnboardingGerenciaSeccion } from "@/app/components/onboarding-gerencia";
 import { StatCard } from "@/app/components/stat-card";
 import {
   ESTADOS_TENANT,
@@ -311,6 +312,8 @@ export default function DetalleTenantPage() {
                 />
               </div>
             </section>
+
+            <OnboardingGerenciaSeccion tenantId={t.tenant_id} />
 
             <CambiarEstado
               actual={t.estado}
@@ -1144,6 +1147,7 @@ const ACCIONES: Record<string, string> = {
   ajuste_creditos: "Ajuste de créditos",
   prueba_otorgada: "Plan de prueba otorgado",
   prueba_revocada: "Plan de prueba revocado",
+  prueba_onboarding: "Prueba por cuestionario de bienvenida",
   impersonacion: "Vio el portal como el negocio",
   alerta_revisada: "Alerta revisada",
 };

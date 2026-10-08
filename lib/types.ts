@@ -22,12 +22,16 @@ export interface UsuarioOut {
   /** Solo en una sesión "ver como" de plataforma: el gerente que mira. */
   impersonado_por?: string | null;
   impersonacion_expira?: string | null;
+  /** En "ver como": hasta cuándo el dueño autorizó editar; null = solo lectura. */
+  impersonacion_escritura_hasta?: string | null;
   /** Perfil personal (GET /api/perfil tiene el resto). Para el sidebar. */
   nombres?: string | null;
   apellido_paterno?: string | null;
   perfil_completo?: boolean;
   /** Cambia al subir o borrar la foto. null = sin foto. */
   foto_version?: string | null;
+  /** Cuenta nueva con el cuestionario de bienvenida sin contestar ni omitir. */
+  onboarding_pendiente?: boolean;
 }
 
 // ---- Perfil (routers/perfil.py) ----
@@ -137,6 +141,81 @@ export interface AgenteConfig {
 
 export interface ModelosOut {
   modelos: string[];
+}
+
+// ---- Onboarding: cuestionario de bienvenida (routers/onboarding.py) ----
+export type GiroNegocio =
+  | "salon_belleza"
+  | "salud"
+  | "restaurante"
+  | "tienda"
+  | "inmobiliaria"
+  | "servicios_profesionales"
+  | "educacion"
+  | "otro";
+export type TonoAgente = "cercano" | "formal" | "juvenil";
+export type CanalOnboarding = "whatsapp" | "instagram" | "facebook";
+export type EstadoOnboarding = "sin_iniciar" | "pendiente" | "omitido" | "completado";
+
+export interface OnboardingRespuestas {
+  giro: GiroNegocio;
+  descripcion: string;
+  agenda_citas: boolean;
+  vende_por_chat: boolean;
+  visitas_campo: boolean;
+  consulta_sistemas: boolean;
+  num_vendedores: number;
+  num_proveedores: number;
+  canales: CanalOnboarding[];
+  tono: TonoAgente;
+  horario: string;
+}
+
+export interface PlanRecomendado {
+  nombre: string;
+  /** Decimal serializado como string. */
+  precio_monthly: string;
+  herramientas: Herramienta[];
+  /** null = sin tope. */
+  max_vendedores: number | null;
+  max_proveedores: number | null;
+  /** false si ningún plan activo cubre todo: `faltantes` dice qué queda afuera. */
+  cubre_todo: boolean;
+  faltantes: string[];
+}
+
+export interface OnboardingRecomendacion {
+  system_prompt: string;
+  modulos: Herramienta[];
+  plan: PlanRecomendado | null;
+}
+
+export interface OnboardingOut {
+  estado: EstadoOnboarding;
+  respuestas: OnboardingRespuestas | null;
+  recomendacion: OnboardingRecomendacion | null;
+  prueba_disponible: boolean;
+  dias_prueba: number;
+  /** El prompt actual lo escribió el dueño: aplicar no lo pisa sin confirmar. */
+  prompt_editado: boolean;
+}
+
+export interface OnboardingAplicado {
+  prompt_actualizado: boolean;
+  modulos_encendidos: Herramienta[];
+  modulos_pendientes: Herramienta[];
+  prueba: { plan: string; vence: string } | null;
+  plan_recomendado: string | null;
+}
+
+export interface OnboardingGerencia {
+  estado: EstadoOnboarding;
+  respuestas: OnboardingRespuestas | null;
+  plan_recomendado: string | null;
+  completado_en: string | null;
+  omitido_en: string | null;
+  prueba_otorgada_en: string | null;
+  actualizado_en: string | null;
 }
 
 // ---- Canales ----
@@ -269,7 +348,30 @@ export interface ActualizarHerramientaIn {
 }
 
 // ---- Conversaciones ----
-export interface ConversacionOut {
+/**
+ * Quién tiene la conversación (backend: services/asignacion_conversaciones.py).
+ * Todo null = sin asignar.
+ */
+export interface AsignacionConversacion {
+  asignado_a: string | null;
+  asignado_nombre: string | null;
+  asignado_rol: string | null;
+  asignado_en: string | null;
+  /** 'owner' | 'usuario' | 'agente' | 'sistema' */
+  asignado_origen: string | null;
+  /** Por qué cayó donde cayó (p. ej. la asignación automática no encontró responsable). */
+  asignacion_nota: string | null;
+}
+
+/** Una cuenta a la que se le puede asignar (GET /api/conversaciones/asignables). */
+export interface AsignableOut {
+  id: string;
+  nombre: string;
+  email: string;
+  role: string;
+}
+
+export interface ConversacionOut extends AsignacionConversacion {
   id: string;
   channel_type: string;
   status: string;
@@ -314,9 +416,10 @@ export interface EnviarMensajeIn {
 export interface ConversacionEstadoOut {
   id: string;
   status: string;
+  asignado_a?: string | null;
 }
 
-export interface ConversacionDetalleOut {
+export interface ConversacionDetalleOut extends AsignacionConversacion {
   id: string;
   channel_type: string;
   status: string;
@@ -536,7 +639,11 @@ export type TipoAlerta =
   | "reserva_cancelada"
   | "conversacion_transferida"
   | "perfil_incompleto"
-  | "agenda_reprogramada";
+  | "agenda_reprogramada"
+  | "solicitud_escritura"
+  | "conversacion_asignada"
+  | "asignacion_fallida"
+  | "mensaje_conversacion_asignada";
 
 export interface AlertaOut {
   id: string;
@@ -1202,6 +1309,40 @@ export interface CohortesOut {
   meses: number;
   cohortes: CohorteOut[];
 }
+
+// ---- Acceso de soporte con escritura (routers/acceso_soporte.py) ----
+export type EstadoAccesoSoporte =
+  | "pendiente"
+  | "aprobada"
+  | "rechazada"
+  | "revocada"
+  | "cancelada"
+  | "vencida"
+  | "terminada";
+
+export interface SolicitudEscrituraOut {
+  id: string;
+  gerente_email: string;
+  motivo: string;
+  estado: EstadoAccesoSoporte;
+  creada_en: string;
+  expira_en: string;
+  resuelta_en: string | null;
+  canal: "portal" | "correo" | null;
+  duracion_min: number | null;
+  concede_hasta: string | null;
+}
+
+export interface InfoEnlaceEscrituraOut {
+  tenant_nombre: string;
+  gerente_email: string;
+  motivo: string;
+  estado: EstadoAccesoSoporte;
+  expira_en: string;
+}
+
+/** Cuánto puede durar la edición autorizada (minutos). Igual que el backend. */
+export const DURACIONES_ESCRITURA = [15, 30, 60] as const;
 
 // ---- Ver como el negocio ----
 export interface ImpersonarIn {

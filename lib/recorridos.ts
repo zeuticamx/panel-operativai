@@ -20,8 +20,19 @@ export interface Recorrido {
   pasos: PasoRecorrido[];
 }
 
-/** Rutas sin recorrido: redirecciones, documentos legales y el login. */
-export const RUTAS_SIN_RECORRIDO = ["/", "/conectar/callback", "/condiciones", "/privacidad", "/login"];
+/**
+ * Rutas sin recorrido: redirecciones, documentos legales, el login, el enlace
+ * de un solo uso del correo y el cuestionario de bienvenida (ya es un paso a paso).
+ */
+export const RUTAS_SIN_RECORRIDO = [
+  "/",
+  "/conectar/callback",
+  "/condiciones",
+  "/privacidad",
+  "/login",
+  "/acceso-soporte",
+  "/bienvenida",
+];
 
 /** Pantallas sin sesión con recorrido: el botón flota porque no tienen PageHeader. */
 export const RUTAS_PUBLICAS = ["/registro", "/recuperar", "/invitacion"];

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Briefcase, MapPin, MessageCircle, RefreshCw } from "lucide-react";
 import { fechaDeParametro } from "@/lib/agenda";
 import { useApi } from "@/lib/use-api";
+import { useDatosEnVivo } from "@/lib/use-websocket-alertas";
 import type { ClienteOut, PipelineOut, VendedorOut } from "@/lib/types";
 import { fmtInt, infoEstadoCliente, infoEstadoPipeline, infoPrioridad, tiempoRelativo } from "@/lib/formato";
 import { Badge } from "@/app/components/badge";
@@ -46,7 +47,7 @@ function MiCartera() {
   const fechaAgenda = useMemo(() => fechaDeParametro(fechaParam), [fechaParam]);
   const servicios = useServicios();
   const { puedeUsar } = usePlan();
-  const yo = useApi<VendedorOut>("/api/vendedores/yo");
+  const yo = useApi<VendedorOut>("/api/vendedores/yo", { refrescarCada: 60_000, alVolverAlFoco: true });
 
   // Cada sección solo si el negocio la tiene: sin esto el backend respondería
   // 409 (módulo apagado) o 402 (fuera del plan) y la pantalla se llenaría de errores.
@@ -55,14 +56,19 @@ function MiCartera() {
 
   const leads = useApi<PipelineOut[]>(
     yo.data && conEmbudo ? `/api/vendedores/${yo.data.id}/pipeline?incluir_cerrados=false` : null,
+    { refrescarCada: 60_000, alVolverAlFoco: true },
   );
-  const clientes = useApi<ClienteOut[]>(yo.data && conCampo ? "/api/clientes?limite=200" : null);
+  const clientes = useApi<ClienteOut[]>(
+    yo.data && conCampo ? "/api/clientes?limite=200" : null,
+    { refrescarCada: 60_000, alVolverAlFoco: true },
+  );
 
   const recargar = () => {
     void yo.recargar(true);
     void leads.recargar(true);
     void clientes.recargar(true);
   };
+  useDatosEnVivo(["cartera", "agenda"], recargar);
 
   return (
     <>

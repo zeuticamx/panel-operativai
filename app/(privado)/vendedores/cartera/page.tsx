@@ -9,6 +9,7 @@ import {
   ESTADOS_CLIENTE,
   PRIORIDADES_CLIENTE,
   fmtInt,
+  formatoFechaHora,
   infoEstadoCliente,
   infoPrioridad,
   tiempoRelativo,
@@ -336,7 +337,7 @@ function Cartera() {
                           </td>
                           <td
                             className="px-4 py-2 text-right font-mono text-[11px] text-text-600"
-                            title={c.actualizado_en}
+                            title={formatoFechaHora(c.actualizado_en)}
                           >
                             {tiempoRelativo(c.actualizado_en)}
                           </td>

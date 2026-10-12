@@ -6,7 +6,9 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarX2,
+  Bot,
   Headset,
+  UserMinus,
   Milestone,
   MessageSquareMore,
   ShieldAlert,
@@ -43,6 +45,9 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   conversacion_asignada: { label: "Conversación asignada", icon: UserCheck, clase: "text-blue-500" },
   asignacion_fallida: { label: "Sin responsable", icon: UserX, clase: "text-danger" },
   mensaje_conversacion_asignada: { label: "Mensaje en tu chat", icon: MessageSquareMore, clase: "text-blue-500" },
+  conversacion_tomada: { label: "Conversación tomada", icon: UserCheck, clase: "text-blue-500" },
+  conversacion_liberada: { label: "Conversación liberada", icon: UserMinus, clase: "text-amber-500" },
+  conversacion_devuelta_ia: { label: "Devuelta a la IA", icon: Bot, clase: "text-emerald-500" },
 };
 
 const ORDEN: TipoAlerta[] = [

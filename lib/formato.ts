@@ -5,6 +5,18 @@ const LOCALE = "es-MX";
 const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto" });
 export const fmtInt = new Intl.NumberFormat(LOCALE);
 
+/**
+ * Las columnas `TIMESTAMP` (sin zona) de n8n —conversations, messages— llegan
+ * sin "Z" ni offset y el navegador las leería como hora local. Se guardan en
+ * UTC, así que se les agrega la "Z" para que se conviertan a la zona local.
+ * Si ya traen zona, se devuelven tal cual.
+ */
+export function aUtc(iso: string): string {
+  return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(iso) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(iso)
+    ? `${iso.replace(" ", "T")}Z`
+    : iso;
+}
+
 /** Hora relativa legible: "hace instantes", "hace 3 minutos", "ayer". */
 export function tiempoRelativo(iso: string, now: number = Date.now()): string {
   const then = new Date(iso).getTime();

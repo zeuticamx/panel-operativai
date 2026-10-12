@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useApi } from "@/lib/use-api";
 import { useConversacionLive } from "@/lib/use-conversacion-live";
 import type { ConversacionDetalleOut } from "@/lib/types";
-import { estadoVentanaMeta, etiquetaIdentificador, formatoFechaHora, iniciales } from "@/lib/formato";
+import { aUtc, estadoVentanaMeta, etiquetaIdentificador, formatoFechaHora, iniciales } from "@/lib/formato";
 import { ThreadViewer } from "@/app/components/thread-viewer";
 import { MensajeComposer } from "@/app/components/mensaje-composer";
 import { Badge } from "@/app/components/badge";
@@ -17,8 +17,8 @@ import { Aviso, Boton, Cargando } from "@/app/components/ui";
 
 /**
  * Igual que /conversaciones/{id}, pero para gerencia de plataforma: el
- * tenant_id viaja por query string (llegó de la lista, que a su vez lo
- * recibió de la ficha del negocio) en vez de salir del JWT del que llama.
+ * tenant_id viaja por query string (llegÃ³ de la lista, que a su vez lo
+ * recibiÃ³ de la ficha del negocio) en vez de salir del JWT del que llama.
  */
 export default function ConversacionDetalleGerenciaPage() {
   const params = useParams<{ id: string }>();
@@ -100,13 +100,13 @@ export default function ConversacionDetalleGerenciaPage() {
                     />
                   </span>
                 )}
-                <span className="hidden sm:inline">· inició {formatoFechaHora(data.started_at)}</span>
-                <span className="hidden sm:inline">· {data.mensajes.length} mensajes</span>
+                <span className="hidden sm:inline">Â· iniciÃ³ {formatoFechaHora(aUtc(data.started_at))}</span>
+                <span className="hidden sm:inline">Â· {data.mensajes.length} mensajes</span>
               </div>
             </div>
           </>
         ) : (
-          <h1 className="text-sm font-medium text-text-100">Conversación</h1>
+          <h1 className="text-sm font-medium text-text-100">ConversaciÃ³n</h1>
         )}
 
         <Boton
@@ -126,7 +126,7 @@ export default function ConversacionDetalleGerenciaPage() {
           {error ? (
             <Aviso tipo="error">{error}</Aviso>
           ) : !data ? (
-            <Cargando texto="cargando conversación…" />
+            <Cargando texto="cargando conversaciÃ³nâ€¦" />
           ) : (
             <ThreadViewer
               mensajes={data.mensajes}

@@ -643,7 +643,10 @@ export type TipoAlerta =
   | "solicitud_escritura"
   | "conversacion_asignada"
   | "asignacion_fallida"
-  | "mensaje_conversacion_asignada";
+  | "mensaje_conversacion_asignada"
+  | "conversacion_tomada"
+  | "conversacion_liberada"
+  | "conversacion_devuelta_ia";
 
 export interface AlertaOut {
   id: string;
@@ -1461,12 +1464,16 @@ export interface ServicioOut {
   precio: string | null;
   activo: boolean;
   creado_en: string;
+  /** Horas mínimas de antelación para cancelar sin ser "tardía" (0-720); null = sin regla. */
+  antelacion_cancelacion_horas: number | null;
 }
 
 export interface ServicioCrearIn {
   nombre: string;
   duracion_minutos: number;
   precio?: string | null;
+  /** Entero 0-720 o null/omitido para no tener regla. */
+  antelacion_cancelacion_horas?: number | null;
 }
 
 export interface ServicioActualizarIn {
@@ -1474,6 +1481,8 @@ export interface ServicioActualizarIn {
   duracion_minutos?: number;
   precio?: string | null;
   activo?: boolean;
+  /** Omitir no cambia la regla; null EXPLÍCITO la borra. */
+  antelacion_cancelacion_horas?: number | null;
 }
 
 /** "HH:MM:SS" (TIME de Postgres). */
@@ -1572,6 +1581,26 @@ export interface ReservaOut {
   precio_cobrado: string | null;
   metodo_pago: MetodoPago | null;
   creado_en: string;
+  /** Cancelada con menos antelación que la regla del servicio (spec 001). */
+  cancelacion_tardia: boolean;
+  cancelada_por: "cliente" | "equipo" | null;
+  /** Horas de la regla vigente al cancelar; null si no había regla. */
+  antelacion_aplicada_horas: number | null;
+}
+
+/**
+ * Fila del reporte de plataforma de cancelaciones tardías. Sin datos del
+ * cliente final. `servicio_id` es null en la fila "Sin servicio".
+ */
+export interface CancelacionTardiaFilaOut {
+  tenant_id: string;
+  tenant_nombre: string;
+  servicio_id: string | null;
+  servicio_nombre: string;
+  /** AAAA-MM-DD o AAAA-MM, en la zona horaria del tenant. */
+  periodo: string;
+  tardias: number;
+  total_cliente: number;
 }
 
 /** Alta manual desde el portal (walk-in o telefónico). */
@@ -1785,4 +1814,24 @@ export interface InvitacionInfoOut {
 export interface AceptarInvitacionIn extends InvitacionTokenIn {
   password: string;
   acepta_terminos: boolean;
+}
+
+// --- Historial de citas de un cliente (spec 002) ---
+// Espejo de CitaHistorialPortalOut / HistorialCitasPortalOut (backend/schemas.py).
+// Sin precio, pago, motivo ni identificador de cita. Las fechas son texto ISO
+// 8601 local del negocio (con desfase), no instantes UTC.
+export interface CitaHistorialOut {
+  fecha_hora_inicio: string;
+  hora_fin: string;
+  servicio_nombre: string;
+  proveedor_nombre: string;
+  estado: EstadoReserva;
+  notas: string | null;
+  cancelada_por: "cliente" | "equipo" | null;
+  cancelacion_tardia: boolean;
+}
+
+export interface HistorialCitasOut {
+  citas: CitaHistorialOut[];
+  hay_mas: boolean;
 }

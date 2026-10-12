@@ -151,6 +151,7 @@ function Contenido() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [modoForm, setModoForm] = useState<ModoReservaForm | null>(null);
   const [reservaVista, setReservaVista] = useState<ReservaOut | null>(null);
+  const [soloTardias, setSoloTardias] = useState(false);
   const [disponibilidadAbierta, setDisponibilidadAbierta] = useState(false);
   const yo = proveedor ? (proveedores.data?.[0] ?? null) : null;
 
@@ -180,10 +181,16 @@ function Contenido() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservaBuscadaId, reservas.data]);
 
+  // Siempre la versión más reciente de la cita abierta: tras una recarga (p. ej.
+  // el 409 reserva_no_confirmada) el detalle muestra su estado real.
+  const reservaAbierta = reservaVista
+    ? (reservas.data?.find((r) => r.id === reservaVista.id) ?? reservaVista)
+    : null;
   const cargandoInicial = servicios.loading && !servicios.data;
   const listaReservas = reservas.data ?? [];
   const activas = listaReservas.filter((r) => r.estado !== "cancelada");
   const confirmadas = listaReservas.filter((r) => r.estado === "confirmada");
+  const tardias = listaReservas.filter((r) => r.estado === "cancelada" && r.cancelacion_tardia);
 
   const abrirCrear = (proveedorId: string, horas: number, minutos: number) => {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -317,6 +324,14 @@ function Contenido() {
                 <span className="ml-1 font-mono text-[11px] text-text-600 capitalize">
                   {fechaLegible(fecha)}
                 </span>
+                <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-text-400">
+                  <input
+                    type="checkbox"
+                    checked={soloTardias}
+                    onChange={(e) => setSoloTardias(e.target.checked)}
+                  />
+                  Cancelación tardía ({fmtInt.format(tardias.length)})
+                </label>
               </div>
 
               <CalendarioGrid
@@ -325,6 +340,7 @@ function Contenido() {
                 ventanasPorProveedor={ventanasPorProveedor}
                 onSlotClick={gerencia ? abrirCrear : undefined}
                 onReservaClick={setReservaVista}
+                soloTardias={soloTardias}
               />
             </>
           )}
@@ -347,7 +363,7 @@ function Contenido() {
         <ReservaDetalle
           open={reservaVista !== null}
           onOpenChange={(o) => !o && setReservaVista(null)}
-          reserva={reservaVista}
+          reserva={reservaAbierta}
           tenantId={servicios.tenantId}
           proveedores={proveedores.data ?? []}
           servicios={catalogo.data ?? []}
@@ -356,6 +372,7 @@ function Contenido() {
             setModoForm({ tipo: "reprogramar", reserva: r });
           }}
           onCambiado={alGuardar}
+          onRecargar={() => void reservas.recargar(true)}
           acciones={gerencia ? "todas" : proveedor ? "propias" : "ninguna"}
         />
       )}

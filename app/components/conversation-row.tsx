@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ConversacionOut } from "@/lib/types";
-import { estadoVentanaMeta, etiquetaIdentificador, formatoCorto, iniciales } from "@/lib/formato";
+import { aUtc, estadoVentanaMeta, etiquetaIdentificador, formatoCorto, iniciales } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
 import { CanalBadge, StatusBadge } from "./status";
@@ -55,7 +55,7 @@ export function ConversationRow({
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium text-text-100">{nombre}</span>
           <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-600">
-            {formatoCorto(c.last_message_at, now)}
+            {formatoCorto(aUtc(c.last_message_at), now)}
           </span>
         </div>
 

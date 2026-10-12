@@ -130,14 +130,38 @@ export class ApiError extends Error {
   detail: string;
   /** Solo en los 402 del gate por plan: qué herramienta y por qué. */
   bloqueo: BloqueoPlanDetalle | null;
+  /** Código estable de los errores con `detail` objeto (p. ej. "reserva_no_confirmada"); null si no hay. */
+  codigo: string | null;
+  /** Estado actual del recurso cuando el `detail` objeto lo informa (p. ej. el de la cita); null si no. */
+  estado: string | null;
 
-  constructor(status: number, detail: string, bloqueo: BloqueoPlanDetalle | null = null) {
+  constructor(
+    status: number,
+    detail: string,
+    bloqueo: BloqueoPlanDetalle | null = null,
+    extra: { codigo?: string | null; estado?: string | null } = {},
+  ) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
     this.bloqueo = bloqueo;
+    this.codigo = extra.codigo ?? null;
+    this.estado = extra.estado ?? null;
   }
+}
+
+/** `codigo` y `estado` de un `detail` objeto ({codigo, mensaje, estado?}); null si no es objeto o no trae strings. */
+function extraerCodigoYEstado(data: unknown): { codigo: string | null; estado: string | null } {
+  const vacio = { codigo: null, estado: null };
+  if (!data || typeof data !== "object" || !("detail" in data)) return vacio;
+  const d = (data as { detail: unknown }).detail;
+  if (!d || typeof d !== "object" || Array.isArray(d)) return vacio;
+  const { codigo, estado } = d as { codigo?: unknown; estado?: unknown };
+  return {
+    codigo: typeof codigo === "string" ? codigo : null,
+    estado: typeof estado === "string" ? estado : null,
+  };
 }
 
 /**
@@ -336,7 +360,7 @@ export async function apiFetch<T = unknown>(
     if (bloqueo && metodo !== "GET" && metodo !== "HEAD" && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(PLAN_BLOQUEADO_EVENT, { detail: bloqueo }));
     }
-    throw new ApiError(res.status, extraerDetalle(data, res.status), bloqueo);
+    throw new ApiError(res.status, extraerDetalle(data, res.status), bloqueo, extraerCodigoYEstado(data));
   }
 
   return data as T;

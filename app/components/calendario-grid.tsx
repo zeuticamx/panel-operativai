@@ -1,6 +1,8 @@
 "use client";
 
 import type { ProveedorOut, ReservaOut } from "@/lib/types";
+import { formatoFechaHora } from "@/lib/formato";
+import { Badge } from "./badge";
 
 // Rango fijo de la grilla. No sale de los horarios reales de cada
 // proveedor (eso lo resuelve /calendario/disponibilidad para el agente de
@@ -41,6 +43,7 @@ export function CalendarioGrid({
   ventanasPorProveedor,
   onSlotClick,
   onReservaClick,
+  soloTardias = false,
 }: {
   proveedores: ProveedorOut[];
   reservas: ReservaOut[];
@@ -55,7 +58,23 @@ export function CalendarioGrid({
   /** Sin esto las franjas libres no se pueden tocar (quien mira no crea citas). */
   onSlotClick?: (proveedorId: string, horas: number, minutos: number) => void;
   onReservaClick: (reserva: ReservaOut) => void;
+  /**
+   * Filtro "Cancelación tardía" (R25): en vez de la grilla muestra, como
+   * lista de tarjetas, solo las canceladas tardías. No va sobre la grilla
+   * porque las canceladas comparten franja con citas vivas y con otras
+   * canceladas, y la tabla con rowSpan no admite citas solapadas.
+   */
+  soloTardias?: boolean;
 }) {
+  if (soloTardias) {
+    return (
+      <ListaCancelacionesTardias
+        reservas={reservas.filter((r) => r.estado === "cancelada" && r.cancelacion_tardia)}
+        onReservaClick={onReservaClick}
+      />
+    );
+  }
+
   const filas = generarFilas();
 
   const porProveedor = new Map<string, ReservaOut[]>();
@@ -202,5 +221,45 @@ export function CalendarioGrid({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ListaCancelacionesTardias({
+  reservas,
+  onReservaClick,
+}: {
+  reservas: ReservaOut[];
+  onReservaClick: (reserva: ReservaOut) => void;
+}) {
+  if (reservas.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed border-bg-700 px-6 py-12 text-center font-mono text-xs text-text-600">
+        No hay cancelaciones tardías este día.
+      </p>
+    );
+  }
+  const ordenadas = [...reservas].sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+  return (
+    <ul data-tour="calendario.agenda" className="flex flex-col gap-2">
+      {ordenadas.map((r) => (
+        <li key={r.id}>
+          <button
+            type="button"
+            onClick={() => onReservaClick(r)}
+            className="flex w-full cursor-pointer flex-col gap-1 rounded-md border border-bg-700 bg-bg-900 px-3 py-2 text-left hover:bg-hover focus:outline-none focus:ring-2 focus:ring-bg-600"
+          >
+            <span className="flex flex-wrap items-center justify-between gap-2">
+              <span className="truncate text-xs font-medium text-text-100">
+                {r.cliente_nombre ?? "Cliente"}
+              </span>
+              <Badge tone="warning">Cancelación tardía</Badge>
+            </span>
+            <span className="truncate font-mono text-[11px] text-text-400">
+              {r.servicio_nombre} · {r.proveedor_nombre} · {formatoFechaHora(r.hora_inicio)}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

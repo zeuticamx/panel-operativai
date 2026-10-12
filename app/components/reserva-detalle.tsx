@@ -3,7 +3,8 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { History } from "lucide-react";
-import { apiFetch, mensajeDeError } from "@/lib/auth";
+import { ApiError, apiFetch, mensajeDeError } from "@/lib/auth";
+import { MENSAJE_RESERVA_NO_CONFIRMADA } from "@/lib/antelacion-cancelacion";
 import { formatoFechaHora, formatoHora, infoEstadoReserva } from "@/lib/formato";
 import type { MetodoPago, ProveedorOut, ReservaOut, ServicioOut } from "@/lib/types";
 import { ReservaHistorialModal } from "./reserva-historial-modal";
@@ -25,6 +26,7 @@ export function ReservaDetalle({
   servicios,
   onReprogramar,
   onCambiado,
+  onRecargar,
   acciones = "todas",
 }: {
   open: boolean;
@@ -35,6 +37,8 @@ export function ReservaDetalle({
   servicios: ServicioOut[];
   onReprogramar: (reserva: ReservaOut) => void;
   onCambiado: (mensaje: string) => void;
+  /** Recarga la lista de citas sin cerrar el detalle (409 reserva_no_confirmada, R45). */
+  onRecargar?: () => void;
   /**
    * Qué puede hacer quien mira (espejo de routers/calendario.py):
    * "todas" gerencia; "propias" el proveedor sobre sus citas (cancelar y
@@ -99,7 +103,15 @@ export function ReservaDetalle({
       onOpenChange(false);
       onCambiado("Reserva cancelada.");
     } catch (e) {
-      setError(mensajeDeError(e, "No se pudo cancelar la reserva."));
+      if (e instanceof ApiError && e.codigo === "reserva_no_confirmada") {
+        // Otro la cambió antes: no se reintenta; se refresca la agenda y el
+        // detalle pasa a mostrar el estado real (sin botón "Cancelar").
+        setConfirmCancelar(false);
+        setError(MENSAJE_RESERVA_NO_CONFIRMADA);
+        onRecargar?.();
+      } else {
+        setError(mensajeDeError(e, "No se pudo cancelar la reserva."));
+      }
     } finally {
       setProcesando(null);
     }
@@ -165,6 +177,11 @@ export function ReservaDetalle({
               </Dialog.Title>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone={info.tone}>{info.label}</Badge>
+                {reserva.cancelacion_tardia && (
+                  <Badge tone="warning" title="Se canceló con menos antelación que la regla del servicio">
+                    Cancelación tardía
+                  </Badge>
+                )}
                 {/* La bitácora es de gerencia: el proveedor no la ve (403). */}
                 {acciones !== "propias" && (
                   <button

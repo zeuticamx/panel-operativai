@@ -30,6 +30,7 @@ const TABS = [
   { href: "/gerencia/consumo", label: "Consumo", exacto: false },
   { href: "/gerencia/cohortes", label: "Retención", exacto: false },
   { href: "/gerencia/incidencias", label: "Reportes", exacto: false },
+  { href: "/gerencia/cancelaciones", label: "Cancelaciones", exacto: false },
   { href: "/gerencia/auditoria", label: "Bitácora", exacto: false },
   { href: "/gerencia/equipo", label: "Equipo", exacto: false },
 ];

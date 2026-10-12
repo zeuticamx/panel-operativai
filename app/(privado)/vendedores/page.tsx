@@ -12,6 +12,7 @@ import {
   ESTADOS_CERRADOS,
   ESTADOS_PIPELINE,
   fmtInt,
+  formatoFechaHora,
   formatoMonto,
   formatoPorcentaje,
   infoEstadoPipeline,
@@ -564,7 +565,7 @@ export default function VendedoresPage() {
                             </td>
                             <td
                               className="px-4 py-2 text-right font-mono text-[11px] text-text-600"
-                              title={l.actualizado_en}
+                              title={formatoFechaHora(l.actualizado_en)}
                             >
                               {tiempoRelativo(l.actualizado_en, now)}
                             </td>

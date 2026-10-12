@@ -1,5 +1,5 @@
 import type { MensajeOut } from "@/lib/types";
-import { formatoFechaHora, formatoHora } from "@/lib/formato";
+import { aUtc, formatoFechaHora, formatoHora } from "@/lib/formato";
 import { MessageBubble } from "./message-bubble";
 import { AdjuntoMensaje } from "./adjunto-mensaje";
 
@@ -7,12 +7,12 @@ const ETIQUETA_AUTOMATICA = /^\[(Imagen|Documento: .*)\]$/;
 
 /** Clave de día local para agrupar mensajes con un separador de fecha. */
 function claveDia(iso: string) {
-  const d = new Date(iso);
+  const d = new Date(aUtc(iso));
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 function etiquetaDia(iso: string) {
-  return new Date(iso).toLocaleDateString("es-MX", {
+  return new Date(aUtc(iso)).toLocaleDateString("es-MX", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -58,7 +58,7 @@ export function ThreadViewer({
             )}
             <MessageBubble
               role={m.role}
-              timestamp={formatoHora(m.created_at)}
+              timestamp={formatoHora(aUtc(m.created_at))}
               meta={
                 m.role === "assistant"
                   ? nombreAgente
@@ -82,7 +82,7 @@ export function ThreadViewer({
                 m.adjuntos?.length &&
                 (ETIQUETA_AUTOMATICA.test(m.content) || m.adjuntos.some((a) => a.nombre === m.content))
               ) && (
-                <span title={formatoFechaHora(m.created_at)}>{m.content}</span>
+                <span title={formatoFechaHora(aUtc(m.created_at))}>{m.content}</span>
               )}
             </MessageBubble>
           </div>

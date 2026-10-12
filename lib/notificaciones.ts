@@ -30,6 +30,9 @@ const COLOR_POR_TIPO: Record<TipoAlerta, string> = {
   conversacion_asignada: "#3b82f6", // blue-500: te tocó atender un chat
   asignacion_fallida: "#ef4444", // red-500: nadie la tiene y hay que repartirla
   mensaje_conversacion_asignada: "#3b82f6", // blue-500: el cliente escribió en tu chat
+  conversacion_tomada: "#3b82f6", // blue-500: informativo, alguien se hizo cargo
+  conversacion_liberada: "#f59e0b", // amber-500: ya no es tuya
+  conversacion_devuelta_ia: "#10b981", // emerald-500: la IA retomó el chat
 };
 
 const DURACION_MS = 5000;

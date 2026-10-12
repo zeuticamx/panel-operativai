@@ -3,6 +3,11 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
+import {
+  AYUDA_ANTELACION,
+  ETIQUETA_ANTELACION,
+  parsearAntelacion,
+} from "@/lib/antelacion-cancelacion";
 import type { ServicioActualizarIn, ServicioOut } from "@/lib/types";
 import { Aviso, Boton, Campo, inputClass } from "./ui";
 
@@ -10,6 +15,7 @@ interface Errores {
   nombre?: string;
   duracion?: string;
   precio?: string;
+  antelacion?: string;
 }
 
 /**
@@ -39,6 +45,11 @@ export function ServicioEditarModal({
   const [nombre, setNombre] = useState(servicio.nombre);
   const [duracion, setDuracion] = useState(String(servicio.duracion_minutos));
   const [precio, setPrecio] = useState(servicio.precio ?? "");
+  const [antelacion, setAntelacion] = useState(
+    servicio.antelacion_cancelacion_horas === null
+      ? ""
+      : String(servicio.antelacion_cancelacion_horas),
+  );
   const [errores, setErrores] = useState<Errores>({});
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -68,6 +79,9 @@ export function ServicioEditarModal({
       }
     }
 
+    const ant = parsearAntelacion(antelacion);
+    if (ant.error) nuevos.antelacion = ant.error;
+
     setErrores(nuevos);
     return Object.keys(nuevos).length === 0;
   };
@@ -86,6 +100,8 @@ export function ServicioEditarModal({
             nombre: nombre.trim(),
             duracion_minutos: Number(duracion),
             precio: precio.trim() === "" ? null : precio.trim(),
+            // null explícito: vacío borra la regla (omitirlo la dejaría igual).
+            antelacion_cancelacion_horas: parsearAntelacion(antelacion).valor,
           } satisfies ServicioActualizarIn,
         },
       );
@@ -136,6 +152,23 @@ export function ServicioEditarModal({
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
                 placeholder="0.00"
+              />
+            </Campo>
+            <Campo
+              id="se-antelacion"
+              label={ETIQUETA_ANTELACION}
+              hint={AYUDA_ANTELACION}
+              error={errores.antelacion}
+            >
+              <input
+                id="se-antelacion"
+                type="number"
+                min={0}
+                max={720}
+                step={1}
+                className={inputClass}
+                value={antelacion}
+                onChange={(e) => setAntelacion(e.target.value)}
               />
             </Campo>
 

@@ -13,6 +13,9 @@ const TIPOS_DE_CONVERSACION: string[] = [
   "conversacion_asignada",
   "asignacion_fallida",
   "mensaje_conversacion_asignada",
+  "conversacion_tomada",
+  "conversacion_liberada",
+  "conversacion_devuelta_ia",
 ];
 
 /**

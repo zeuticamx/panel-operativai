@@ -5,6 +5,11 @@ import { Pencil, Plus } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import { formatoMonto } from "@/lib/formato";
+import {
+  AYUDA_ANTELACION,
+  ETIQUETA_ANTELACION,
+  parsearAntelacion,
+} from "@/lib/antelacion-cancelacion";
 import type { ServicioActualizarIn, ServicioCrearIn, ServicioOut } from "@/lib/types";
 import { CalendarioTabs, ModuloCalendarioApagado } from "@/app/components/modulo-calendario";
 import { esGerencia, useServicios } from "@/app/components/modulo-vendedores";
@@ -26,6 +31,7 @@ export default function CalendarioServiciosPage() {
   const [nombreNuevo, setNombreNuevo] = useState("");
   const [duracionNueva, setDuracionNueva] = useState("30");
   const [precioNuevo, setPrecioNuevo] = useState("");
+  const [antelacionNueva, setAntelacionNueva] = useState("");
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -34,6 +40,11 @@ export default function CalendarioServiciosPage() {
   const crear = async () => {
     const duracion = Number(duracionNueva);
     if (!base || !nombreNuevo.trim() || !Number.isFinite(duracion) || duracion < 5) return;
+    const antelacion = parsearAntelacion(antelacionNueva);
+    if (antelacion.error) {
+      setError(antelacion.error);
+      return;
+    }
     setCreando(true);
     setError(null);
     try {
@@ -43,11 +54,13 @@ export default function CalendarioServiciosPage() {
           nombre: nombreNuevo.trim(),
           duracion_minutos: duracion,
           precio: precioNuevo.trim() || undefined,
+          antelacion_cancelacion_horas: antelacion.valor,
         } satisfies ServicioCrearIn,
       });
       setNombreNuevo("");
       setDuracionNueva("30");
       setPrecioNuevo("");
+      setAntelacionNueva("");
       catalogo.recargar(true);
     } catch (e) {
       setError(mensajeDeError(e, "No se pudo crear el servicio."));
@@ -132,6 +145,22 @@ export default function CalendarioServiciosPage() {
                       onChange={(e) => setPrecioNuevo(e.target.value)}
                       placeholder="0.00"
                     />
+                  </div>
+                  <div className="flex w-64 flex-col gap-1.5">
+                    <label htmlFor="serv-antelacion" className="text-xs text-text-400">
+                      {ETIQUETA_ANTELACION}
+                    </label>
+                    <input
+                      id="serv-antelacion"
+                      type="number"
+                      min={0}
+                      max={720}
+                      step={1}
+                      className={inputClass}
+                      value={antelacionNueva}
+                      onChange={(e) => setAntelacionNueva(e.target.value)}
+                    />
+                    <span className="font-mono text-[11px] text-text-600">{AYUDA_ANTELACION}</span>
                   </div>
                   <Boton
                     variante="primario"

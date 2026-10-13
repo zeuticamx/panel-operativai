@@ -137,6 +137,18 @@ export interface AgenteConfig {
   temperature: number;
   history_window: number;
   is_active: boolean;
+  /** Lo que el plan deja elegir. Solo viene en las respuestas; el PUT no lo manda. */
+  limites_plan?: LimitesAgente | null;
+}
+
+/** Espejo de LimitesAgenteOut (services/limites_agente.py). */
+export interface LimitesAgente {
+  plan: string | null;
+  /** Modelos que puede elegir hoy; si el plan no limita, todo el catálogo. */
+  modelos_permitidos: string[];
+  modelo_por_defecto: string | null;
+  /** Tope efectivo de history_window. */
+  historial_maximo: number;
 }
 
 export interface ModelosOut {
@@ -1381,8 +1393,19 @@ export interface PlanGerenciaOut {
   orden: number;
   /** Price recurrente de Stripe (price_...). null = no se puede contratar en línea. */
   stripe_price_id: string | null;
+  /** Modelos que el plan deja elegir al agente (el primero es el default). null = sin límite. */
+  modelos_permitidos: string[] | null;
+  /** Mensajes de historial máximos del agente. null = sin límite. */
+  historial_maximo: number | null;
   creado_en: string;
   actualizado_en: string;
+}
+
+/** GET /api/gerencia/planes/modelos-agente. */
+export interface ModelosAgentePlanOut {
+  modelos: string[];
+  historial_min: number;
+  historial_max: number;
 }
 
 export interface PlanCrearIn {
@@ -1402,6 +1425,8 @@ export interface PlanCrearIn {
   activo?: boolean;
   orden?: number;
   stripe_price_id?: string | null;
+  modelos_permitidos?: string[] | null;
+  historial_maximo?: number | null;
 }
 
 /** Parcial: un campo ausente o en null no se toca (no se puede renombrar acá). */
@@ -1422,6 +1447,10 @@ export interface PlanActualizarIn {
   orden?: number | null;
   /** "" lo borra; null/ausente no lo toca. */
   stripe_price_id?: string | null;
+  /** [] quita el límite; null/ausente no lo toca. */
+  modelos_permitidos?: string[] | null;
+  /** 0 quita el límite; null/ausente no lo toca. */
+  historial_maximo?: number | null;
 }
 
 // ============================================================

@@ -5,7 +5,12 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Pencil, Plus, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
-import type { PlanActualizarIn, PlanCrearIn, PlanGerenciaOut } from "@/lib/types";
+import type {
+  ModelosAgentePlanOut,
+  PlanActualizarIn,
+  PlanCrearIn,
+  PlanGerenciaOut,
+} from "@/lib/types";
 import { fmtInt, formatoMonto } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
@@ -33,6 +38,7 @@ import {
  */
 export default function PlanesPage() {
   const planes = useApi<PlanGerenciaOut[]>("/api/gerencia/planes");
+  const catalogo = useApi<ModelosAgentePlanOut>("/api/gerencia/planes/modelos-agente");
   const [editando, setEditando] = useState<PlanGerenciaOut | null>(null);
   const [creando, setCreando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -105,6 +111,7 @@ export default function PlanesPage() {
                     <th className="px-3 py-2 text-right font-normal">vendedores</th>
                     <th className="px-3 py-2 text-right font-normal">proveedores</th>
                     <th className="px-3 py-2 text-right font-normal">leads/mes</th>
+                    <th className="px-3 py-2 font-normal">agente (modelos · historial)</th>
                     <th className="px-3 py-2 font-normal">servicios</th>
                     <th className="px-3 py-2 font-normal">price stripe</th>
                     <th className="px-3 py-2 font-normal">activo</th>
@@ -147,6 +154,11 @@ export default function PlanesPage() {
                         {p.max_leads_mensuales === null
                           ? "sin tope"
                           : fmtInt.format(p.max_leads_mensuales)}
+                      </td>
+                      <td className="max-w-[14rem] px-3 py-2 text-text-400">
+                        <span className="block truncate" title={resumenAgente(p)}>
+                          {resumenAgente(p)}
+                        </span>
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-1">
@@ -202,7 +214,7 @@ export default function PlanesPage() {
                   {lista.length === 0 && (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={12}
                         className="px-3 py-8 text-center font-mono text-[11px] text-text-600"
                       >
                         todavía no hay ningún plan en el catálogo
@@ -218,6 +230,7 @@ export default function PlanesPage() {
 
       <FormularioPlan
         modo="crear"
+        catalogo={catalogo.data}
         open={creando}
         onOpenChange={setCreando}
         onGuardado={(nombre) => recargar(`Plan "${nombre}" creado.`)}
@@ -225,6 +238,7 @@ export default function PlanesPage() {
       {editando && (
         <FormularioPlan
           modo="editar"
+          catalogo={catalogo.data}
           plan={editando}
           open={editando !== null}
           onOpenChange={(o) => !o && setEditando(null)}
@@ -247,6 +261,22 @@ function aOpcional(texto: string): string | null {
   return t === "" ? null : t;
 }
 
+/** claude-haiku-4-5-20251001 -> "Haiku 4.5"; un id que no reconoce lo deja tal cual. */
+function nombreModelo(id: string): string {
+  const m = /^claude-(haiku|sonnet|opus)-(\d+(?:-\d+)?)/.exec(id);
+  if (!m) return id;
+  return `${m[1].charAt(0).toUpperCase()}${m[1].slice(1)} ${m[2].replace("-", ".")}`;
+}
+
+/** "Haiku 4.5, Sonnet 5 · hasta 100 msj", o "sin límite" si el plan no limita nada. */
+function resumenAgente(p: PlanGerenciaOut): string {
+  const modelos = p.modelos_permitidos ? p.modelos_permitidos.map(nombreModelo).join(", ") : "todos";
+  const historial = p.historial_maximo === null ? "hasta 200" : `hasta ${p.historial_maximo}`;
+  return p.modelos_permitidos === null && p.historial_maximo === null
+    ? "sin límite"
+    : `${modelos} · ${historial} msj`;
+}
+
 /** Vacío o un Price de Stripe (price_...). Mismo patrón que StripePriceId en el backend. */
 const PATRON_PRICE_STRIPE = /^(price_[A-Za-z0-9]+)?$/;
 
@@ -260,12 +290,15 @@ function numeroOpcionalValido(texto: string): boolean {
 function FormularioPlan({
   modo,
   plan,
+  catalogo,
   open,
   onOpenChange,
   onGuardado,
 }: {
   modo: "crear" | "editar";
   plan?: PlanGerenciaOut;
+  /** Modelos disponibles y rango del historial (GET /api/gerencia/planes/modelos-agente). */
+  catalogo: ModelosAgentePlanOut | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onGuardado: (nombre: string) => void;
@@ -286,6 +319,9 @@ function FormularioPlan({
   const [crmCampo, setCrmCampo] = useState(true);
   const [calendario, setCalendario] = useState(true);
   const [activo, setActivo] = useState(true);
+  // Ninguno marcado = el plan no limita modelos.
+  const [modelosSel, setModelosSel] = useState<string[]>([]);
+  const [historialMax, setHistorialMax] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -309,6 +345,8 @@ function FormularioPlan({
     setCrmCampo(plan?.crm_campo_activo ?? true);
     setCalendario(plan?.calendario_activo ?? true);
     setActivo(plan?.activo ?? true);
+    setModelosSel(plan?.modelos_permitidos ?? []);
+    setHistorialMax(plan?.historial_maximo?.toString() ?? "");
     setError(null);
   }, [open, plan]);
 
@@ -324,8 +362,27 @@ function FormularioPlan({
     numeroOpcionalValido(maxLeads) &&
     numeroOpcionalValido(orden);
   const priceValido = PATRON_PRICE_STRIPE.test(stripePriceId.trim());
+  const histMin = catalogo?.historial_min ?? 5;
+  const histTope = catalogo?.historial_max ?? 200;
+  const historialTexto = historialMax.trim();
+  // Vacío = sin límite; si hay valor, entero dentro del rango que acepta el backend.
+  const historialValido =
+    historialTexto === "" ||
+    (/^\d+$/.test(historialTexto) &&
+      Number(historialTexto) >= histMin &&
+      Number(historialTexto) <= histTope);
   const puedeGuardar =
-    nombreValido && precioValido && camposOpcionalesValidos && priceValido && !guardando;
+    nombreValido &&
+    precioValido &&
+    camposOpcionalesValidos &&
+    priceValido &&
+    historialValido &&
+    !guardando;
+
+  const alternarModelo = (id: string) =>
+    setModelosSel((previos) =>
+      previos.includes(id) ? previos.filter((m) => m !== id) : [...previos, id],
+    );
 
   const guardar = async () => {
     if (!puedeGuardar) return;
@@ -350,6 +407,8 @@ function FormularioPlan({
           crm_campo_activo: crmCampo,
           calendario_activo: calendario,
           activo,
+          modelos_permitidos: modelosSel.length > 0 ? modelosSel : null,
+          historial_maximo: historialTexto === "" ? null : Number(historialTexto),
         };
         await apiFetch<PlanGerenciaOut>("/api/gerencia/planes", { method: "POST", json: body });
         onGuardado(body.nombre);
@@ -371,6 +430,9 @@ function FormularioPlan({
           crm_campo_activo: crmCampo,
           calendario_activo: calendario,
           activo,
+          // [] y 0 y no null: en PATCH null es "no tocar", esto es quitar el límite.
+          modelos_permitidos: modelosSel,
+          historial_maximo: historialTexto === "" ? 0 : Number(historialTexto),
         };
         await apiFetch<PlanGerenciaOut>(
           `/api/gerencia/planes/${encodeURIComponent(plan.nombre)}`,
@@ -565,6 +627,55 @@ function FormularioPlan({
                 className={inputClass}
               />
             </Campo>
+
+            <fieldset className="flex flex-col gap-3 border-t border-bg-700 pt-4">
+              <legend className="mb-1 text-sm text-text-100">Límites del agente</legend>
+              <p className="font-mono text-[11px] text-text-600">
+                Ningún modelo marcado = todos. Si bajas un límite, los negocios que ya tienen este
+                plan se recortan de inmediato (el modelo pasa al primero marcado).
+              </p>
+              {(catalogo?.modelos ?? []).map((id) => {
+                const inputId = `plan-modelo-${id}`;
+                return (
+                  <label
+                    key={id}
+                    htmlFor={inputId}
+                    className="flex cursor-pointer items-center gap-3 text-sm text-text-100"
+                  >
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      checked={modelosSel.includes(id)}
+                      onChange={() => alternarModelo(id)}
+                      disabled={guardando}
+                      className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--success)]"
+                    />
+                    <span>{nombreModelo(id)}</span>
+                    <span className="font-mono text-[11px] text-text-600">{id}</span>
+                  </label>
+                );
+              })}
+              <Campo
+                id="plan-historial-maximo"
+                label="Historial máximo (mensajes)"
+                hint={`${histMin} a ${histTope} · vacío = sin límite`}
+                error={historialValido ? null : `Entero entre ${histMin} y ${histTope}`}
+              >
+                <input
+                  id="plan-historial-maximo"
+                  type="number"
+                  inputMode="numeric"
+                  min={histMin}
+                  max={histTope}
+                  value={historialMax}
+                  onChange={(e) => setHistorialMax(e.target.value)}
+                  disabled={guardando}
+                  placeholder="sin límite"
+                  aria-invalid={!historialValido}
+                  className={inputClass}
+                />
+              </Campo>
+            </fieldset>
 
             <div className="flex flex-col gap-3 border-t border-bg-700 pt-4">
               <div className="flex items-center justify-between">

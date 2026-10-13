@@ -123,6 +123,16 @@ export default function AgentePage() {
   const promptLen = form.system_prompt.length;
   const promptExcedido = promptLen > PROMPT_MAX;
 
+  // Lo que el plan deja elegir (viene del servidor, que es quien lo hace cumplir).
+  const limites = original?.limites_plan ?? null;
+  const modelosDelPlan = limites?.modelos_permitidos ?? listaModelos;
+  // Con modelos limitados no hay "predeterminado del sistema": el servidor guarda el del plan.
+  const planLimitaModelos = limites?.modelo_por_defecto != null;
+  const historialTope = limites?.historial_maximo ?? HISTORIAL_MAX;
+  const historialExcedido = form.history_window > historialTope;
+  const modeloFueraDelPlan = Boolean(form.model) && !modelosDelPlan.includes(form.model as string);
+  const nombrePlan = limites?.plan ? limites.plan.charAt(0).toUpperCase() + limites.plan.slice(1) : null;
+
   return (
     <>
       <PageHeader
@@ -149,7 +159,7 @@ export default function AgentePage() {
               form="form-agente"
               variante="primario"
               loading={guardando}
-              disabled={!sucio || promptExcedido}
+              disabled={!sucio || promptExcedido || historialExcedido || modeloFueraDelPlan}
             >
               Guardar cambios
             </Boton>
@@ -264,7 +274,14 @@ export default function AgentePage() {
               <Campo
                 id="model"
                 label="Modelo"
-                hint={modelos.error ? `No se pudo cargar la lista: ${modelos.error}` : "Lista permitida por el servidor"}
+                hint={
+                  modelos.error
+                    ? `No se pudo cargar la lista: ${modelos.error}`
+                    : planLimitaModelos && nombrePlan
+                      ? `Tu plan ${nombrePlan} incluye ${modelosDelPlan.length} de ${listaModelos.length} modelos`
+                      : "Lista permitida por el servidor"
+                }
+                error={modeloFueraDelPlan ? "Este modelo no está en tu plan. Elige uno incluido." : null}
               >
                 <select
                   id="model"
@@ -273,15 +290,19 @@ export default function AgentePage() {
                   disabled={guardando || modelos.loading}
                   className={selectClass}
                 >
-                  <option value="">Predeterminado del sistema</option>
+                  {!planLimitaModelos && <option value="">Predeterminado del sistema</option>}
+                  {/* Un modelo guardado que no está en la lista (o null con plan limitado) se muestra para no perderlo en silencio. */}
                   {modeloFueraDeLista && (
                     <option value={modeloFueraDeLista}>{modeloFueraDeLista} (no listado)</option>
                   )}
-                  {listaModelos.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
+                  {listaModelos.map((m) => {
+                    const incluido = modelosDelPlan.includes(m);
+                    return (
+                      <option key={m} value={m} disabled={!incluido && m !== form.model}>
+                        {incluido ? m : `${m} (requiere otro plan)`}
+                      </option>
+                    );
+                  })}
                 </select>
               </Campo>
 
@@ -316,14 +337,22 @@ export default function AgentePage() {
               <Campo
                 id="history_window"
                 label="Mensajes de contexto"
-                hint={`Cuántos mensajes previos recuerda (${HISTORIAL_MIN}–${HISTORIAL_MAX})`}
+                hint={`Cuántos mensajes previos recuerda (${HISTORIAL_MIN}–${historialTope}${
+                  historialTope < HISTORIAL_MAX && nombrePlan ? `, tope de tu plan ${nombrePlan}` : ""
+                })`}
+                error={
+                  historialExcedido
+                    ? `Tu plan permite hasta ${historialTope} mensajes. Mejora tu plan para dar más contexto.`
+                    : null
+                }
               >
                 <input
                   id="history_window"
                   type="number"
                   inputMode="numeric"
                   min={HISTORIAL_MIN}
-                  max={HISTORIAL_MAX}
+                  max={historialTope}
+                  aria-invalid={historialExcedido || undefined}
                   step={1}
                   value={form.history_window}
                   onChange={(e) => {

@@ -48,6 +48,7 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   conversacion_tomada: { label: "Conversación tomada", icon: UserCheck, clase: "text-blue-500" },
   conversacion_liberada: { label: "Conversación liberada", icon: UserMinus, clase: "text-amber-500" },
   conversacion_devuelta_ia: { label: "Devuelta a la IA", icon: Bot, clase: "text-emerald-500" },
+  aviso_cita_no_enviado: { label: "Aviso de cita no enviado", icon: CalendarX2, clase: "text-amber-500" },
 };
 
 const ORDEN: TipoAlerta[] = [

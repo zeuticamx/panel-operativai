@@ -441,7 +441,17 @@ export interface ConversacionDetalleOut extends AsignacionConversacion {
   usuario_username: string | null;
   ultimo_mensaje_cliente_at: string | null;
   minutos_restantes_ventana: number | null;
+  /** Último corte de contexto del agente (ISO con zona) o null si nunca se limpió. */
+  contexto_limpiado_en: string | null;
+  /** true solo si el botón «Limpiar contexto» puede funcionar para esta sesión. */
+  puede_limpiar_contexto: boolean;
   mensajes: MensajeOut[];
+}
+
+/** Respuesta (201) de POST /api/conversaciones/{id}/limpiar-contexto */
+export interface LimpiarContextoOut {
+  conversacion_id: string;
+  contexto_limpiado_en: string;
 }
 
 /** Respuesta de POST /api/conversaciones/{id}/contacto */
@@ -658,7 +668,8 @@ export type TipoAlerta =
   | "mensaje_conversacion_asignada"
   | "conversacion_tomada"
   | "conversacion_liberada"
-  | "conversacion_devuelta_ia";
+  | "conversacion_devuelta_ia"
+  | "aviso_cita_no_enviado";
 
 export interface AlertaOut {
   id: string;

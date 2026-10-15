@@ -33,6 +33,7 @@ const TIPO_CLASES: Record<TipoAlerta, string> = {
   conversacion_tomada: "border-l-blue-500 bg-blue-500/10",
   conversacion_liberada: "border-l-amber-500 bg-amber-500/10",
   conversacion_devuelta_ia: "border-l-emerald-500 bg-emerald-500/10",
+  aviso_cita_no_enviado: "border-l-amber-500 bg-amber-500/10",
 };
 
 /**

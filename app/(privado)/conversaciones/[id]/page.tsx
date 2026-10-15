@@ -15,6 +15,7 @@ import { ThreadViewer } from "@/app/components/thread-viewer";
 import { MensajeComposer } from "@/app/components/mensaje-composer";
 import { esGerencia } from "@/app/components/modulo-vendedores";
 import { PanelAsignacion } from "@/app/components/panel-asignacion";
+import { LimpiarContextoAgente } from "@/app/components/limpiar-contexto-agente";
 import { HistorialCitasCliente } from "@/app/components/historial-citas-cliente";
 import { Badge } from "@/app/components/badge";
 import { CanalBadge, StatusBadge } from "@/app/components/status";
@@ -184,6 +185,15 @@ export default function ConversacionDetallePage() {
           esGerencia={esGerencia(usuario)}
           miId={usuario?.id ?? null}
           onCambio={() => recargar(true)}
+        />
+      )}
+
+      {data && (
+        <LimpiarContextoAgente
+          conversacionId={data.id}
+          puedeLimpiar={data.puede_limpiar_contexto}
+          limpiadoEn={data.contexto_limpiado_en}
+          onLimpiado={() => recargar(true)}
         />
       )}
 

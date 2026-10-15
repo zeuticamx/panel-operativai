@@ -91,6 +91,23 @@ async function escribirYEnviar() {
   );
 }
 
+describe("conversación con limpiar contexto (spec 003)", () => {
+  it("con permiso, el botón está visible junto al hilo y al composer", () => {
+    mockUseApi.mockReturnValue({
+      data: { ...CONVERSACION, puede_limpiar_contexto: true, contexto_limpiado_en: null },
+      loading: false,
+      error: null,
+      recargar: jest.fn(),
+    });
+    mockApiFetch.mockResolvedValue({});
+    render(<ConversacionDetallePage />);
+
+    expect(screen.getByRole("button", { name: "Limpiar contexto del agente" })).toBeVisible();
+    expect(screen.getByText("Hola, quiero ver mis citas")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Responder como humano…")).toBeInTheDocument();
+  });
+});
+
 describe("conversación con historial de citas", () => {
   it("con el historial pendiente, el hilo y el composer están y se puede enviar", async () => {
     mockApiFetch.mockImplementation((ruta: string) =>

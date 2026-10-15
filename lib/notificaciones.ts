@@ -33,6 +33,7 @@ const COLOR_POR_TIPO: Record<TipoAlerta, string> = {
   conversacion_tomada: "#3b82f6", // blue-500: informativo, alguien se hizo cargo
   conversacion_liberada: "#f59e0b", // amber-500: ya no es tuya
   conversacion_devuelta_ia: "#10b981", // emerald-500: la IA retomó el chat
+  aviso_cita_no_enviado: "#f59e0b", // amber-500: el cliente no recibió el aviso de su cita
 };
 
 const DURACION_MS = 5000;

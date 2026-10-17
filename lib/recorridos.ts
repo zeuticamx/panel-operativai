@@ -90,6 +90,11 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     NOTIFICACIONES,
     AYUDA,
   ],
+  "/conversaciones/ocultas": [
+    intro("Conversaciones ocultas", "Los chats de números que desvinculaste. Son de solo lectura y se eliminan a los 12 meses."),
+    NOTIFICACIONES,
+    AYUDA,
+  ],
   "/conversaciones/[id]": [
     intro("Chat con tu cliente", "Aquí ves la conversación completa y puedes intervenir tú mismo."),
     { ancla: "conversacion.cabecera", titulo: "Cliente y estado", texto: "Quién es, por qué canal escribe, si lo atiende la IA o una persona, y cuánto queda de la ventana de 24 h." },
@@ -99,7 +104,7 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
   ],
   "/canales": [
     intro("Canales", "Conecta las cuentas donde responde tu agente."),
-    { ancla: "canales.lista", titulo: "Tus canales", texto: "WhatsApp, Instagram y Facebook con su estado. Conecta o reconecta cada uno desde su fila." },
+    { ancla: "canales.lista", titulo: "Tus números de WhatsApp", texto: "Cada número tiene su propio agente. Aquí ves las plazas de tu plan, el número principal y puedes conectar, pausar, reactivar o desvincular. Instagram y Facebook van debajo." },
     { ancla: "pagina.acciones", titulo: "Actualizar estado", texto: "Vuelve a consultar si cada canal sigue conectado." },
     AYUDA,
   ],

@@ -19,10 +19,14 @@ import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
   HerramientaInfoOut,
+  HerramientaNumero,
   HerramientaOut,
   HerramientaTipo,
+  HerramientasNumeroIn,
+  ListaNumeros,
 } from "@/lib/types";
 import { formatoFechaHora } from "@/lib/formato";
+import { mensajeErrorNumero, nombreNumero } from "@/lib/numeros";
 import { cn } from "@/lib/utils";
 import { useUsuario } from "@/app/components/usuario-context";
 import { Badge } from "@/app/components/badge";
@@ -33,8 +37,10 @@ import {
   Boton,
   Campo,
   ConfirmDialog,
+  Interruptor,
   PageHeader,
   inputClass,
+  selectClass,
 } from "@/app/components/ui";
 
 const TIPO = {
@@ -83,6 +89,8 @@ export default function HerramientasPage() {
   const [ocupada, setOcupada] = useState<string | null>(null);
   const [aEliminar, setEliminar] = useState<HerramientaOut | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  // Sube cuando cambia el catálogo del negocio, para que el panel por número lo vuelva a pedir.
+  const [versionCatalogo, setVersionCatalogo] = useState(0);
 
   const lista = herramientas.data ?? [];
   const correo = info.data?.correo_servicio ?? null;
@@ -131,6 +139,7 @@ export default function HerramientasPage() {
       setAviso(`"${aEliminar.display_name}" se quitó de las herramientas del agente.`);
       setEliminar(null);
       herramientas.recargar(true);
+      setVersionCatalogo((v) => v + 1);
     } catch (e) {
       setErrorAccion(mensajeDeError(e, "No se pudo eliminar la herramienta."));
     } finally {
@@ -143,6 +152,7 @@ export default function HerramientasPage() {
     setErrorAccion(null);
     setAviso(mensaje);
     herramientas.recargar(true);
+    setVersionCatalogo((v) => v + 1);
   };
 
   const sinCredencial = info.error !== null;
@@ -356,6 +366,9 @@ export default function HerramientasPage() {
               })}
             </section>
           )}
+
+          {/* Qué herramientas usa cada número (spec 005a, RF-6) */}
+          {lista.length > 0 && <ActivacionPorNumero key={versionCatalogo} />}
 
           {/* Auditoría de créditos: solo el propietario (el backend también lo exige) */}
           {usuario?.role === "owner" && (
@@ -610,5 +623,121 @@ function FormularioHerramienta({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+// ------------------------------------------------------------
+// Activación por número (spec 005a, RF-6, RF-9, RF-17)
+// ------------------------------------------------------------
+/** Valor del selector para Instagram, Facebook y el chat web (un solo conjunto de herramientas). */
+const SOCIAL = "social";
+
+/**
+ * Qué herramientas del negocio usa cada número de WhatsApp (y, aparte,
+ * Instagram, Facebook y el chat web). Una herramienta nueva del negocio nace
+ * desactivada en todos: se activa aquí, una por una. Solo se pueden activar
+ * las que la lista del plan incluye (402 `herramienta_no_incluida_en_plan`).
+ */
+function ActivacionPorNumero() {
+  const numeros = useApi<ListaNumeros>("/api/canales/whatsapp/numeros");
+  const [elegido, setElegido] = useState<string | null>(null);
+  const lista = numeros.data?.numeros ?? [];
+  const seleccion = elegido && (elegido === SOCIAL || lista.some((n) => n.id === elegido))
+    ? elegido
+    : (lista.find((n) => n.es_principal) ?? lista[0])?.id ?? SOCIAL;
+
+  const ruta = seleccion === SOCIAL ? "/api/herramientas/social" : `/api/herramientas/numeros/${seleccion}`;
+  const filas = useApi<HerramientaNumero[]>(ruta);
+  const [ocupada, setOcupada] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const alternar = async (h: HerramientaNumero) => {
+    setError(null);
+    setOcupada(h.tool_key);
+    try {
+      const cuerpo: HerramientasNumeroIn = h.activa
+        ? { activar: [], desactivar: [h.tool_key] }
+        : { activar: [h.tool_key], desactivar: [] };
+      await apiFetch<HerramientaNumero[]>(ruta, { method: "PUT", json: cuerpo });
+      await filas.recargar(true);
+    } catch (e) {
+      setError(mensajeErrorNumero(e, "No se pudo cambiar la herramienta."));
+    } finally {
+      setOcupada(null);
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3 rounded-md border border-bg-700 bg-bg-900 p-4">
+      <header className="flex flex-col gap-0.5">
+        <h2 className="text-sm font-medium text-text-100">Herramientas por número</h2>
+        <p className="text-xs text-text-400">
+          Cada número de WhatsApp usa solo las herramientas que actives aquí. Las herramientas nuevas empiezan
+          desactivadas en todos.
+        </p>
+      </header>
+
+      <Campo id="selector-herramientas" label="Número" className="max-w-md">
+        <select
+          id="selector-herramientas"
+          value={seleccion}
+          onChange={(e) => {
+            setError(null);
+            setElegido(e.target.value);
+          }}
+          className={selectClass}
+        >
+          {lista.map((n) => (
+            <option key={n.id} value={n.id}>
+              WhatsApp {nombreNumero(n)}
+              {n.es_principal ? " · principal" : ""}
+              {n.estado === "pausado" ? " · pausado" : ""}
+            </option>
+          ))}
+          <option value={SOCIAL}>Instagram, Facebook y chat web</option>
+        </select>
+      </Campo>
+
+      {numeros.error && <Aviso tipo="error">{numeros.error}</Aviso>}
+      {filas.error && <Aviso tipo="error">{filas.error}</Aviso>}
+      {error && <Aviso tipo="error">{error}</Aviso>}
+
+      {!filas.data && filas.loading ? (
+        <p className="font-mono text-xs text-text-600">cargando…</p>
+      ) : (
+        <ul className="overflow-hidden rounded-md border border-bg-700">
+          {(filas.data ?? []).map((h, i) => (
+            <li
+              key={h.tool_key}
+              className={cn(
+                "flex flex-wrap items-center gap-3 px-3 py-2.5",
+                i > 0 && "border-t border-bg-700",
+                !h.permitida_por_plan && "opacity-60",
+              )}
+            >
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-sm text-text-100">{h.display_name ?? h.tool_key}</span>
+                <span className="font-mono text-[11px] break-all text-text-600">clave {h.tool_key}</span>
+                {!h.permitida_por_plan && (
+                  <span className="text-xs text-warning">Tu plan no incluye esta herramienta.</span>
+                )}
+              </div>
+              <Interruptor
+                label={`${h.display_name ?? h.tool_key} en este número`}
+                checked={h.activa}
+                // Se puede apagar siempre; encender solo si el plan la incluye.
+                disabled={ocupada !== null || (!h.activa && !h.permitida_por_plan)}
+                onChange={() => alternar(h)}
+              />
+            </li>
+          ))}
+          {filas.data && filas.data.length === 0 && (
+            <li className="px-3 py-4 text-center text-xs text-text-400">
+              Conecta una herramienta para poder activarla aquí.
+            </li>
+          )}
+        </ul>
+      )}
+    </section>
   );
 }

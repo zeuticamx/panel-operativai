@@ -134,12 +134,14 @@ export class ApiError extends Error {
   codigo: string | null;
   /** Estado actual del recurso cuando el `detail` objeto lo informa (p. ej. el de la cita); null si no. */
   estado: string | null;
+  /** Solo en el 429 `demasiados_intentos` (spec 005a, RF-2): ISO de cuándo se libera el bloqueo; null si no viene. */
+  liberaEn: string | null;
 
   constructor(
     status: number,
     detail: string,
     bloqueo: BloqueoPlanDetalle | null = null,
-    extra: { codigo?: string | null; estado?: string | null } = {},
+    extra: { codigo?: string | null; estado?: string | null; libera_en?: string | null } = {},
   ) {
     super(detail);
     this.name = "ApiError";
@@ -148,19 +150,23 @@ export class ApiError extends Error {
     this.bloqueo = bloqueo;
     this.codigo = extra.codigo ?? null;
     this.estado = extra.estado ?? null;
+    this.liberaEn = extra.libera_en ?? null;
   }
 }
 
 /** `codigo` y `estado` de un `detail` objeto ({codigo, mensaje, estado?}); null si no es objeto o no trae strings. */
-function extraerCodigoYEstado(data: unknown): { codigo: string | null; estado: string | null } {
-  const vacio = { codigo: null, estado: null };
+function extraerCodigoYEstado(
+  data: unknown,
+): { codigo: string | null; estado: string | null; libera_en: string | null } {
+  const vacio = { codigo: null, estado: null, libera_en: null };
   if (!data || typeof data !== "object" || !("detail" in data)) return vacio;
   const d = (data as { detail: unknown }).detail;
   if (!d || typeof d !== "object" || Array.isArray(d)) return vacio;
-  const { codigo, estado } = d as { codigo?: unknown; estado?: unknown };
+  const { codigo, estado, libera_en } = d as { codigo?: unknown; estado?: unknown; libera_en?: unknown };
   return {
     codigo: typeof codigo === "string" ? codigo : null,
     estado: typeof estado === "string" ? estado : null,
+    libera_en: typeof libera_en === "string" ? libera_en : null,
   };
 }
 

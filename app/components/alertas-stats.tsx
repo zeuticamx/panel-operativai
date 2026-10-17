@@ -7,10 +7,13 @@ import {
   CalendarClock,
   CalendarX2,
   Bot,
+  BotOff,
   Headset,
   UserMinus,
   Milestone,
   MessageSquareMore,
+  PauseCircle,
+  Scissors,
   ShieldAlert,
   Siren,
   Sparkles,
@@ -49,6 +52,9 @@ const TIPO_INFO: Record<TipoAlerta, { label: string; icon: ComponentType<{ size?
   conversacion_liberada: { label: "Conversación liberada", icon: UserMinus, clase: "text-amber-500" },
   conversacion_devuelta_ia: { label: "Devuelta a la IA", icon: Bot, clase: "text-emerald-500" },
   aviso_cita_no_enviado: { label: "Aviso de cita no enviado", icon: CalendarX2, clase: "text-amber-500" },
+  numeros_pausados: { label: "Números pausados", icon: PauseCircle, clase: "text-amber-500" },
+  numeros_recortados: { label: "Configuración recortada por el plan", icon: Scissors, clase: "text-amber-500" },
+  numero_configuracion_incompleta: { label: "Agente sin configurar", icon: BotOff, clase: "text-danger" },
 };
 
 const ORDEN: TipoAlerta[] = [

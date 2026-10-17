@@ -6,12 +6,15 @@ import { Pencil, Plus, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
 import type {
+  FamiliaHerramienta,
+  FamiliasHerramientasOut,
   ModelosAgentePlanOut,
   PlanActualizarIn,
   PlanCrearIn,
   PlanGerenciaOut,
 } from "@/lib/types";
 import { fmtInt, formatoMonto } from "@/lib/formato";
+import { cupoParaCrear, cupoParaEnviar, cupoValido, textoCupo } from "@/lib/numeros";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { GerenciaTabs } from "@/app/components/gerencia";
@@ -36,9 +39,24 @@ import {
  * lo que de verdad se cobra cada mes. Sin él, el plan no se puede contratar
  * en línea (crear-pago responde 409).
  */
+/** Nombre legible de cada familia del catálogo base de herramientas del agente (spec 005a, P5). */
+const ETIQUETA_FAMILIA: Record<FamiliaHerramienta, string> = {
+  calendario: "Calendario",
+  sql_lectura: "Consulta de datos",
+  http: "Llamadas HTTP",
+  google_sheets: "Hojas de Google",
+  google_docs: "Documentos de Google",
+};
+
+/** Las familias que el portal no conoce todavía se muestran con su clave. */
+function etiquetaFamilia(f: string): string {
+  return ETIQUETA_FAMILIA[f as FamiliaHerramienta] ?? f;
+}
+
 export default function PlanesPage() {
   const planes = useApi<PlanGerenciaOut[]>("/api/gerencia/planes");
   const catalogo = useApi<ModelosAgentePlanOut>("/api/gerencia/planes/modelos-agente");
+  const familias = useApi<FamiliasHerramientasOut>("/api/gerencia/planes/familias-herramientas");
   const [editando, setEditando] = useState<PlanGerenciaOut | null>(null);
   const [creando, setCreando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -101,7 +119,7 @@ export default function PlanesPage() {
             </p>
 
             <div className="overflow-x-auto rounded-md border border-bg-700">
-              <table className="w-full min-w-[70rem] text-sm">
+              <table className="w-full min-w-[88rem] text-sm">
                 <thead className="bg-bg-800 text-left font-mono text-[11px] text-text-600">
                   <tr>
                     <th className="px-3 py-2 font-normal">plan</th>
@@ -111,7 +129,9 @@ export default function PlanesPage() {
                     <th className="px-3 py-2 text-right font-normal">vendedores</th>
                     <th className="px-3 py-2 text-right font-normal">proveedores</th>
                     <th className="px-3 py-2 text-right font-normal">leads/mes</th>
+                    <th className="px-3 py-2 text-right font-normal">números WhatsApp</th>
                     <th className="px-3 py-2 font-normal">agente (modelos · historial)</th>
+                    <th className="px-3 py-2 font-normal">herramientas del agente</th>
                     <th className="px-3 py-2 font-normal">servicios</th>
                     <th className="px-3 py-2 font-normal">price stripe</th>
                     <th className="px-3 py-2 font-normal">activo</th>
@@ -155,10 +175,26 @@ export default function PlanesPage() {
                           ? "sin tope"
                           : fmtInt.format(p.max_leads_mensuales)}
                       </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-text-400">
+                        {textoCupo(p.max_numeros_whatsapp)}
+                      </td>
                       <td className="max-w-[14rem] px-3 py-2 text-text-400">
                         <span className="block truncate" title={resumenAgente(p)}>
                           {resumenAgente(p)}
                         </span>
+                      </td>
+                      <td className="max-w-[16rem] px-3 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {p.herramientas_plan.length === 0 ? (
+                            <Badge>ninguna</Badge>
+                          ) : (
+                            p.herramientas_plan.map((f) => (
+                              <Badge key={f} tone="success">
+                                {etiquetaFamilia(f)}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-1">
@@ -214,7 +250,7 @@ export default function PlanesPage() {
                   {lista.length === 0 && (
                     <tr>
                       <td
-                        colSpan={12}
+                        colSpan={14}
                         className="px-3 py-8 text-center font-mono text-[11px] text-text-600"
                       >
                         todavía no hay ningún plan en el catálogo
@@ -231,6 +267,7 @@ export default function PlanesPage() {
       <FormularioPlan
         modo="crear"
         catalogo={catalogo.data}
+        familias={familias.data?.familias ?? null}
         open={creando}
         onOpenChange={setCreando}
         onGuardado={(nombre) => recargar(`Plan "${nombre}" creado.`)}
@@ -239,6 +276,7 @@ export default function PlanesPage() {
         <FormularioPlan
           modo="editar"
           catalogo={catalogo.data}
+          familias={familias.data?.familias ?? null}
           plan={editando}
           open={editando !== null}
           onOpenChange={(o) => !o && setEditando(null)}
@@ -291,6 +329,7 @@ function FormularioPlan({
   modo,
   plan,
   catalogo,
+  familias,
   open,
   onOpenChange,
   onGuardado,
@@ -299,6 +338,8 @@ function FormularioPlan({
   plan?: PlanGerenciaOut;
   /** Modelos disponibles y rango del historial (GET /api/gerencia/planes/modelos-agente). */
   catalogo: ModelosAgentePlanOut | null;
+  /** Catálogo base de familias de herramientas (GET /api/gerencia/planes/familias-herramientas). */
+  familias: FamiliaHerramienta[] | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onGuardado: (nombre: string) => void;
@@ -312,6 +353,10 @@ function FormularioPlan({
   const [maxVendedores, setMaxVendedores] = useState("");
   const [maxProveedores, setMaxProveedores] = useState("");
   const [maxLeads, setMaxLeads] = useState("");
+  // Tope de números de WhatsApp activos: vacío o 0 = sin tope (RF-1).
+  const [maxNumeros, setMaxNumeros] = useState("");
+  // Familias de herramientas del agente que incluye el plan (RF-9).
+  const [familiasSel, setFamiliasSel] = useState<FamiliaHerramienta[]>([]);
   const [orden, setOrden] = useState("0");
   const [agenteIa, setAgenteIa] = useState(true);
   const [gestionVendedores, setGestionVendedores] = useState(true);
@@ -338,6 +383,9 @@ function FormularioPlan({
     setMaxVendedores(plan?.max_vendedores?.toString() ?? "");
     setMaxProveedores(plan?.max_proveedores?.toString() ?? "");
     setMaxLeads(plan?.max_leads_mensuales?.toString() ?? "");
+    setMaxNumeros(plan?.max_numeros_whatsapp?.toString() ?? "");
+    // Un plan nuevo parte con todo el catálogo base incluido, como los interruptores de servicios.
+    setFamiliasSel(plan?.herramientas_plan ?? familias ?? []);
     setOrden(plan?.orden?.toString() ?? "0");
     setAgenteIa(plan?.agente_ia_activo ?? true);
     setGestionVendedores(plan?.gestion_vendedores_activo ?? true);
@@ -348,7 +396,7 @@ function FormularioPlan({
     setModelosSel(plan?.modelos_permitidos ?? []);
     setHistorialMax(plan?.historial_maximo?.toString() ?? "");
     setError(null);
-  }, [open, plan]);
+  }, [open, plan, familias]);
 
   // 50 y no 100: es lo que admite tenant_subscriptions.plan (ver PlanCrearIn).
   const nombreValido = modo === "editar" || (nombre.trim().length >= 2 && nombre.length <= 50);
@@ -360,6 +408,7 @@ function FormularioPlan({
     numeroOpcionalValido(maxVendedores) &&
     numeroOpcionalValido(maxProveedores) &&
     numeroOpcionalValido(maxLeads) &&
+    cupoValido(maxNumeros) &&
     numeroOpcionalValido(orden);
   const priceValido = PATRON_PRICE_STRIPE.test(stripePriceId.trim());
   const histMin = catalogo?.historial_min ?? 5;
@@ -378,6 +427,9 @@ function FormularioPlan({
     priceValido &&
     historialValido &&
     !guardando;
+
+  const alternarFamilia = (f: FamiliaHerramienta) =>
+    setFamiliasSel((previas) => (previas.includes(f) ? previas.filter((x) => x !== f) : [...previas, f]));
 
   const alternarModelo = (id: string) =>
     setModelosSel((previos) =>
@@ -409,6 +461,8 @@ function FormularioPlan({
           activo,
           modelos_permitidos: modelosSel.length > 0 ? modelosSel : null,
           historial_maximo: historialTexto === "" ? null : Number(historialTexto),
+          max_numeros_whatsapp: cupoParaCrear(maxNumeros),
+          herramientas_plan: familiasSel,
         };
         await apiFetch<PlanGerenciaOut>("/api/gerencia/planes", { method: "POST", json: body });
         onGuardado(body.nombre);
@@ -433,6 +487,9 @@ function FormularioPlan({
           // [] y 0 y no null: en PATCH null es "no tocar", esto es quitar el límite.
           modelos_permitidos: modelosSel,
           historial_maximo: historialTexto === "" ? 0 : Number(historialTexto),
+          // 0 y no null: en PATCH null es "no tocar", 0 quita el tope de números.
+          max_numeros_whatsapp: cupoParaEnviar(maxNumeros, plan.max_numeros_whatsapp),
+          herramientas_plan: familiasSel,
         };
         await apiFetch<PlanGerenciaOut>(
           `/api/gerencia/planes/${encodeURIComponent(plan.nombre)}`,
@@ -615,6 +672,27 @@ function FormularioPlan({
               </Campo>
             </div>
 
+            <Campo
+              id="plan-max-numeros"
+              label="Máx. números de WhatsApp"
+              hint="activos a la vez · vacío = sin tope · 0 quita el tope"
+              error={cupoValido(maxNumeros) ? null : "Entero mayor o igual que 0 (0 quita el tope)"}
+            >
+              <input
+                id="plan-max-numeros"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={maxNumeros}
+                onChange={(e) => setMaxNumeros(e.target.value)}
+                disabled={guardando}
+                placeholder="sin tope"
+                aria-invalid={!cupoValido(maxNumeros)}
+                className={inputClass}
+              />
+            </Campo>
+
             <Campo id="plan-orden" label="Orden" hint="menor sale primero en el catálogo">
               <input
                 id="plan-orden"
@@ -675,6 +753,36 @@ function FormularioPlan({
                   className={inputClass}
                 />
               </Campo>
+            </fieldset>
+
+            <fieldset className="flex flex-col gap-3 border-t border-bg-700 pt-4">
+              <legend className="mb-1 text-sm text-text-100">Herramientas del agente</legend>
+              <p className="font-mono text-[11px] text-text-600">
+                Qué familias de herramientas pueden usar los números del plan. Si quitas una, los números que la
+                tenían la pierden (queda desactivada, sin borrar su configuración) y no la recuperan solos si
+                vuelve a incluirse.
+              </p>
+              {(familias ?? []).map((f) => {
+                const inputId = `plan-familia-${f}`;
+                return (
+                  <label
+                    key={f}
+                    htmlFor={inputId}
+                    className="flex cursor-pointer items-center gap-3 text-sm text-text-100"
+                  >
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      checked={familiasSel.includes(f)}
+                      onChange={() => alternarFamilia(f)}
+                      disabled={guardando}
+                      className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--success)]"
+                    />
+                    <span>{etiquetaFamilia(f)}</span>
+                    <span className="font-mono text-[11px] text-text-600">{f}</span>
+                  </label>
+                );
+              })}
             </fieldset>
 
             <div className="flex flex-col gap-3 border-t border-bg-700 pt-4">

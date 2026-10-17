@@ -190,7 +190,7 @@ export function Sidebar() {
         title={sinPlan ? "No incluido en tu plan actual" : undefined}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "relative flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] leading-tight font-medium transition-colors",
+          "relative flex flex-col items-center gap-1 rounded-lg px-0.5 py-1.5 text-[11px] leading-tight font-medium transition-colors",
           active ? "bg-accent-soft text-accent" : "text-text-400 hover:bg-hover hover:text-text-100",
           className,
         )}
@@ -199,7 +199,9 @@ export function Sidebar() {
           <span className="absolute top-2.5 bottom-2.5 -left-2 w-[3px] rounded-r bg-accent" aria-hidden />
         )}
         <Icon size={20} className="shrink-0" aria-hidden />
-        <span className="max-w-full truncate">{label}</span>
+        {/* Sin truncate: "Conversaciones" se parte con guion (hifenación
+            con lang="es") en vez de quedar en "Conversac…". */}
+        <span className="max-w-full text-center break-words hyphens-auto">{label}</span>
         {href === "/conversaciones" && (
           <BadgePendientes n={pendientes} className="absolute top-1 right-2" />
         )}
@@ -220,7 +222,8 @@ export function Sidebar() {
   return (
     <>
       {/* ---------- Rail de escritorio ---------- */}
-      <aside className="hidden w-[88px] shrink-0 flex-col border-r border-bg-700 bg-bg-900 px-2 py-3 md:flex">
+      {/* 96px: el panel de cuenta se ancla con md:left-[96px], mantener igual. */}
+      <aside className="hidden w-24 shrink-0 flex-col border-r border-bg-700 bg-bg-900 px-1.5 py-3 md:flex">
         <Link
           href={inicio}
           aria-label="OperativAI, ir al inicio"
@@ -230,15 +233,17 @@ export function Sidebar() {
           <img src="/operativai.ico" alt="" width={32} height={32} />
         </Link>
 
+        {/* overflow-x-hidden: ningún título o etiqueta puede abrir un scroll
+            horizontal. El scroll vertical sigue, sin barra visible. */}
         <nav
           data-tour="nav.principal"
-          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto"
+          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto [scrollbar-width:none]"
           aria-label="Principal"
         >
           {grupos.map((grupo, i) => (
             <div key={grupo.titulo} className="flex flex-col gap-0.5">
               {i > 0 && <div className="mx-3 my-2 h-px bg-bg-700" aria-hidden />}
-              <span className="my-1 text-center text-[10px] tracking-wider text-text-600 uppercase">
+              <span className="my-1 text-center text-[10px] tracking-wide whitespace-nowrap text-text-600 uppercase">
                 {grupo.titulo}
               </span>
               {grupo.items.map((item) => railLink(item))}

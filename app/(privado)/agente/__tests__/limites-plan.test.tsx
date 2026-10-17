@@ -1,5 +1,7 @@
 /**
- * /agente con los límites del plan (limites_plan de GET /api/agente):
+ * /agente con los límites del plan (limites_plan de GET /api/agente; sin números
+ * de WhatsApp vinculados la página edita la configuración de Instagram, Facebook y
+ * chat web, spec 005a):
  *  - un modelo que el plan no incluye sale deshabilitado;
  *  - con modelos limitados no hay "Predeterminado del sistema";
  *  - el tope de mensajes de contexto sale del plan, y pasarse bloquea Guardar.
@@ -11,6 +13,11 @@ import type { AgenteConfig, ModelosOut } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
 jest.mock("@/lib/use-api", () => ({ useApi: jest.fn() }));
+jest.mock("next/navigation", () => ({
+  ...jest.requireActual("next/navigation"),
+  useRouter: () => ({ replace: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(""),
+}));
 jest.mock("@/app/components/centro-notificaciones", () => ({ CentroNotificaciones: () => null }));
 
 const mockUseApi = useApi as jest.Mock;
@@ -41,7 +48,14 @@ function config(sobre: Partial<AgenteConfig> = {}): AgenteConfig {
 
 function montar(cfg: AgenteConfig) {
   mockUseApi.mockImplementation((path: string | null) => ({
-    data: path === "/api/agente" ? cfg : path === "/api/agente/modelos" ? MODELOS : null,
+    data:
+      path === "/api/agente"
+        ? cfg
+        : path === "/api/agente/modelos"
+          ? MODELOS
+          : path === "/api/canales/whatsapp/numeros"
+            ? { numeros: [], tope: null, plazas_usadas: 0, plazas_libres: null }
+            : null,
     loading: false,
     error: null,
     recargar: jest.fn(),

@@ -98,3 +98,23 @@ test("el proveedor arranca en su agenda", () => {
   expect(inicioDeRol(u)).toBe("/calendario");
   expect(puedeVerRuta(u, inicioDeRol(u))).toBe(true);
 });
+
+// Spec 005a (RF-14, RF-18): las conversaciones de números desvinculados son solo de la gerencia del negocio.
+test.each([
+  ["owner", true],
+  ["superadmin", true],
+  ["member", false],
+  ["vendedor", false],
+  ["proveedor", false],
+])("%s en /conversaciones/ocultas: %s", (role, esperado) => {
+  expect(puedeVerRuta(con(role), "/conversaciones/ocultas")).toBe(esperado);
+});
+
+test.each(["vendedor", "proveedor", "member"])(
+  "%s sigue abriendo la lista normal de conversaciones, no las ocultas",
+  (role) => {
+    expect(puedeVerRuta(con(role), "/conversaciones")).toBe(true);
+    expect(puedeVerRuta(con(role), "/conversaciones/c-1")).toBe(true);
+    expect(puedeVerRuta(con(role), "/conversaciones/ocultas")).toBe(false);
+  },
+);

@@ -669,7 +669,11 @@ export type TipoAlerta =
   | "conversacion_tomada"
   | "conversacion_liberada"
   | "conversacion_devuelta_ia"
-  | "aviso_cita_no_enviado";
+  | "aviso_cita_no_enviado"
+  // Spec 005a (RF-20): avisos de varios números de WhatsApp.
+  | "numeros_pausados"
+  | "numeros_recortados"
+  | "numero_configuracion_incompleta";
 
 export interface AlertaOut {
   id: string;
@@ -1408,6 +1412,10 @@ export interface PlanGerenciaOut {
   modelos_permitidos: string[] | null;
   /** Mensajes de historial máximos del agente. null = sin límite. */
   historial_maximo: number | null;
+  /** Tope de números de WhatsApp activos (spec 005a, RF-1). null = sin tope. */
+  max_numeros_whatsapp: number | null;
+  /** Familias de herramientas del agente que incluye el plan (RF-9). */
+  herramientas_plan: FamiliaHerramienta[];
   creado_en: string;
   actualizado_en: string;
 }
@@ -1438,6 +1446,10 @@ export interface PlanCrearIn {
   stripe_price_id?: string | null;
   modelos_permitidos?: string[] | null;
   historial_maximo?: number | null;
+  /** null/ausente = sin tope; un entero >= 1 fija el tope. */
+  max_numeros_whatsapp?: number | null;
+  /** null/ausente = se siembra desde los flags del plan; [] = ninguna familia. */
+  herramientas_plan?: FamiliaHerramienta[] | null;
 }
 
 /** Parcial: un campo ausente o en null no se toca (no se puede renombrar acá). */
@@ -1462,6 +1474,18 @@ export interface PlanActualizarIn {
   modelos_permitidos?: string[] | null;
   /** 0 quita el límite; null/ausente no lo toca. */
   historial_maximo?: number | null;
+  /** 0 quita el tope de números; null/ausente no lo toca (RF-1). */
+  max_numeros_whatsapp?: number | null;
+  /** [] deja el plan sin herramientas; null/ausente no lo toca. */
+  herramientas_plan?: FamiliaHerramienta[] | null;
+}
+
+/** Las cinco familias del catálogo base de herramientas del agente (spec 005a, P5). */
+export type FamiliaHerramienta = "calendario" | "sql_lectura" | "http" | "google_sheets" | "google_docs";
+
+/** GET /api/gerencia/planes/familias-herramientas. */
+export interface FamiliasHerramientasOut {
+  familias: FamiliaHerramienta[];
 }
 
 // ============================================================
@@ -1874,4 +1898,114 @@ export interface CitaHistorialOut {
 export interface HistorialCitasOut {
   citas: CitaHistorialOut[];
   hay_mas: boolean;
+}
+
+// --- Varios números de WhatsApp por negocio (spec 005a) ---
+// Espejo de NumeroWhatsAppOut / ListaNumerosOut / NumeroAgenteOut /
+// HerramientaNumeroOut / ConversacionOcultaOut (backend/schemas.py).
+export type EstadoNumero = "activo" | "pausado" | "desvinculado";
+
+export interface NumeroWhatsApp {
+  id: string;
+  phone_number_id: string;
+  telefono_visible: string | null;
+  bsp_provider: string;
+  estado: EstadoNumero;
+  es_principal: boolean;
+  /** Línea de avisos de la plataforma: la gestiona la plataforma (RF-14, RF-15). */
+  es_linea_avisos: boolean;
+  vinculado_en: string | null;
+  pausado_en: string | null;
+  motivo_pausa: string | null;
+  agent_name: string;
+  system_prompt: string;
+  model: string | null;
+  temperature: number;
+  history_window: number;
+  agente_activo: boolean;
+  /** Sin prompt o sin nombre de agente (RF-8): no responde. */
+  configuracion_incompleta: boolean;
+  herramientas: string[];
+}
+
+/** GET /api/canales/whatsapp/numeros. `tope` null = sin tope; `plazas_libres` null cuando no hay tope. */
+export interface ListaNumeros {
+  numeros: NumeroWhatsApp[];
+  tope: number | null;
+  plazas_usadas: number;
+  plazas_libres: number | null;
+}
+
+/** POST /api/canales/whatsapp/numeros/{id}/pausar. */
+export interface PausarNumeroOut {
+  numero: NumeroWhatsApp;
+  /** La pausa dejó al negocio sin números activos (D5). */
+  sin_numero_activo: boolean;
+}
+
+/** GET/PUT /api/agente/numeros/{id}: configuración de un número con los límites del plan. */
+export interface NumeroConfig {
+  id: string;
+  phone_number_id: string;
+  estado: EstadoNumero;
+  es_principal: boolean;
+  es_linea_avisos: boolean;
+  agent_name: string;
+  system_prompt: string;
+  model: string | null;
+  temperature: number;
+  history_window: number;
+  agente_activo: boolean;
+  configuracion_incompleta: boolean;
+  limites_plan: LimitesAgente | null;
+  herramientas: string[];
+}
+
+/** PUT /api/agente/numeros/{id}: parcial, solo viajan los campos que cambian. */
+export interface NumeroConfigIn {
+  agent_name?: string;
+  system_prompt?: string;
+  model?: string | null;
+  temperature?: number;
+  history_window?: number;
+  agente_activo?: boolean;
+}
+
+/** GET/PUT /api/herramientas/numeros/{id} y /api/herramientas/social. */
+export interface HerramientaNumero {
+  tool_key: string;
+  tool_type: string | null;
+  display_name: string | null;
+  description: string | null;
+  familia: FamiliaHerramienta | null;
+  /** Activada en este número (o en Instagram y Facebook). */
+  activa: boolean;
+  /** La lista del plan incluye su familia (RF-6, RF-9). */
+  permitida_por_plan: boolean;
+}
+
+/** PUT /api/herramientas/numeros/{id}: todo o nada (RF-6). */
+export interface HerramientasNumeroIn {
+  activar: string[];
+  desactivar: string[];
+}
+
+/** GET /api/conversaciones/ocultas: conversaciones de números desvinculados (RF-14), solo lectura. */
+export interface ConversacionOculta {
+  id: string;
+  channel_type: string;
+  status: string;
+  started_at: string | null;
+  last_message_at: string | null;
+  asignado_a: string | null;
+  agente_canal_id: string | null;
+  desvinculado_en: string | null;
+  telefono_visible: string | null;
+  phone_number_id: string | null;
+  usuario_nombre: string | null;
+}
+
+/** GET /api/conversaciones/ocultas/{id}: la cabecera y sus mensajes. */
+export interface ConversacionOcultaDetalle extends ConversacionOculta {
+  mensajes: MensajeOut[];
 }

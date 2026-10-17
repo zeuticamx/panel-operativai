@@ -18,6 +18,16 @@ const TIPOS_DE_CONVERSACION: string[] = [
   "conversacion_devuelta_ia",
 ];
 
+/** Ids de los números que trae `datos.numeros` (los de Instagram y Facebook no tienen id). */
+function idsDeNumerosAfectados(alerta: AlertaOut): string[] {
+  const numeros = alerta.datos?.numeros;
+  if (!Array.isArray(numeros)) return [];
+  return numeros.flatMap((n) => {
+    const id = n && typeof n === "object" ? (n as { id?: unknown }).id : null;
+    return typeof id === "string" && id ? [id] : [];
+  });
+}
+
 /**
  * A dónde manda una alerta al hacerle clic (centro de notificaciones o
  * botón "Ver detalle" del toast) — historia de notificaciones en tiempo
@@ -28,6 +38,15 @@ const TIPOS_DE_CONVERSACION: string[] = [
  */
 export function rutaParaAlerta(alerta: AlertaOut): string | null {
   if (alerta.tipo === "perfil_incompleto") return "/preferencias";
+
+  // Spec 005a (RF-20): avisos de números de WhatsApp. Con un solo número
+  // afectado se abre su configuración; con varios, la lista (donde se reactivan).
+  if (alerta.tipo === "numeros_pausados") return "/canales";
+  if (alerta.tipo === "numeros_recortados" || alerta.tipo === "numero_configuracion_incompleta") {
+    const ids = idsDeNumerosAfectados(alerta);
+    if (ids.length === 1) return `/agente?numero=${encodeURIComponent(ids[0])}`;
+    return alerta.tipo === "numero_configuracion_incompleta" && ids.length === 0 ? "/agente" : "/canales";
+  }
 
   // Solo le llega al vendedor dueño del pendiente (services/agenda.py): su
   // agenda vive en /mi-cartera, abierta en la semana de la fecha nueva.

@@ -34,6 +34,9 @@ const COLOR_POR_TIPO: Record<TipoAlerta, string> = {
   conversacion_liberada: "#f59e0b", // amber-500: ya no es tuya
   conversacion_devuelta_ia: "#10b981", // emerald-500: la IA retomó el chat
   aviso_cita_no_enviado: "#f59e0b", // amber-500: el cliente no recibió el aviso de su cita
+  numeros_pausados: "#f59e0b", // amber-500: números pausados por el plan, reactivar es manual
+  numeros_recortados: "#f59e0b", // amber-500: el plan recortó la configuración de un número
+  numero_configuracion_incompleta: "#ef4444", // red-500: un número dejó de responder
 };
 
 const DURACION_MS = 5000;

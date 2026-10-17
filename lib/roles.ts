@@ -56,7 +56,23 @@ const RUTAS_PROVEEDOR_PREFIJO = ["/conversaciones", "/preferencias"];
 const RUTAS_PROVEEDOR_EXACTAS = ["/calendario"];
 
 /** Configuración del negocio y pagos: el backend se los niega a 'member'. */
-const RUTAS_SOLO_GERENCIA = ["/agente", "/canales", "/herramientas", "/suscripcion", "/pagos", "/bienvenida"];
+const RUTAS_SOLO_GERENCIA = [
+  "/agente",
+  "/canales",
+  "/herramientas",
+  "/suscripcion",
+  "/pagos",
+  "/bienvenida",
+  // Spec 005a (RF-14): conversaciones de números desvinculados, solo owner y superadmin.
+  "/conversaciones/ocultas",
+];
+
+/**
+ * Rutas que cuelgan de un prefijo que otros roles sí abren, pero que son solo
+ * de gerencia del negocio. Vendedor y proveedor abren "/conversaciones", así
+ * que sin esta exclusión explícita entrarían también a las ocultas.
+ */
+const RUTAS_EXCLUIDAS_DE_ACOTADOS = ["/conversaciones/ocultas"];
 
 function bajo(pathname: string, prefijo: string): boolean {
   return pathname === prefijo || pathname.startsWith(prefijo + "/");
@@ -84,10 +100,14 @@ export function puedeVerRuta(usuario: ConRol, pathname: string): boolean {
     case "member":
       return !bajo(pathname, "/mi-cartera") && !RUTAS_SOLO_GERENCIA.some((r) => bajo(pathname, r));
     case "vendedor":
-      return RUTAS_VENDEDOR.some((r) => bajo(pathname, r));
+      return (
+        RUTAS_VENDEDOR.some((r) => bajo(pathname, r)) &&
+        !RUTAS_EXCLUIDAS_DE_ACOTADOS.some((r) => bajo(pathname, r))
+      );
     case "proveedor":
       return (
-        RUTAS_PROVEEDOR_EXACTAS.includes(pathname) || RUTAS_PROVEEDOR_PREFIJO.some((r) => bajo(pathname, r))
+        (RUTAS_PROVEEDOR_EXACTAS.includes(pathname) || RUTAS_PROVEEDOR_PREFIJO.some((r) => bajo(pathname, r))) &&
+        !RUTAS_EXCLUIDAS_DE_ACOTADOS.some((r) => bajo(pathname, r))
       );
     default:
       // Rol desconocido: solo su perfil, igual que el backend (lista blanca).

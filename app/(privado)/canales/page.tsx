@@ -1,26 +1,23 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Check, ExternalLink, RefreshCw, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
-import { loginConCode, META_APP_ID, META_REDIRECT_URI } from "@/lib/meta-oauth";
+import { META_APP_ID, META_REDIRECT_URI } from "@/lib/meta-oauth";
 import type {
   ActivarOut,
   ActivarResultado,
   CanalOut,
-  ConectarMetaOut,
-  ConectarWhatsAppOut,
   DesconectarCanalOut,
-  IniciarNeuroApiConnectOut,
   PaginaDisponible,
 } from "@/lib/types";
-import { CANALES, etiquetaCanal, formatoFechaHora, type CanalTipo } from "@/lib/formato";
+import { etiquetaCanal, formatoFechaHora, type CanalTipo } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { CanalIcon } from "@/app/components/status";
-import { Aviso, Boton, Campo, Cargando, ConfirmDialog, PageHeader, inputClass } from "@/app/components/ui";
+import { NumerosWhatsApp } from "@/app/components/numeros-whatsapp";
+import { Aviso, Boton, Cargando, ConfirmDialog, PageHeader } from "@/app/components/ui";
 
 type Paso =
   | { etapa: "inactivo" }
@@ -29,11 +26,13 @@ type Paso =
   | { etapa: "paginas"; paginas: PaginaDisponible[]; seleccion: Set<string>; activando: boolean }
   | { etapa: "resultado"; resultados: ActivarResultado[] };
 
-const INTERVALO_RETORNO_MS = 3_000;
-const ESPERA_RETORNO_MS = 90_000;
+/**
+ * WhatsApp ya no es una fila: un negocio vincula varios números y cada uno
+ * se gestiona en `NumerosWhatsApp` (spec 005a). Aquí quedan los canales de Meta.
+ */
+const CANALES_META = ["instagram", "facebook"] as const satisfies readonly CanalTipo[];
 
-const DESCRIPCION: Record<CanalTipo, string> = {
-  whatsapp: "Mensajes al número de WhatsApp Business de tu negocio.",
+const DESCRIPCION: Record<(typeof CANALES_META)[number], string> = {
   instagram: "Mensajes directos a tu cuenta de Instagram profesional.",
   facebook: "Mensajes por Messenger a tu página de Facebook.",
 };
@@ -54,42 +53,15 @@ export default function CanalesPage() {
 }
 
 function Contenido() {
-  const params = useSearchParams();
   const canales = useApi<CanalOut[]>("/api/canales");
   const [paso, setPaso] = useState<Paso>({ etapa: "inactivo" });
   const [errorFlujo, setErrorFlujo] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [desconectar, setDesconectar] = useState<CanalTipo | null>(null);
   const [desconectando, setDesconectando] = useState(false);
-  const [formWhatsApp, setFormWhatsApp] = useState(false);
-  const [lineaWhatsApp, setLineaWhatsApp] = useState("");
-  const [conectandoWhatsApp, setConectandoWhatsApp] = useState(false);
-  const [conectandoNeuroApi, setConectandoNeuroApi] = useState(false);
 
   const porTipo = new Map<string, CanalOut>();
   for (const c of canales.data ?? []) porTipo.set(c.channel_type, c);
-
-  // Retorno de la NeuroAPI Connect Session: llegar acá no significa que ya
-  // esté conectado (eso lo decide el webhook, del lado del servidor), y el
-  // webhook suele llegar DESPUÉS que el navegador. Por eso se consulta
-  // periódicamente hasta verlo activo o agotar la espera.
-  const retornoNeuroApi = params.get("whatsapp_neuroapi") === "retorno";
-  const whatsappActivo = Boolean(porTipo.get("whatsapp")?.is_active);
-  const [esperaAgotada, setEsperaAgotada] = useState(false);
-  const recargarCanales = canales.recargar;
-  useEffect(() => {
-    if (!retornoNeuroApi || whatsappActivo) return;
-    void recargarCanales(true);
-    const intervalo = setInterval(() => void recargarCanales(true), INTERVALO_RETORNO_MS);
-    const limite = setTimeout(() => {
-      clearInterval(intervalo);
-      setEsperaAgotada(true);
-    }, ESPERA_RETORNO_MS);
-    return () => {
-      clearInterval(intervalo);
-      clearTimeout(limite);
-    };
-  }, [retornoNeuroApi, whatsappActivo, recargarCanales]);
 
   // ---- Flujo Meta ----------------------------------------------------
   const cargarPaginas = async () => {
@@ -102,31 +74,6 @@ function Contenido() {
       setPaso({ etapa: "paginas", paginas, seleccion, activando: false });
     } catch (e) {
       setErrorFlujo(mensajeDeError(e));
-      setPaso({ etapa: "inactivo" });
-    }
-  };
-
-  const conectarConFacebook = async () => {
-    setErrorFlujo(null);
-    setAviso(null);
-    setPaso({ etapa: "conectando" });
-    try {
-      const resultado = await loginConCode();
-      if (!resultado) {
-        setAviso("Conexión cancelada. No se hizo ningún cambio.");
-        setPaso({ etapa: "inactivo" });
-        return;
-      }
-
-      // El redirect_uri viaja junto al code: Meta exige que el del canje sea
-      // idéntico al que se usó para abrir el diálogo.
-      await apiFetch<ConectarMetaOut>("/api/canales/meta/conectar", {
-        method: "POST",
-        json: { code: resultado.code, redirect_uri: resultado.redirectUri },
-      });
-      await cargarPaginas();
-    } catch (e) {
-      setErrorFlujo(mensajeDeError(e, "No se pudo conectar con Facebook."));
       setPaso({ etapa: "inactivo" });
     }
   };
@@ -158,48 +105,6 @@ function Contenido() {
     }
   };
 
-  // ---- Flujo WhatsApp (vía Kontesta) ---------------------------------
-  const conectarWhatsApp = async () => {
-    const linea = lineaWhatsApp.trim();
-    if (!linea) return;
-    setErrorFlujo(null);
-    setAviso(null);
-    setConectandoWhatsApp(true);
-    try {
-      await apiFetch<ConectarWhatsAppOut>("/api/canales/whatsapp/conectar", {
-        method: "POST",
-        json: { phone_number_id: linea },
-      });
-      setAviso("WhatsApp conectado. Tu agente ya puede responder por ese número.");
-      setFormWhatsApp(false);
-      setLineaWhatsApp("");
-      canales.recargar(true);
-    } catch (e) {
-      setErrorFlujo(mensajeDeError(e, "No se pudo conectar WhatsApp."));
-    } finally {
-      setConectandoWhatsApp(false);
-    }
-  };
-
-  // ---- Flujo WhatsApp (vía NeuroAPI Connect Sessions) ----------------
-  const iniciarNeuroApiConnect = async () => {
-    setErrorFlujo(null);
-    setAviso(null);
-    setConectandoNeuroApi(true);
-    try {
-      const datos = await apiFetch<IniciarNeuroApiConnectOut>(
-        "/api/canales/whatsapp/neuroapi/iniciar",
-        { method: "POST" },
-      );
-      // .assign() y no `.href`: la regla react-hooks/immutability de
-      // eslint-config-next 16 prohíbe asignarle a window.location.
-      window.location.assign(datos.connect_url);
-    } catch (e) {
-      setErrorFlujo(mensajeDeError(e, "No se pudo iniciar la vinculación con WhatsApp."));
-      setConectandoNeuroApi(false);
-    }
-  };
-
   // ---- Desconectar ---------------------------------------------------
   const confirmarDesconexion = async () => {
     if (!desconectar) return;
@@ -226,8 +131,6 @@ function Contenido() {
     }
   };
 
-  const ocupado = paso.etapa === "conectando" || paso.etapa === "cargando_paginas";
-
   return (
     <>
       <PageHeader
@@ -251,17 +154,6 @@ function Contenido() {
           {canales.error && <Aviso tipo="error">{canales.error}</Aviso>}
           {errorFlujo && <Aviso tipo="error">{errorFlujo}</Aviso>}
           {aviso && <Aviso tipo="exito">{aviso}</Aviso>}
-          {retornoNeuroApi && !whatsappActivo && !esperaAgotada && (
-            <Aviso tipo="info">
-              Estamos terminando de vincular tu WhatsApp. Esto puede tardar unos segundos.
-            </Aviso>
-          )}
-          {retornoNeuroApi && !whatsappActivo && esperaAgotada && (
-            <Aviso tipo="error">
-              No recibimos la confirmación de WhatsApp. Recarga la página en un momento o vuelve a
-              intentarlo.
-            </Aviso>
-          )}
           {(!META_APP_ID || !META_REDIRECT_URI) && (
             <Aviso tipo="info">
               Falta{" "}
@@ -273,18 +165,15 @@ function Contenido() {
             </Aviso>
           )}
 
-          {/* Estado por canal */}
-          <section data-tour="canales.lista" className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
-            {CANALES.map((tipo, i) => {
+          {/* WhatsApp: varios números, cada uno con su agente (spec 005a) */}
+          <NumerosWhatsApp />
+
+          {/* Estado de Instagram y Facebook */}
+          <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
+            {CANALES_META.map((tipo, i) => {
               const c = porTipo.get(tipo);
               const conectado = Boolean(c?.is_active);
-              const esMeta = tipo === "facebook" || tipo === "instagram";
-              const identificador =
-                tipo === "whatsapp"
-                  ? c?.phone_number_id
-                  : tipo === "instagram"
-                    ? c?.ig_user_id
-                    : c?.page_id;
+              const identificador = tipo === "instagram" ? c?.ig_user_id : c?.page_id;
 
               return (
                 <div
@@ -337,104 +226,21 @@ function Contenido() {
                       >
                         Desconectar
                       </Boton>
-                    ) : esMeta ? (
-                      <Boton
-                        variante="primario"
-                        onClick={conectarConFacebook}
-                        loading={paso.etapa === "conectando"}
-                        disabled={ocupado || !META_APP_ID}
-                      >
-                        <CanalIcon tipo="facebook" size={13} />
-                        Conectar con Facebook
-                      </Boton>
                     ) : (
-                      <>
-                        <Boton
-                          variante="primario"
-                          onClick={iniciarNeuroApiConnect}
-                          loading={conectandoNeuroApi}
-                          disabled={formWhatsApp}
-                        >
-                          <CanalIcon tipo="whatsapp" size={13} />
-                          Conectar WhatsApp
-                        </Boton>
-                        <Boton
-                          variante="fantasma"
-                          onClick={() => {
-                            setErrorFlujo(null);
-                            setAviso(null);
-                            setFormWhatsApp(true);
-                          }}
-                          disabled={formWhatsApp || conectandoNeuroApi}
-                        >
-                          Conectar manualmente
-                        </Boton>
-                      </>
+                      // Instagram y Facebook pausados a propósito: la
+                      // conexión por Meta sigue sin terminar de probarse.
+                      // Las líneas que ya estaban conectadas antes de este
+                      // cambio no se tocan (ver la rama `conectado` arriba);
+                      // esto solo bloquea dar de alta una nueva.
+                      <Boton variante="secundario" disabled title="Disponible próximamente">
+                        Próximamente
+                      </Boton>
                     )}
                   </div>
                 </div>
               );
             })}
           </section>
-
-          {/* Alta de WhatsApp */}
-          {formWhatsApp && (
-            <section className="rounded-md border border-bg-700 bg-bg-800 p-4">
-              <header className="mb-3 flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-medium text-text-100">Conectar WhatsApp Business</h2>
-                  <p className="font-mono text-[11px] text-text-600">
-                    tu número ya tiene que estar dado de alta con nosotros
-                  </p>
-                </div>
-                <Boton
-                  variante="fantasma"
-                  onClick={() => setFormWhatsApp(false)}
-                  disabled={conectandoWhatsApp}
-                  aria-label="Cerrar panel"
-                  className="min-h-8 px-2"
-                >
-                  <X size={14} aria-hidden />
-                </Boton>
-              </header>
-
-              <Aviso tipo="info">
-                Esta alta manual es solo para números que ya dimos de alta de nuestro lado, fuera
-                del portal. Para la mayoría de los casos conviene el botón “Conectar WhatsApp” de
-                arriba, que vincula tu cuenta directamente.
-              </Aviso>
-
-              <div className="mt-3 flex flex-wrap items-end gap-2">
-                <Campo
-                  id="linea-whatsapp"
-                  label="Id de línea"
-                  hint="el identificador que te dimos al dar de alta tu número"
-                  className="min-w-56 flex-1"
-                >
-                  <input
-                    id="linea-whatsapp"
-                    value={lineaWhatsApp}
-                    onChange={(e) => setLineaWhatsApp(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") conectarWhatsApp();
-                    }}
-                    disabled={conectandoWhatsApp}
-                    placeholder="p. ej. 1234567890"
-                    autoComplete="off"
-                    className={inputClass}
-                  />
-                </Campo>
-                <Boton
-                  variante="primario"
-                  onClick={conectarWhatsApp}
-                  loading={conectandoWhatsApp}
-                  disabled={!lineaWhatsApp.trim()}
-                >
-                  Conectar
-                </Boton>
-              </div>
-            </section>
-          )}
 
           {/* Panel del flujo Meta */}
           {paso.etapa !== "inactivo" && (
@@ -573,8 +379,11 @@ function Contenido() {
             </section>
           )}
 
-          {/* Atajo: ya autorizó Meta antes pero no eligió páginas */}
-          {paso.etapa === "inactivo" && META_APP_ID && (
+          {/* Atajo: ya autorizó Meta antes pero no eligió páginas.
+              Oculto mientras Instagram/Facebook estén en "Próximamente": es
+              la misma alta de página por otra puerta, y dejarla abierta
+              desmentiría el botón de arriba. */}
+          {false && paso.etapa === "inactivo" && META_APP_ID && (
             <p className="font-mono text-[11px] text-text-600">
               ¿Ya conectaste tu cuenta de Meta y solo quieres agregar páginas?{" "}
               <button

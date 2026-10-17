@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, EyeOff, Search, X } from "lucide-react";
 import { useApi, useDebounce } from "@/lib/use-api";
-import type { ConversacionOut } from "@/lib/types";
+import type { ConversacionOut, ListaNumeros } from "@/lib/types";
 import { CANALES, etiquetaCanal } from "@/lib/formato";
+import { nombreNumero } from "@/lib/numeros";
 import { ConversationRow } from "@/app/components/conversation-row";
-import { Aviso, Boton, PageHeader, selectClass } from "@/app/components/ui";
+import { esGerencia } from "@/app/components/modulo-vendedores";
+import { useUsuario } from "@/app/components/usuario-context";
+import { Aviso, Boton, PageHeader, claseBoton, selectClass } from "@/app/components/ui";
 
 const LIMITE = 25;
 
@@ -32,11 +36,19 @@ export default function ConversacionesPage() {
   const [canal, setCanal] = useState("");
   const [estado, setEstado] = useState("");
   const [asignada, setAsignada] = useState("");
+  const [numeroId, setNumeroId] = useState("");
   const [buscar, setBuscar] = useState("");
   const [pagina, setPagina] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   const buscarDebounced = useDebounce(buscar.trim(), 300);
+
+  // Spec 005a (RF-18): la vista por número es de owner, superadmin y member;
+  // vendedor y proveedor no la tienen (el backend les respondería 403).
+  const { usuario } = useUsuario();
+  const veNumeros = usuario?.role === "owner" || usuario?.role === "superadmin" || usuario?.role === "member";
+  const numeros = useApi<ListaNumeros>(veNumeros ? "/api/canales/whatsapp/numeros" : null);
+  const listaNumeros = numeros.data?.numeros ?? [];
 
   // Cualquier cambio de filtro vuelve a la primera página.
   const cambiarCanal = (v: string) => {
@@ -51,6 +63,10 @@ export default function ConversacionesPage() {
     setAsignada(v);
     setPagina(0);
   };
+  const cambiarNumero = (v: string) => {
+    setNumeroId(v);
+    setPagina(0);
+  };
   const cambiarBuscar = (v: string) => {
     setBuscar(v);
     setPagina(0);
@@ -61,11 +77,12 @@ export default function ConversacionesPage() {
     if (canal) qs.set("canal", canal);
     if (estado) qs.set("estado", estado);
     if (asignada) qs.set("asignada", asignada);
+    if (numeroId) qs.set("numero_id", numeroId);
     if (buscarDebounced) qs.set("buscar", buscarDebounced.slice(0, 100));
     qs.set("limite", String(LIMITE));
     qs.set("offset", String(pagina * LIMITE));
     return `/api/conversaciones?${qs.toString()}`;
-  }, [canal, estado, asignada, buscarDebounced, pagina]);
+  }, [canal, estado, asignada, numeroId, buscarDebounced, pagina]);
 
   const { data, loading, error, recargar } = useApi<ConversacionOut[]>(path);
 
@@ -77,11 +94,12 @@ export default function ConversacionesPage() {
     return () => clearInterval(id);
   }, [recargar]);
 
-  const hayFiltros = Boolean(canal || estado || asignada || buscar);
+  const hayFiltros = Boolean(canal || estado || asignada || numeroId || buscar);
   const limpiar = () => {
     setCanal("");
     setEstado("");
     setAsignada("");
+    setNumeroId("");
     setBuscar("");
     setPagina(0);
   };
@@ -99,6 +117,15 @@ export default function ConversacionesPage() {
           data && data.length > 0
             ? `${desde}–${hasta}${haySiguiente ? "+" : ""}`
             : undefined
+        }
+        acciones={
+          // Conversaciones de números desvinculados: solo owner y superadmin (RF-14).
+          esGerencia(usuario) ? (
+            <Link href="/conversaciones/ocultas" className={claseBoton("fantasma")}>
+              <EyeOff size={13} aria-hidden />
+              Ocultas
+            </Link>
+          ) : undefined
         }
       />
 
@@ -174,6 +201,29 @@ export default function ConversacionesPage() {
             </option>
           ))}
         </select>
+
+        {veNumeros && listaNumeros.length > 1 && (
+          <>
+            <label htmlFor="numero" className="sr-only">
+              Número de WhatsApp
+            </label>
+            <select
+              id="numero"
+              value={numeroId}
+              onChange={(e) => cambiarNumero(e.target.value)}
+              className={`${selectClass} w-auto max-w-full py-1.5 text-xs`}
+            >
+              <option value="">Todos los números</option>
+              {listaNumeros.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {nombreNumero(n)}
+                  {n.es_linea_avisos ? " (línea de avisos)" : ""}
+                  {n.estado === "pausado" ? " (pausado)" : ""}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
 
         {hayFiltros && (
           <Boton variante="fantasma" onClick={limpiar} className="min-h-8 px-2">

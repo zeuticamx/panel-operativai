@@ -8,6 +8,7 @@ import {
   Briefcase,
   CalendarDays,
   CreditCard,
+  FileText,
   LayoutDashboard,
   Lock,
   LogOut,
@@ -61,6 +62,7 @@ const NAV_GRUPOS: { titulo: string; items: Item[] }[] = [
     titulo: "Configurar",
     items: [
       { icon: Plug, label: "Canales", href: "/canales" },
+      { icon: FileText, label: "Plantillas", href: "/plantillas" },
       { icon: Bot, label: "Agente", href: "/agente" },
       { icon: Wrench, label: "Herramientas", href: "/herramientas" },
       { icon: Users, label: "Vendedores", href: "/vendedores" },

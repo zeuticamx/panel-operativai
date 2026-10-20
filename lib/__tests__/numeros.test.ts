@@ -22,6 +22,7 @@ function numero(extra: Partial<NumeroWhatsApp> = {}): NumeroWhatsApp {
     phone_number_id: "1001",
     telefono_visible: null,
     bsp_provider: "neuroapi",
+    connection_mode: "standard",
     estado: "activo",
     es_principal: false,
     es_linea_avisos: false,

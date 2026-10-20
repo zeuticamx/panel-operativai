@@ -1,0 +1,64 @@
+name: Frontend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calidad:
+    name: Lint, tipos, tests y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # mismo que el Dockerfile
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # Incluye `next typegen`: next-env.d.ts y los tipos de rutas no están en el repo.
+      - run: npm run typecheck
+
+      - run: npm test -- --ci
+
+      # lib/auth.ts falla el build de producción si falta NEXT_PUBLIC_API_URL.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://operativai-server.vws2rl.easypanel.host
+
+  seguridad:
+    name: Auditoría de dependencias y secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks revisa todo el historial
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Solo dependencias de producción: lo de desarrollo no llega a la imagen standalone.
+      - name: npm audit (producción)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Imagen oficial en vez de gitleaks-action, que pide licencia en organizaciones.
+      - name: gitleaks (historial completo)
+        run: >
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2
+          detect --source /repo --redact --verbose

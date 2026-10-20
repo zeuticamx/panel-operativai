@@ -29,6 +29,7 @@ function numero(extra: Partial<NumeroWhatsApp> = {}): NumeroWhatsApp {
     phone_number_id: "1001",
     telefono_visible: "+52 55 1111 1111",
     bsp_provider: "neuroapi",
+    connection_mode: "standard",
     estado: "activo",
     es_principal: false,
     es_linea_avisos: false,
@@ -48,7 +49,7 @@ function numero(extra: Partial<NumeroWhatsApp> = {}): NumeroWhatsApp {
 }
 
 function lista(numeros: NumeroWhatsApp[], extra: Partial<ListaNumeros> = {}): ListaNumeros {
-  return { numeros, tope: 3, plazas_usadas: 2, plazas_libres: 1, ...extra };
+  return { numeros, tope: 3, plazas_usadas: 2, plazas_libres: 1, coexistencia_permitida: true, ...extra };
 }
 
 const LISTA_VARIOS = lista([

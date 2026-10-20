@@ -213,6 +213,9 @@ export default function PlanesPage() {
                           <Badge tone={p.calendario_activo ? "success" : "neutral"}>
                             calendario
                           </Badge>
+                          <Badge tone={p.coexistencia_activa ? "success" : "neutral"}>
+                            coexistencia
+                          </Badge>
                         </div>
                       </td>
                       <td className="max-w-[12rem] px-3 py-2">
@@ -363,6 +366,8 @@ function FormularioPlan({
   const [herramientas, setHerramientas] = useState(true);
   const [crmCampo, setCrmCampo] = useState(true);
   const [calendario, setCalendario] = useState(true);
+  // Un plan nuevo no incluye la coexistencia hasta que gerencia lo decida.
+  const [coexistencia, setCoexistencia] = useState(false);
   const [activo, setActivo] = useState(true);
   // Ninguno marcado = el plan no limita modelos.
   const [modelosSel, setModelosSel] = useState<string[]>([]);
@@ -392,6 +397,7 @@ function FormularioPlan({
     setHerramientas(plan?.herramientas_activo ?? true);
     setCrmCampo(plan?.crm_campo_activo ?? true);
     setCalendario(plan?.calendario_activo ?? true);
+    setCoexistencia(plan?.coexistencia_activa ?? false);
     setActivo(plan?.activo ?? true);
     setModelosSel(plan?.modelos_permitidos ?? []);
     setHistorialMax(plan?.historial_maximo?.toString() ?? "");
@@ -462,6 +468,7 @@ function FormularioPlan({
           modelos_permitidos: modelosSel.length > 0 ? modelosSel : null,
           historial_maximo: historialTexto === "" ? null : Number(historialTexto),
           max_numeros_whatsapp: cupoParaCrear(maxNumeros),
+          coexistencia_activa: coexistencia,
           herramientas_plan: familiasSel,
         };
         await apiFetch<PlanGerenciaOut>("/api/gerencia/planes", { method: "POST", json: body });
@@ -489,6 +496,7 @@ function FormularioPlan({
           historial_maximo: historialTexto === "" ? 0 : Number(historialTexto),
           // 0 y no null: en PATCH null es "no tocar", 0 quita el tope de números.
           max_numeros_whatsapp: cupoParaEnviar(maxNumeros, plan.max_numeros_whatsapp),
+          coexistencia_activa: coexistencia,
           herramientas_plan: familiasSel,
         };
         await apiFetch<PlanGerenciaOut>(
@@ -829,6 +837,20 @@ function FormularioPlan({
                   checked={calendario}
                   disabled={guardando}
                   onChange={setCalendario}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-sm text-text-100">Incluye modo coexistencia</span>
+                  <span className="font-mono text-[11px] text-text-600">
+                    WhatsApp Business app + API en el mismo número
+                  </span>
+                </div>
+                <Interruptor
+                  label="Incluye modo coexistencia"
+                  checked={coexistencia}
+                  disabled={guardando}
+                  onChange={setCoexistencia}
                 />
               </div>
               <div className="flex items-center justify-between">

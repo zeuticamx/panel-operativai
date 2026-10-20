@@ -6,7 +6,12 @@
 // ---- Auth ----
 export interface TokenOut {
   access_token: string;
-  refresh_token: string;
+  /**
+   * `null` en el portal web (spec 006): el refresh viaja en una cookie
+   * HttpOnly que la respuesta ya dejó puesta, no en el cuerpo. Solo queda
+   * poblado para un cliente que mande `X-Cliente: movil` (la app aparte).
+   */
+  refresh_token: string | null;
   token_type: "bearer";
 }
 
@@ -279,6 +284,17 @@ export interface ConectarWhatsAppOut {
 export interface DesconectarCanalOut {
   desconectado: string;
   proveedor: string | null;
+}
+
+/**
+ * Cómo se vincula un número de WhatsApp: `standard` = solo API (el número opera
+ * 100% por el agente) · `coexistence` = también en la app de WhatsApp Business del móvil.
+ */
+export type ModoConexionWhatsApp = "standard" | "coexistence";
+
+/** POST /api/canales/whatsapp/neuroapi/iniciar — cuerpo (opcional; por defecto `standard`). */
+export interface IniciarNeuroApiConnectIn {
+  connection_mode: ModoConexionWhatsApp;
 }
 
 /** POST /api/canales/whatsapp/neuroapi/iniciar — crea una NeuroAPI Connect Session. */
@@ -1414,6 +1430,8 @@ export interface PlanGerenciaOut {
   historial_maximo: number | null;
   /** Tope de números de WhatsApp activos (spec 005a, RF-1). null = sin tope. */
   max_numeros_whatsapp: number | null;
+  /** El plan permite vincular números en modo coexistencia (app móvil + API). */
+  coexistencia_activa: boolean;
   /** Familias de herramientas del agente que incluye el plan (RF-9). */
   herramientas_plan: FamiliaHerramienta[];
   creado_en: string;
@@ -1448,6 +1466,8 @@ export interface PlanCrearIn {
   historial_maximo?: number | null;
   /** null/ausente = sin tope; un entero >= 1 fija el tope. */
   max_numeros_whatsapp?: number | null;
+  /** Ausente = false. */
+  coexistencia_activa?: boolean;
   /** null/ausente = se siembra desde los flags del plan; [] = ninguna familia. */
   herramientas_plan?: FamiliaHerramienta[] | null;
 }
@@ -1476,6 +1496,8 @@ export interface PlanActualizarIn {
   historial_maximo?: number | null;
   /** 0 quita el tope de números; null/ausente no lo toca (RF-1). */
   max_numeros_whatsapp?: number | null;
+  /** null/ausente no lo toca. */
+  coexistencia_activa?: boolean | null;
   /** [] deja el plan sin herramientas; null/ausente no lo toca. */
   herramientas_plan?: FamiliaHerramienta[] | null;
 }
@@ -1910,6 +1932,8 @@ export interface NumeroWhatsApp {
   phone_number_id: string;
   telefono_visible: string | null;
   bsp_provider: string;
+  /** Solo API o también en la app móvil de WhatsApp Business. */
+  connection_mode: ModoConexionWhatsApp;
   estado: EstadoNumero;
   es_principal: boolean;
   /** Línea de avisos de la plataforma: la gestiona la plataforma (RF-14, RF-15). */
@@ -1934,6 +1958,8 @@ export interface ListaNumeros {
   tope: number | null;
   plazas_usadas: number;
   plazas_libres: number | null;
+  /** El plan vigente incluye el modo coexistencia. */
+  coexistencia_permitida: boolean;
 }
 
 /** POST /api/canales/whatsapp/numeros/{id}/pausar. */
@@ -2008,4 +2034,56 @@ export interface ConversacionOculta {
 /** GET /api/conversaciones/ocultas/{id}: la cabecera y sus mensajes. */
 export interface ConversacionOcultaDetalle extends ConversacionOculta {
   mensajes: MensajeOut[];
+}
+
+// ------------------------------------------------------------
+// Plantillas de WhatsApp del negocio (backend: PlantillaTenantOut)
+// ------------------------------------------------------------
+export type CategoriaPlantilla = "UTILITY" | "MARKETING" | "AUTHENTICATION";
+export type EstadoPlantillaMeta = "PENDING" | "APPROVED" | "REJECTED" | "PAUSED" | "DISABLED";
+
+/** Componente tal como lo guarda Meta (HEADER, BODY, FOOTER, BUTTONS). */
+export interface ComponentePlantilla {
+  type: string;
+  format?: string;
+  text?: string;
+  buttons?: { type: string; text: string; url?: string; phone_number?: string }[];
+}
+
+export interface PlantillaTenantOut {
+  nombre: string;
+  idioma: string;
+  categoria: CategoriaPlantilla;
+  estado: EstadoPlantillaMeta;
+  motivo_rechazo: string | null;
+  componentes: ComponentePlantilla[];
+  variables_cuerpo: number;
+  variable_encabezado: boolean;
+  actualizada_en: string;
+  sincronizada_en: string | null;
+}
+
+export interface PlantillaBotonIn {
+  tipo: "QUICK_REPLY" | "URL" | "PHONE_NUMBER";
+  texto: string;
+  url?: string;
+  telefono?: string;
+}
+
+export interface PlantillaCrearIn {
+  nombre: string;
+  idioma: string;
+  categoria: CategoriaPlantilla;
+  encabezado?: string;
+  ejemplo_encabezado?: string;
+  cuerpo: string;
+  ejemplos_cuerpo: string[];
+  pie?: string;
+  botones: PlantillaBotonIn[];
+}
+
+export interface PlantillaPruebaIn {
+  telefono: string;
+  valores_cuerpo: string[];
+  valor_encabezado?: string;
 }

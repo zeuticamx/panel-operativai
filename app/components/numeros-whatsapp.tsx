@@ -15,13 +15,16 @@ import {
 } from "@/lib/numeros";
 import { formatoFechaHora } from "@/lib/formato";
 import type {
+  IniciarNeuroApiConnectIn,
   IniciarNeuroApiConnectOut,
   ListaNumeros,
+  ModoConexionWhatsApp,
   NumeroWhatsApp,
   PausarNumeroOut,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
+import { ModoConexionDialog } from "./modo-conexion-whatsapp";
 import { CanalIcon } from "./status";
 import { Aviso, Boton, Campo, ConfirmDialog, inputClass } from "./ui";
 
@@ -109,6 +112,7 @@ export function ListaDeNumeros({
                         <Star size={10} aria-hidden /> principal
                       </Badge>
                     )}
+                    {n.connection_mode === "coexistence" && <Badge tone="info">coexistencia</Badge>}
                     {n.es_linea_avisos && <Badge tone="info">línea de avisos de plataforma</Badge>}
                     {n.configuracion_incompleta && <Badge tone="warning">configuración incompleta</Badge>}
                     {!n.agente_activo && <Badge>agente apagado</Badge>}
@@ -193,6 +197,7 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
   const [linea, setLinea] = useState("");
   const [conectandoManual, setConectandoManual] = useState(false);
   const [conectandoNeuroApi, setConectandoNeuroApi] = useState(false);
+  const [elegirModo, setElegirModo] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
   const lista = numeros.data;
@@ -323,12 +328,14 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
     }
   };
 
-  const iniciarNeuroApi = async () => {
+  const iniciarNeuroApi = async (modo: ModoConexionWhatsApp) => {
     reiniciarMensajes();
     setConectandoNeuroApi(true);
     try {
+      const cuerpo: IniciarNeuroApiConnectIn = { connection_mode: modo };
       const datos = await apiFetch<IniciarNeuroApiConnectOut>("/api/canales/whatsapp/neuroapi/iniciar", {
         method: "POST",
+        json: cuerpo,
       });
       // .assign() y no `.href`: la regla react-hooks/immutability de
       // eslint-config-next 16 prohíbe asignarle a window.location.
@@ -336,6 +343,7 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
     } catch (e) {
       setError(mensajeErrorNumero(e, "No se pudo iniciar la vinculación con WhatsApp."));
       setConectandoNeuroApi(false);
+      setElegirModo(false);
     }
   };
 
@@ -350,7 +358,15 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
         </div>
         {!soloLectura && (
           <div className="flex flex-wrap items-center gap-2">
-            <Boton variante="primario" onClick={iniciarNeuroApi} loading={conectandoNeuroApi} disabled={formManual}>
+            <Boton
+              variante="primario"
+              onClick={() => {
+                reiniciarMensajes();
+                setElegirModo(true);
+              }}
+              loading={conectandoNeuroApi}
+              disabled={formManual}
+            >
               <CanalIcon tipo="whatsapp" size={13} />
               Conectar WhatsApp
             </Boton>
@@ -444,6 +460,14 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
           </div>
         </div>
       )}
+
+      <ModoConexionDialog
+        open={elegirModo}
+        onOpenChange={setElegirModo}
+        coexistenciaPermitida={lista?.coexistencia_permitida ?? false}
+        loading={conectandoNeuroApi}
+        onConfirm={iniciarNeuroApi}
+      />
 
       <ConfirmDialog
         open={aPausar !== null}

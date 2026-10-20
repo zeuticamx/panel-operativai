@@ -28,6 +28,7 @@ import type {
 import { formatoFechaHora } from "@/lib/formato";
 import { mensajeErrorNumero, nombreNumero } from "@/lib/numeros";
 import { cn } from "@/lib/utils";
+import { urlSegura } from "@/lib/url-segura";
 import { useUsuario } from "@/app/components/usuario-context";
 import { Badge } from "@/app/components/badge";
 import { ConsumoCreditos } from "./consumo-creditos";
@@ -301,9 +302,9 @@ export default function HerramientasPage() {
                       </p>
 
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] break-all text-text-600">
-                        {h.url_original ? (
+                        {urlSegura(h.url_original) ? (
                           <a
-                            href={h.url_original}
+                            href={urlSegura(h.url_original)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-text-400 underline-offset-2 hover:text-text-100 hover:underline"

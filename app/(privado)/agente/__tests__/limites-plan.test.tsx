@@ -54,7 +54,7 @@ function montar(cfg: AgenteConfig) {
         : path === "/api/agente/modelos"
           ? MODELOS
           : path === "/api/canales/whatsapp/numeros"
-            ? { numeros: [], tope: null, plazas_usadas: 0, plazas_libres: null }
+            ? { numeros: [], tope: null, plazas_usadas: 0, plazas_libres: null, coexistencia_permitida: true }
             : null,
     loading: false,
     error: null,

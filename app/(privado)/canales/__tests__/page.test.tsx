@@ -51,6 +51,7 @@ const NUMERO = {
   phone_number_id: "1001",
   telefono_visible: "+52 55 1111 1111",
   bsp_provider: "neuroapi",
+  connection_mode: "standard",
   estado: "activo",
   es_principal: true,
   es_linea_avisos: false,
@@ -73,6 +74,7 @@ function listaNumeros(cuantos: number) {
     tope: null,
     plazas_usadas: cuantos,
     plazas_libres: null,
+    coexistencia_permitida: true,
   };
 }
 
@@ -100,7 +102,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-test("el botón Conectar WhatsApp pide la sesión al endpoint de NeuroAPI Connect", async () => {
+test("Conectar WhatsApp pide primero el modo y luego la sesión a NeuroAPI Connect (estándar por defecto)", async () => {
   mockFetch({ connect_url: "https://connect.neurochat.com.ec/sess_abc" });
 
   render(<CanalesPage />);
@@ -108,10 +110,22 @@ test("el botón Conectar WhatsApp pide la sesión al endpoint de NeuroAPI Connec
   const boton = await screen.findByRole("button", { name: /conectar whatsapp/i });
   await userEvent.click(boton);
 
+  // Abrir el selector no crea ninguna sesión todavía.
+  expect(await screen.findByRole("radio", { name: /modo exclusivo api/i })).toBeChecked();
+  expect(global.fetch).not.toHaveBeenCalledWith(
+    expect.stringContaining("/api/canales/whatsapp/neuroapi/iniciar"),
+    expect.anything(),
+  );
+
+  await userEvent.click(screen.getByRole("button", { name: /continuar con meta/i }));
+
   await waitFor(() => {
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/canales/whatsapp/neuroapi/iniciar"),
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ connection_mode: "standard" }),
+      }),
     );
   });
 
@@ -127,10 +141,28 @@ test("si el backend rechaza la vinculación automática, se muestra el error", a
 
   const boton = await screen.findByRole("button", { name: /conectar whatsapp/i });
   await userEvent.click(boton);
+  await userEvent.click(await screen.findByRole("button", { name: /continuar con meta/i }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent(
     /la vinculación automática de whatsapp no está configurada/i,
   );
+});
+
+test("elegir coexistencia envía connection_mode='coexistence' al crear la sesión", async () => {
+  mockFetch({ connect_url: "https://connect.neurochat.com.ec/sess_abc" });
+
+  render(<CanalesPage />);
+
+  await userEvent.click(await screen.findByRole("button", { name: /conectar whatsapp/i }));
+  await userEvent.click(await screen.findByRole("radio", { name: /modo coexistencia/i }));
+  await userEvent.click(screen.getByRole("button", { name: /continuar con meta/i }));
+
+  await waitFor(() => {
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/canales/whatsapp/neuroapi/iniciar"),
+      expect.objectContaining({ body: JSON.stringify({ connection_mode: "coexistence" }) }),
+    );
+  });
 });
 
 test("al volver con ?whatsapp_neuroapi=retorno se avisa y se vuelve a pedir la lista de números", async () => {

@@ -16,6 +16,8 @@ const TEXTO_POR_CODIGO: Record<string, string> = {
   cupo_numeros_whatsapp:
     "Tu plan no tiene plazas libres para otro número de WhatsApp activo. Mejora tu plan o pausa uno.",
   herramienta_no_incluida_en_plan: "Tu plan no incluye esta herramienta. Mejora tu plan para activarla.",
+  coexistencia_no_incluida_en_plan:
+    "Tu plan no incluye el modo coexistencia. Mejora tu plan o conecta el número en modo exclusivo API.",
   // 403
   linea_avisos_gestionada_por_plataforma:
     "Esta es la línea de avisos de la plataforma: la gestiona la plataforma, no se puede pausar ni desvincular.",

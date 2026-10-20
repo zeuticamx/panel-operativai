@@ -16,6 +16,10 @@ COPY . .
 # build, no se leen en runtime: hay que pasarlas como build args desde
 # EasyPanel (Build Args), no como variables de entorno del servicio.
 ARG NEXT_PUBLIC_API_URL
+# "true" = el portal reenvía /api/* al backend (rewrite en next.config.ts) y el
+# navegador solo habla con su propio origen: la cookie de refresh es de primera
+# parte. Ver backend/README.md "Sesión y refresh token".
+ARG NEXT_PUBLIC_API_PROXY
 ARG NEXT_PUBLIC_META_APP_ID
 ARG NEXT_PUBLIC_META_CONFIG_ID
 ARG NEXT_PUBLIC_META_REDIRECT_URI
@@ -23,6 +27,7 @@ ARG NEXT_PUBLIC_CHAT_IFRAME_URL
 ARG NEXT_PUBLIC_TENANT_ID
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_API_PROXY=$NEXT_PUBLIC_API_PROXY \
     NEXT_PUBLIC_META_APP_ID=$NEXT_PUBLIC_META_APP_ID \
     NEXT_PUBLIC_META_CONFIG_ID=$NEXT_PUBLIC_META_CONFIG_ID \
     NEXT_PUBLIC_META_REDIRECT_URI=$NEXT_PUBLIC_META_REDIRECT_URI \

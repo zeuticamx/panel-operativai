@@ -19,6 +19,10 @@ const PUERTO_BACKEND_HTTPS = "8443";
  * en vez de pisar NEXT_PUBLIC_API_URL con un valor fijo por entorno.
  */
 function resolverApiUrl(): string {
+  if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === "production") {
+    // Sin esto un build de producción apuntaría en silencio a localhost.
+    throw new Error("Falta NEXT_PUBLIC_API_URL: defínela como build arg antes de compilar.");
+  }
   const base = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
     /\/$/,
     "",
@@ -44,8 +48,24 @@ function resolverApiUrl(): string {
 
 export const API_URL = resolverApiUrl();
 
+/**
+ * Base de las peticiones HTTP (fetch). Con NEXT_PUBLIC_API_PROXY=true es ""
+ * (rutas relativas): el navegador le habla al propio portal y next.config.ts
+ * reenvía `/api/*` al backend, de modo que la cookie de refresh es de
+ * primera parte. Los sockets siguen yendo directo a `API_URL`: se
+ * autentican con el access token, no con la cookie, y el proxy de Next no
+ * reenvía WebSockets.
+ */
+export const API_HTTP_URL = process.env.NEXT_PUBLIC_API_PROXY === "true" ? "" : API_URL;
+
 const ACCESS_KEY = "operativai_access_token";
-const REFRESH_KEY = "operativai_refresh_token";
+/**
+ * Clave vieja (antes de spec 006), de un cliente anterior que todavía
+ * tenga el refresh en localStorage. Ya no se escribe nunca: solo se lee,
+ * una vez, la primera vez que hace falta refrescar (ver
+ * `_refreshLegacyUnaVez` más abajo), y se borra en cuanto sirvió o falló.
+ */
+const REFRESH_KEY_LEGACY = "operativai_refresh_token";
 const AUTH_EVENT = "operativai-auth-change";
 
 /**
@@ -69,13 +89,17 @@ export function getAccessToken(): string | null {
   );
 }
 
-export function getRefreshToken(): string | null {
+/**
+ * Refresh de un cliente viejo (antes de spec 006) que lo haya dejado en
+ * localStorage. Se lee UNA sola vez (lo borra tanto si sirve como si no):
+ * de ahí en más el refresh vive solo en la cookie HttpOnly que puso el
+ * backend, nunca en storage que JS pueda leer.
+ */
+function _refreshLegacyUnaVez(): string | null {
   if (typeof window === "undefined") return null;
-  // En "ver como" no hay refresh. Devolver el del gerente sería peor que
-  // nada: refrescaría SU sesión y el reintento seguiría saliendo con el
-  // token vencido de la impersonación, que es el que manda getAccessToken.
-  if (enVerComo()) return null;
-  return window.localStorage.getItem(REFRESH_KEY);
+  const token = window.localStorage.getItem(REFRESH_KEY_LEGACY);
+  if (token) window.localStorage.removeItem(REFRESH_KEY_LEGACY);
+  return token;
 }
 
 export function enVerComo(): boolean {
@@ -99,18 +123,39 @@ export function terminarVerComo(): string {
   return volver;
 }
 
-export function setTokens(tokens: Pick<TokenOut, "access_token" | "refresh_token">) {
+/**
+ * Guarda el access token (spec 006: el refresh ya no pasa por acá, viaja
+ * en la cookie HttpOnly que el backend dejó puesta en la misma respuesta).
+ * Acepta el `TokenOut` completo porque así llega de /auth/login,
+ * /verificar, /google e /invitacion/aceptar — `refresh_token` ahí viene
+ * `null` y simplemente se ignora.
+ */
+export function setTokens(tokens: Pick<TokenOut, "access_token">) {
   window.localStorage.setItem(ACCESS_KEY, tokens.access_token);
-  window.localStorage.setItem(REFRESH_KEY, tokens.refresh_token);
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
+/**
+ * Limpia la sesión local y, en paralelo, le pide al backend que cierre la
+ * sesión de refresh (borra la fila y expira la cookie). No espera esa
+ * respuesta ni falla si no llega: el cliente ya quedó deslogueado de
+ * todos modos, y reintentar un logout no tiene sentido.
+ */
 export function clearTokens() {
   window.localStorage.removeItem(ACCESS_KEY);
-  window.localStorage.removeItem(REFRESH_KEY);
+  window.localStorage.removeItem(REFRESH_KEY_LEGACY);
   window.sessionStorage.removeItem(VER_COMO_KEY);
   window.sessionStorage.removeItem(VER_COMO_VOLVER_KEY);
   window.dispatchEvent(new Event(AUTH_EVENT));
+
+  if (typeof window !== "undefined") {
+    fetch(`${API_HTTP_URL}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }).catch(() => {});
+  }
 }
 
 export function onAuthChange(cb: () => void) {
@@ -236,13 +281,17 @@ async function refrescarTokens(): Promise<boolean> {
   if (refreshEnCurso) return refreshEnCurso;
 
   refreshEnCurso = (async () => {
-    const refresh = getRefreshToken();
-    if (!refresh) return false;
+    // El refresh normal va en la cookie HttpOnly (`credentials: "include"`
+    // la manda sola); el cuerpo solo lleva algo si queda un refresh de un
+    // cliente viejo (spec 006, ventana de migración) — y se borra apenas
+    // se usa, sirva o no.
+    const legacy = _refreshLegacyUnaVez();
     try {
-      const res = await fetch(`${API_URL}/api/auth/refresh`, {
+      const res = await fetch(`${API_HTTP_URL}/api/auth/refresh`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refresh }),
+        body: JSON.stringify(legacy ? { refresh_token: legacy } : {}),
       });
       if (!res.ok) return false;
       const data = (await res.json()) as TokenOut;
@@ -304,11 +353,17 @@ export async function apiFetch<T = unknown>(
     return {
       ...rest,
       headers,
+      // El backend y el portal viven en dominios distintos (spec 006): sin
+      // esto el navegador ni manda la cookie `op_refresh` en /auth/refresh
+      // y /auth/logout, ni guarda la que pone /auth/login. El resto de los
+      // endpoints no la usan (va con Path=/api/auth), así que no hay nada
+      // que perder por mandarla siempre.
+      credentials: "include",
       body: json !== undefined ? JSON.stringify(json) : rest.body,
     };
   };
 
-  const url = path.startsWith("http") ? path : `${API_URL}${path}`;
+  const url = path.startsWith("http") ? path : `${API_HTTP_URL}${path}`;
 
   let res: Response;
   try {

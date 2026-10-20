@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAccessToken } from "@/lib/auth";
 import { useUsuario } from "./usuario-context";
 
 /**
@@ -12,8 +11,18 @@ import { useUsuario } from "./usuario-context";
  */
 const CHAT_IFRAME_SRC = process.env.NEXT_PUBLIC_CHAT_IFRAME_URL ?? "";
 
-/** Origen permitido para el postMessage. Debe matchear el dominio del iframe. */
-const CHAT_IFRAME_ORIGIN = "*"; // ⚠️ EDITAR: restringir al origen real en prod.
+/**
+ * Origen exacto del iframe: el postMessage solo se entrega a ese origen.
+ * Si la URL no es válida, queda en null y no se envía nada.
+ */
+function origenDe(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+const CHAT_IFRAME_ORIGIN = origenDe(CHAT_IFRAME_SRC);
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -26,17 +35,17 @@ export function ChatWidget() {
   if (open && !montado) setMontado(true);
 
   const handleLoad = () => {
-    if (!iframeRef.current?.contentWindow) return;
+    if (!iframeRef.current?.contentWindow || !CHAT_IFRAME_ORIGIN) return;
 
-    // ⚠️ EDITAR AQUÍ: forma del payload que espera el iframe del chat.
+    // Sin token ni tenant_id: el chat solo necesita el correo del usuario
+    // (chat-service/app/embed/page.tsx lee data.usuario.email). El token de
+    // sesión no sale de la página.
     const payload = {
       type: "auth-sync",
-      token: getAccessToken(),
       usuario: usuario
         ? {
             id: usuario.id,
             email: usuario.email,
-            tenant_id: process.env.NEXT_PUBLIC_TENANT_ID ?? "",
             nombre_negocio: usuario.nombre_negocio,
           }
         : null,

@@ -10,7 +10,9 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { RecorridoProvider } from "@/app/components/recorrido";
 import { PageHeader } from "@/app/components/ui";
 import { useUsuario } from "@/app/components/usuario-context";
-import { marcarRecorridoVisto } from "@/lib/recorridos";
+import { CLAVE_OFERTA_AVISOS_MOSTRADA } from "@/lib/avisos-cita";
+import { publicarOfertaAvisosAbierta } from "@/lib/oferta-avisos-estado";
+import { marcarRecorridoVisto, recorridoVisto } from "@/lib/recorridos";
 
 let mockPathname = "/conversaciones";
 jest.mock("next/navigation", () => ({ usePathname: () => mockPathname }));
@@ -65,6 +67,8 @@ beforeEach(() => {
   marcarRecorridoVisto("u1", "/conversaciones");
   marcarRecorridoVisto("u1", "/dashboard");
   marcarRecorridoVisto("publico", "/registro");
+  sessionStorage.clear();
+  publicarOfertaAvisosAbierta(false);
 });
 
 afterEach(() => {
@@ -224,6 +228,64 @@ test("la primera vez que el cliente entra a la vista arranca solo, y después ya
   // Sigue disponible a mano.
   fireEvent.click(boton()!);
   expect(screen.getByRole("dialog")).toBeInTheDocument();
+});
+
+// La oferta de avisos de cita va primero (spec 007, RF-12).
+describe("primera visita con la oferta de avisos de cita", () => {
+  const conOferta = () => conUsuario({ oferta_avisos_cita_pendiente: true, impersonado_por: null });
+
+  test("con la oferta pendiente por abrir no arranca ni se marca como visto", () => {
+    localStorage.clear();
+    conOferta();
+    montar();
+    act(() => jest.advanceTimersByTime(2000));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(recorridoVisto("u1", "/conversaciones")).toBe(false);
+  });
+
+  test("con el modal abierto (clave ya en 1) espera; al cerrarse arranca solo tras 600 ms", () => {
+    localStorage.clear();
+    conOferta();
+    sessionStorage.setItem(CLAVE_OFERTA_AVISOS_MOSTRADA, "1");
+    act(() => publicarOfertaAvisosAbierta(true));
+    montar();
+    act(() => jest.advanceTimersByTime(2000));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(recorridoVisto("u1", "/conversaciones")).toBe(false);
+
+    act(() => publicarOfertaAvisosAbierta(false));
+    act(() => jest.advanceTimersByTime(500));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(200));
+    expect(screen.getByText("1 de 6")).toBeInTheDocument();
+    expect(recorridoVisto("u1", "/conversaciones")).toBe(true);
+  });
+
+  test("sin oferta pendiente se comporta como siempre", () => {
+    localStorage.clear();
+    conUsuario({ oferta_avisos_cita_pendiente: false });
+    montar();
+    act(() => jest.advanceTimersByTime(1000));
+    expect(tituloPaso()).toBe("Conversaciones");
+  });
+
+  test("oferta ya mostrada y cerrada: el recorrido arranca normal", () => {
+    localStorage.clear();
+    conOferta();
+    sessionStorage.setItem(CLAVE_OFERTA_AVISOS_MOSTRADA, "1");
+    montar();
+    act(() => jest.advanceTimersByTime(1000));
+    expect(tituloPaso()).toBe("Conversaciones");
+  });
+
+  test("si el recorrido ya está en curso cuando abre el modal, se deja como está", () => {
+    conOferta();
+    sessionStorage.setItem(CLAVE_OFERTA_AVISOS_MOSTRADA, "1");
+    montar();
+    fireEvent.click(boton()!);
+    act(() => publicarOfertaAvisosAbierta(true));
+    expect(tituloPaso()).toBe("Conversaciones");
+  });
 });
 
 test("en una sesión «ver como» no arranca solo, pero el botón sí está", () => {

@@ -37,6 +37,8 @@ export interface UsuarioOut {
   foto_version?: string | null;
   /** Cuenta nueva con el cuestionario de bienvenida sin contestar ni omitir. */
   onboarding_pendiente?: boolean;
+  /** Owner/superadmin con calendario activo que aún no decidió la oferta de avisos de cita (spec 007); false en "ver como". */
+  oferta_avisos_cita_pendiente?: boolean;
 }
 
 // ---- Perfil (routers/perfil.py) ----
@@ -144,6 +146,34 @@ export interface AgenteConfig {
   is_active: boolean;
   /** Lo que el plan deja elegir. Solo viene en las respuestas; el PUT no lo manda. */
   limites_plan?: LimitesAgente | null;
+}
+
+/** Un turno de la conversación de prueba (vive solo en el navegador). */
+export interface TurnoPrueba {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Espejo de ProbarAgenteIn (backend/schemas.py): el borrador del formulario + la conversación. */
+export interface ProbarAgenteIn {
+  agent_name: string;
+  system_prompt: string;
+  model: string | null;
+  temperature: number;
+  history_window: number;
+  mensajes: TurnoPrueba[];
+}
+
+/** Espejo de ProbarAgenteOut. */
+export interface ProbarAgenteOut {
+  texto: string;
+  modelo: string;
+  /** El agente habría pasado la conversación a una persona (no se transfirió nada). */
+  transferida: boolean;
+  herramientas: { tool_key: string; parametros: Record<string, unknown> }[];
+  tokens_entrada: number;
+  tokens_salida: number;
+  restantes_hoy: number;
 }
 
 /** Espejo de LimitesAgenteOut (services/limites_agente.py). */
@@ -297,9 +327,23 @@ export interface IniciarNeuroApiConnectIn {
   connection_mode: ModoConexionWhatsApp;
 }
 
-/** POST /api/canales/whatsapp/neuroapi/iniciar — crea una NeuroAPI Connect Session. */
+/**
+ * POST /api/canales/whatsapp/neuroapi/iniciar y /api/canales/instagram/neuroapi/iniciar
+ * — crea una NeuroAPI Connect Session.
+ */
 export interface IniciarNeuroApiConnectOut {
   connect_url: string;
+}
+
+/** GET /api/canales/instagram/neuroapi/estado — la última sesión de Instagram del negocio. */
+export interface EstadoInstagramNeuroApiOut {
+  session_id: string;
+  estado: "pendiente" | "completado" | "fallido";
+  /** vinculado | propio | ajeno | rechazado; null mientras está pendiente. */
+  resultado: string | null;
+  /** p. ej. `cuenta_instagram_no_encontrada`, `demasiados_intentos`. */
+  codigo: string | null;
+  username: string | null;
 }
 
 // ---- Herramientas ----
@@ -399,7 +443,22 @@ export interface AsignableOut {
   role: string;
 }
 
-export interface ConversacionOut extends AsignacionConversacion {
+/**
+ * De qué número/agente de WhatsApp es una conversación (spec 005a). Todo en
+ * null para Instagram/Facebook/widget: un solo agente compartido, sin
+ * ambigüedad posible. `tiene_varios_numeros` dice si el negocio tiene más de
+ * un número vinculado — con uno solo no vale la pena mostrar de cuál es.
+ */
+export interface NumeroDeConversacion {
+  agente_canal_id: string | null;
+  numero_telefono_visible: string | null;
+  numero_phone_number_id: string | null;
+  numero_agent_name: string | null;
+  numero_es_linea_avisos: boolean;
+  tiene_varios_numeros: boolean;
+}
+
+export interface ConversacionOut extends AsignacionConversacion, NumeroDeConversacion {
   id: string;
   channel_type: string;
   status: string;
@@ -447,7 +506,7 @@ export interface ConversacionEstadoOut {
   asignado_a?: string | null;
 }
 
-export interface ConversacionDetalleOut extends AsignacionConversacion {
+export interface ConversacionDetalleOut extends AsignacionConversacion, NumeroDeConversacion {
   id: string;
   channel_type: string;
   status: string;
@@ -457,6 +516,11 @@ export interface ConversacionDetalleOut extends AsignacionConversacion {
   usuario_username: string | null;
   ultimo_mensaje_cliente_at: string | null;
   minutos_restantes_ventana: number | null;
+  /**
+   * Instagram vinculado por NeuroAPI: minutos que le quedan a una persona del
+   * equipo para contestar (7 días, etiqueta HUMAN_AGENT). null en otros canales.
+   */
+  minutos_restantes_ventana_humana?: number | null;
   /** Último corte de contexto del agente (ISO con zona) o null si nunca se limpió. */
   contexto_limpiado_en: string | null;
   /** true solo si el botón «Limpiar contexto» puede funcionar para esta sesión. */
@@ -1083,6 +1147,46 @@ export interface CrearPagoOut {
   checkout_url: string;
   monto: string;
   concepto: string;
+}
+
+// ------------------------------------------------------------
+// Stripe Connect: cobros propios de cada negocio (espejo de la sección
+// "STRIPE CONNECT" de backend/schemas.py). Separado de la facturación de
+// la plataforma de arriba — esto es la cuenta de Stripe que CADA tenant
+// conecta para cobrarle a SUS clientes.
+// ------------------------------------------------------------
+export type EstadoCobroConnect = "activo" | "pagado" | "desactivado";
+
+export interface ConnectEstadoOut {
+  conectado: boolean;
+  charges_habilitado: boolean;
+  payouts_habilitado: boolean;
+  detalles_enviados: boolean;
+  requisitos_pendientes: string[];
+}
+
+/** URL del Account Link hospedado por Stripe. De un solo uso. */
+export interface ConnectOnboardingOut {
+  url: string;
+}
+
+export interface CrearCobroConnectIn {
+  descripcion: string;
+  monto: string;
+}
+
+export interface CobroConnectOut {
+  id: string;
+  descripcion: string;
+  monto: string;
+  moneda: string;
+  url_cobro: string | null;
+  estado: EstadoCobroConnect;
+  application_fee_monto: string | null;
+  /** true si lo generó el agente de IA en una conversación, no el owner desde /cobros. */
+  generado_por_agente: boolean;
+  creado_en: string;
+  pagado_en: string | null;
 }
 
 // ============================================================
@@ -2086,4 +2190,52 @@ export interface PlantillaPruebaIn {
   telefono: string;
   valores_cuerpo: string[];
   valor_encabezado?: string;
+}
+
+// ---- Avisos de cita por negocio (spec 007, routers/avisos_cita_config.py) ----
+export type EstadoPlantillaAviso = "NO_CREADA" | "PENDING" | "APPROVED" | "REJECTED" | "PAUSED" | "DISABLED";
+
+export type TipoAviso = "recordatorio" | "cancelacion";
+
+export type OfertaAvisos = "pendiente" | "aceptada" | "rechazada";
+
+export interface FuncionAviso {
+  tipo: TipoAviso;
+  nombre: string;
+  texto: string;
+  activa: boolean;
+  estado_plantilla: EstadoPlantillaAviso;
+  motivo_rechazo: string | null;
+}
+
+export interface ConfigAvisos {
+  oferta: OfertaAvisos;
+  calendario_activo: boolean;
+  numero_emisor_ok: boolean;
+  /** Siempre [recordatorio, cancelación]. */
+  funciones: FuncionAviso[];
+  /** Confirmación tras POST /oferta; en GET va null. */
+  mensaje: string | null;
+}
+
+export interface ConfigAvisosPatchIn {
+  recordatorio_activo?: boolean;
+  cancelacion_activo?: boolean;
+}
+
+export interface OfertaAvisosIn {
+  accion: "aceptar" | "rechazar";
+}
+
+/** GET /api/gerencia/numero-conversaciones: el número cuyas conversaciones abre gerencia. */
+export interface NumeroGerenciaOut {
+  tenant_id: string;
+  tenant_nombre: string;
+  agente_canal_id: string;
+}
+
+/** GET /api/vista-gerencia: `aplica` es false si este negocio no es el del número. */
+export interface VistaGerenciaOut {
+  aplica: boolean;
+  revocada: boolean;
 }

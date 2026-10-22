@@ -178,6 +178,41 @@ export function estadoVentanaMeta(minutosRestantes: number | null): EstadoVentan
   };
 }
 
+function duracionLarga(minutos: number): string {
+  const dias = Math.floor(minutos / 1440);
+  if (dias === 0) return duracionCorta(minutos);
+  const horas = Math.floor((minutos % 1440) / 60);
+  return horas === 0 ? `${dias} d` : `${dias} d ${horas} h`;
+}
+
+/**
+ * Instagram vinculado por NeuroAPI: una persona del equipo puede contestar
+ * hasta 7 días después del último mensaje del cliente (etiqueta HUMAN_AGENT),
+ * aunque la ventana de 24 h del agente ya se haya cerrado. Solo se muestra
+ * cuando aporta algo: con la de 24 h abierta, la de 24 h ya lo dice todo.
+ */
+export function estadoVentanaHumana(
+  minutosRestantes: number | null | undefined,
+  minutosVentana24h: number | null,
+): EstadoVentana | null {
+  if (minutosRestantes === null || minutosRestantes === undefined) return null;
+  if (minutosVentana24h !== null && minutosVentana24h >= 0) return null;
+
+  if (minutosRestantes < 0) {
+    return {
+      tono: "danger",
+      texto: "Pasaron más de 7 días: Instagram ya no permite contestar a este cliente hasta que vuelva a escribir",
+      textoCorto: "Equipo · cerrada",
+    };
+  }
+  const texto = duracionLarga(minutosRestantes);
+  return {
+    tono: minutosRestantes < 1440 ? "warning" : "success",
+    texto: `Una persona del equipo aún puede contestar por Instagram · quedan ${texto}`,
+    textoCorto: `Equipo · ${texto}`,
+  };
+}
+
 // ------------------------------------------------------------
 // Embudo de venta (módulo de vendedores)
 // ------------------------------------------------------------

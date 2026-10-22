@@ -1,6 +1,6 @@
 import { ApiError } from "./auth";
 import { fmtInt } from "./formato";
-import type { ListaNumeros, NumeroWhatsApp } from "./types";
+import type { ListaNumeros, NumeroDeConversacion, NumeroWhatsApp } from "./types";
 
 /**
  * Reglas de presentación de los números de WhatsApp de un negocio (spec 005a).
@@ -111,6 +111,26 @@ export function esUltimoActivo(numeros: NumeroWhatsApp[], numeroId: string): boo
 /** Nombre para mostrar de un número: teléfono visible si lo hay, si no el identificador. */
 export function nombreNumero(n: Pick<NumeroWhatsApp, "telefono_visible" | "phone_number_id">): string {
   return n.telefono_visible?.trim() || n.phone_number_id;
+}
+
+/**
+ * Etiqueta para distinguir de qué número/agente es una conversación, cuando
+ * el negocio tiene más de uno (con uno solo no hace falta: null). Mismo
+ * criterio de nombre que el selector de números: el nombre del agente si lo
+ * tiene configurado, si no el teléfono — y el sufijo "(línea de avisos)"
+ * cuando es la línea que gestiona la plataforma.
+ */
+export function etiquetaNumeroConversacion(
+  c: NumeroDeConversacion,
+): { texto: string; title: string } | null {
+  if (!c.agente_canal_id || !c.tiene_varios_numeros) return null;
+  const telefono = c.numero_telefono_visible?.trim() || c.numero_phone_number_id || "";
+  const nombre = c.numero_agent_name?.trim() || telefono;
+  const texto = c.numero_es_linea_avisos ? `${nombre} (línea de avisos)` : nombre;
+  return {
+    texto,
+    title: telefono ? `Agente de ${telefono}` : "Agente de este número",
+  };
 }
 
 // ------------------------------------------------------------

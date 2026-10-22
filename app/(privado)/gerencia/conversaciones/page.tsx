@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
 import { useApi, useDebounce } from "@/lib/use-api";
-import type { ConversacionOut, TenantGerenciaOut } from "@/lib/types";
+import type { ConversacionOut, NumeroGerenciaOut, TenantGerenciaOut } from "@/lib/types";
 import { CANALES, etiquetaCanal } from "@/lib/formato";
+import { FiltrosConversaciones } from "@/app/components/filtros-conversaciones";
 import { ConversationRow } from "@/app/components/conversation-row";
 import { GerenciaTabs } from "@/app/components/gerencia";
-import { Aviso, Boton, PageHeader, selectClass } from "@/app/components/ui";
+import { Aviso, PageHeader } from "@/app/components/ui";
 
 const LIMITE = 25;
 
@@ -24,10 +24,19 @@ const ESTADOS = [
  * tenant_id viaja por query string en vez de un buscador propio — ya existe
  * uno completo en /gerencia/tenants, así que se enlaza desde ahí (ver el
  * botón "Ver conversaciones" en /gerencia/tenants/[id]).
+ *
+ * Sin tenant_id abre el atajo: las conversaciones del número de WhatsApp
+ * configurado en el backend (GERENCIA_NUMERO_PHONE_NUMBER_ID). Si el dueño
+ * revocó la vista, el backend contesta 403 y se explica aquí.
  */
 export default function ConversacionesGerenciaPage() {
   const params = useSearchParams();
-  const tenantId = params.get("tenant_id");
+  const tenantParam = params.get("tenant_id");
+
+  // Atajo: sin tenant_id en la URL se resuelve el número configurado.
+  const numero = useApi<NumeroGerenciaOut>(tenantParam ? null : "/api/gerencia/numero-conversaciones");
+  const tenantId = tenantParam ?? numero.data?.tenant_id ?? null;
+  const numeroId = tenantParam ? null : (numero.data?.agente_canal_id ?? null);
 
   const [canal, setCanal] = useState("");
   const [estado, setEstado] = useState("");
@@ -42,11 +51,32 @@ export default function ConversacionesGerenciaPage() {
     if (canal) qs.set("canal", canal);
     if (estado) qs.set("estado", estado);
     if (buscarDebounced) qs.set("buscar", buscarDebounced.slice(0, 100));
+    if (numeroId) qs.set("numero_id", numeroId);
     qs.set("limite", String(LIMITE));
     return `/api/gerencia/tenants/${tenantId}/conversaciones?${qs.toString()}`;
-  }, [tenantId, canal, estado, buscarDebounced]);
+  }, [tenantId, numeroId, canal, estado, buscarDebounced]);
 
   const { data, loading, error } = useApi<ConversacionOut[]>(path);
+
+  if (!tenantParam && numero.loading && !numero.data) {
+    return (
+      <>
+        <PageHeader titulo="Conversaciones" acciones={<GerenciaTabs />} />
+        <div className="p-6 text-center font-mono text-xs text-text-600">cargando…</div>
+      </>
+    );
+  }
+
+  if (!tenantParam && numero.error && numero.data === null && /revoc/i.test(numero.error)) {
+    return (
+      <>
+        <PageHeader titulo="Conversaciones" acciones={<GerenciaTabs />} />
+        <Aviso tipo="error" className="m-4">
+          {numero.error}
+        </Aviso>
+      </>
+    );
+  }
 
   if (!tenantId) {
     return (
@@ -81,58 +111,22 @@ export default function ConversacionesGerenciaPage() {
         acciones={<GerenciaTabs />}
       />
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-bg-700 bg-bg-900 px-4 py-2">
-        <div className="relative min-w-0 flex-1 basis-56">
-          <Search
-            size={13}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-600"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={buscar}
-            onChange={(e) => setBuscar(e.target.value)}
-            placeholder="Buscar por nombre o número…"
-            maxLength={100}
-            className="w-full rounded-md border border-bg-700 bg-bg-950 py-1.5 pr-3 pl-8 text-xs text-text-100 placeholder:text-text-600 focus:border-bg-600 focus:outline-none"
-          />
-        </div>
-
-        <select
-          value={canal}
-          onChange={(e) => setCanal(e.target.value)}
-          aria-label="Canal"
-          className={`${selectClass} w-auto py-1.5 text-xs`}
-        >
-          <option value="">Todos los canales</option>
-          {CANALES.map((c) => (
-            <option key={c} value={c}>
-              {etiquetaCanal(c)}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={estado}
-          onChange={(e) => setEstado(e.target.value)}
-          aria-label="Estado"
-          className={`${selectClass} w-auto py-1.5 text-xs`}
-        >
-          <option value="">Cualquier estado</option>
-          {ESTADOS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-
-        {hayFiltros && (
-          <Boton variante="fantasma" onClick={limpiar} className="min-h-8 px-2">
-            <X size={13} aria-hidden />
-            Limpiar
-          </Boton>
-        )}
-      </div>
+      <FiltrosConversaciones
+        buscar={buscar}
+        onBuscar={setBuscar}
+        onLimpiar={limpiar}
+        campos={[
+          {
+            id: "canal",
+            label: "Canal",
+            todas: "Todos los canales",
+            value: canal,
+            onChange: setCanal,
+            opciones: CANALES.map((c) => ({ value: c, label: etiquetaCanal(c) })),
+          },
+          { id: "estado", label: "Estado", todas: "Cualquier estado", value: estado, onChange: setEstado, opciones: ESTADOS },
+        ]}
+      />
 
       <div className="flex-1 overflow-y-auto">
         {error && (

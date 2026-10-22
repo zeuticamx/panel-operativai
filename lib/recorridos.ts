@@ -233,6 +233,17 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     { ancla: "suscripcion.historial", titulo: "Historial de pagos", texto: "Todos tus pagos y su estado." },
     AYUDA,
   ],
+  "/cobros": [
+    intro("Cobros", "Cobra directo a tus clientes con links de pago de Stripe — distinto de Suscripción, que es lo que tú le pagas a OperativAI."),
+    { ancla: "cobros.conectar", titulo: "Conecta tu cuenta", texto: "Antes de cobrar, conecta tu propia cuenta de Stripe: el dinero llega directo a ti." },
+    { ancla: "cobros.generar", titulo: "Genera un link", texto: "Escribe el concepto y el monto, y comparte el link con tu cliente." },
+    { ancla: "cobros.historial", titulo: "Cobros generados", texto: "Todos los links que generaste, incluidos los que tu agente de IA manda solo durante una conversación." },
+    AYUDA,
+  ],
+  "/cobros/conectar": [
+    intro("Volviste de Stripe", "Aquí confirmamos si tu cuenta ya puede cobrar."),
+    AYUDA,
+  ],
   "/preferencias": [
     intro("Preferencias", "Tu perfil personal y la apariencia del portal. Si eres el dueño, también los servicios y los usuarios de tu negocio."),
     { ancla: "preferencias.foto", titulo: "Foto de perfil", texto: "Sube o quita tu foto." },

@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Sun,
   Users,
+  Wallet,
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,13 +72,17 @@ const NAV_GRUPOS: { titulo: string; items: Item[] }[] = [
 ];
 
 const NAV_SUSCRIPCION: Item = { icon: CreditCard, label: "Suscripción", href: "/suscripcion" };
+// Cobros propios del negocio (Stripe Connect): junto a Suscripción porque es
+// la otra pantalla de dinero, pero es un flujo totalmente distinto (lo que
+// el negocio le cobra a SUS clientes, no lo que paga a OperativAI).
+const NAV_COBROS: Item = { icon: Wallet, label: "Cobros", href: "/cobros" };
 
 // Sección del equipo de OperativAI, no del negocio. Va aparte y al final
 // para que se lea como lo que es: otro nivel, no una pantalla más del
 // portal del cliente.
 const NAV_PLATAFORMA: Item = { icon: ShieldCheck, label: "Plataforma", href: "/gerencia" };
 
-const TODOS = [...NAV_GRUPOS.flatMap((g) => g.items), NAV_SUSCRIPCION];
+const TODOS = [...NAV_GRUPOS.flatMap((g) => g.items), NAV_SUSCRIPCION, NAV_COBROS];
 
 // Barra inferior móvil: hasta cuatro destinos de uso diario, al alcance del
 // pulgar; el resto vive en "Más". En orden de preferencia: se toman los
@@ -133,6 +138,7 @@ export function Sidebar() {
     (g) => g.items.length > 0,
   );
   const suscripcion = visible(NAV_SUSCRIPCION) ? NAV_SUSCRIPCION : null;
+  const cobros = visible(NAV_COBROS) ? NAV_COBROS : null;
   const todos = TODOS.filter(visible);
   const movilHrefs = MOVIL_PREFERIDOS.filter((href) => todos.some((i) => i.href === href)).slice(0, MOVIL_MAX);
   const movil = movilHrefs.map((href) => todos.find((i) => i.href === href)!);
@@ -253,6 +259,7 @@ export function Sidebar() {
           ))}
           <div className="flex-1" />
           {suscripcion && railLink(suscripcion)}
+          {cobros && railLink(cobros)}
           {/* Solo para el nivel gerencia de plataforma. El backend lo
               vuelve a comprobar en cada endpoint: esconder el link es
               para no ofrecer una puerta que no abre, no la seguridad. */}

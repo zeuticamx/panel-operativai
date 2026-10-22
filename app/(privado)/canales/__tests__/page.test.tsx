@@ -176,18 +176,109 @@ test("al volver con ?whatsapp_neuroapi=retorno se avisa y se vuelve a pedir la l
   expect(screen.queryByText(/no recibimos la confirmación/i)).not.toBeInTheDocument();
 });
 
-test("Instagram y Facebook muestran Próximamente en vez del botón de conectar", async () => {
+test("Facebook sigue en Próximamente; Instagram se vincula por NeuroAPI", async () => {
   mockFetch({});
 
   render(<CanalesPage />);
 
   const botones = await screen.findAllByRole("button", { name: /próximamente/i });
-  expect(botones).toHaveLength(2); // uno por fila: instagram y facebook
-  for (const boton of botones) {
-    expect(boton).toBeDisabled();
-  }
+  expect(botones).toHaveLength(1); // solo la fila de facebook
+  expect(botones[0]).toBeDisabled();
+  expect(screen.getByRole("button", { name: /vincular instagram direct/i })).toBeEnabled();
   // El botón real de conexión por Meta no debe existir en ningún lado.
   expect(screen.queryByRole("button", { name: /conectar con facebook/i })).not.toBeInTheDocument();
+});
+
+function mockInstagram(estado: unknown, respuestaIniciar: unknown = {}, statusIniciar = 200) {
+  (global.fetch as jest.Mock).mockImplementation((url: string, opciones?: RequestInit) => {
+    const responder = (data: unknown, status = 200) =>
+      Promise.resolve({ ok: status < 400, status, text: async () => JSON.stringify(data) });
+    if (url.includes("/api/canales/instagram/neuroapi/iniciar") && opciones?.method === "POST") {
+      return responder(respuestaIniciar, statusIniciar);
+    }
+    if (url.includes("/api/canales/instagram/neuroapi/estado")) return responder(estado);
+    if (url.endsWith("/api/canales")) return responder(SIN_CANALES);
+    if (url.endsWith("/api/canales/whatsapp/numeros")) return responder(listaNumeros(1));
+    return responder(null);
+  });
+}
+
+test("Vincular Instagram Direct pide la sesión al backend (sin cuerpo)", async () => {
+  mockInstagram(null, { connect_url: "https://connect.neurochat.com.ec/ig" });
+
+  render(<CanalesPage />);
+  await userEvent.click(await screen.findByRole("button", { name: /vincular instagram direct/i }));
+
+  await waitFor(() => {
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/canales/instagram/neuroapi/iniciar"),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+test("si el backend no puede abrir la sesión de Instagram, se muestra el error", async () => {
+  mockInstagram(null, { detail: "La vinculación de Instagram no está configurada" }, 503);
+
+  render(<CanalesPage />);
+  await userEvent.click(await screen.findByRole("button", { name: /vincular instagram direct/i }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(/la vinculación de instagram no está configurada/i);
+});
+
+test("al volver de Meta con la sesión aún pendiente se espera al webhook", async () => {
+  searchParams = new URLSearchParams("instagram_neuroapi=retorno&status=success");
+  mockInstagram({ session_id: "s", estado: "pendiente", resultado: null, codigo: null, username: null });
+
+  render(<CanalesPage />);
+
+  expect(await screen.findByText(/terminando de vincular tu instagram/i)).toBeInTheDocument();
+  expect(screen.queryByText(/instagram vinculado/i)).not.toBeInTheDocument();
+});
+
+test("al volver de Meta con la cuenta vinculada se confirma con su usuario", async () => {
+  searchParams = new URLSearchParams("instagram_neuroapi=retorno&status=success");
+  mockInstagram({
+    session_id: "s",
+    estado: "completado",
+    resultado: "vinculado",
+    codigo: null,
+    username: "mi_tienda_oficial",
+  });
+
+  render(<CanalesPage />);
+
+  expect(await screen.findByText(/instagram vinculado \(@mi_tienda_oficial\)/i)).toBeInTheDocument();
+});
+
+test("una cuenta que no se pudo vincular no dice de quién es", async () => {
+  searchParams = new URLSearchParams("instagram_neuroapi=retorno&status=success");
+  mockInstagram({
+    session_id: "s",
+    estado: "fallido",
+    resultado: "ajeno",
+    codigo: "cuenta_instagram_no_encontrada",
+    username: "otra_cuenta",
+  });
+
+  render(<CanalesPage />);
+
+  expect(await screen.findByText(/no se pudo vincular esa cuenta de instagram/i)).toBeInTheDocument();
+  expect(screen.queryByText(/otra_cuenta/)).not.toBeInTheDocument();
+});
+
+test("si el negocio canceló en Meta se avisa sin consultar la sesión", async () => {
+  searchParams = new URLSearchParams("instagram_neuroapi=retorno&status=cancelled");
+  mockInstagram(null);
+
+  render(<CanalesPage />);
+
+  expect(await screen.findByText(/no se completó la autorización de instagram/i)).toBeInTheDocument();
+  expect(global.fetch).not.toHaveBeenCalledWith(
+    expect.stringContaining("/api/canales/instagram/neuroapi/estado"),
+    expect.anything(),
+  );
 });
 
 test("un canal de Meta ya conectado conserva su botón de Desconectar", async () => {
@@ -209,6 +300,8 @@ test("un canal de Meta ya conectado conserva su botón de Desconectar", async ()
   expect(await screen.findByRole("button", { name: /^desconectar$/i })).toBeInTheDocument();
   // Facebook sigue sin conectar: a esa fila sí le toca Próximamente.
   expect(await screen.findByRole("button", { name: /próximamente/i })).toBeInTheDocument();
+  // Instagram ya conectado: no se ofrece vincularlo otra vez.
+  expect(screen.queryByRole("button", { name: /vincular instagram direct/i })).not.toBeInTheDocument();
 });
 
 async function desconectarInstagram(proveedor: string | null) {

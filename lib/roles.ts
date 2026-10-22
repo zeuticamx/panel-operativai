@@ -62,6 +62,7 @@ const RUTAS_SOLO_GERENCIA = [
   "/herramientas",
   "/suscripcion",
   "/pagos",
+  "/cobros",
   "/bienvenida",
   // Spec 005a (RF-14): conversaciones de números desvinculados, solo owner y superadmin.
   "/conversaciones/ocultas",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ConversacionOut } from "@/lib/types";
 import { aUtc, estadoVentanaMeta, etiquetaIdentificador, formatoCorto, iniciales } from "@/lib/formato";
+import { etiquetaNumeroConversacion } from "@/lib/numeros";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
 import { CanalBadge, StatusBadge } from "./status";
@@ -37,6 +38,7 @@ export function ConversationRow({
     "Sin nombre";
 
   const ventana = !compact ? estadoVentanaMeta(c.minutos_restantes_ventana) : null;
+  const numero = !compact ? etiquetaNumeroConversacion(c) : null;
 
   return (
     <Link
@@ -84,6 +86,11 @@ export function ConversationRow({
               {ventana && (
                 <Badge tone={ventana.tono} title={ventana.texto}>
                   {ventana.textoCorto}
+                </Badge>
+              )}
+              {numero && (
+                <Badge tone="neutral" title={numero.title} className="max-w-32 truncate">
+                  {numero.texto}
                 </Badge>
               )}
               {c.asignado_nombre ? (

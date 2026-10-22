@@ -3,7 +3,7 @@
  * llegan sin "Z" y son UTC. `aUtc` debe hacer que se conviertan a la hora
  * local del navegador en vez de leerse como si ya fueran locales.
  */
-import { aUtc, formatoCorto, formatoFechaHora, formatoHora } from "@/lib/formato";
+import { aUtc, estadoVentanaHumana, formatoCorto, formatoFechaHora, formatoHora } from "@/lib/formato";
 
 describe("aUtc", () => {
   it("agrega Z a un datetime sin zona", () => {
@@ -53,5 +53,24 @@ describe("formatos con aUtc", () => {
   it("formatoCorto muestra la hora del instante UTC cuando es hoy", () => {
     const ahora = new Date(conZ).getTime() + 60_000;
     expect(formatoCorto(aUtc(naive), ahora)).toBe(formatoHora(conZ));
+  });
+});
+
+describe("estadoVentanaHumana (Instagram por NeuroAPI, 7 días)", () => {
+  it("no se muestra en otros canales ni mientras la ventana de 24 h siga abierta", () => {
+    expect(estadoVentanaHumana(null, -30)).toBeNull();
+    expect(estadoVentanaHumana(undefined, -30)).toBeNull();
+    expect(estadoVentanaHumana(8000, 600)).toBeNull();
+  });
+
+  it("con las 24 h cerradas dice cuánto le queda al equipo", () => {
+    const e = estadoVentanaHumana(5 * 1440 + 120, -1500);
+    expect(e?.tono).toBe("success");
+    expect(e?.textoCorto).toBe("Equipo · 5 d 2 h");
+  });
+
+  it("avisa cuando queda menos de un día y cuando ya pasaron los 7", () => {
+    expect(estadoVentanaHumana(300, -9000)?.tono).toBe("warning");
+    expect(estadoVentanaHumana(-10, -9000)?.tono).toBe("danger");
   });
 });

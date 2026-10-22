@@ -79,9 +79,11 @@ it("la navegación principal agrupa operación diaria antes que configuración",
     "/conversaciones",
     "/calendario",
     "/canales",
+    "/plantillas",
     "/agente",
     "/herramientas",
     "/vendedores",
     "/suscripcion",
+    "/cobros",
   ]);
 });

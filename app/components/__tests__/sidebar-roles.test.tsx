@@ -45,7 +45,13 @@ it("el vendedor ve su cartera y sus chats", () => {
 });
 
 it("el colaborador ve la operación, no la configuración ni los pagos", () => {
-  expect(destinos("member")).toEqual(["/dashboard", "/conversaciones", "/calendario", "/vendedores"]);
+  expect(destinos("member")).toEqual([
+    "/dashboard",
+    "/conversaciones",
+    "/calendario",
+    "/plantillas",
+    "/vendedores",
+  ]);
 });
 
 it("mientras carga el usuario no se ofrece ningún destino", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { Check, ExternalLink, RefreshCw, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
@@ -16,7 +16,9 @@ import { etiquetaCanal, formatoFechaHora, type CanalTipo } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/app/components/badge";
 import { CanalIcon } from "@/app/components/status";
+import { BotonVincularInstagram, RetornoInstagram } from "@/app/components/instagram-neuroapi";
 import { NumerosWhatsApp } from "@/app/components/numeros-whatsapp";
+import { VistaGerenciaPanel } from "@/app/components/vista-gerencia-panel";
 import { Aviso, Boton, Cargando, ConfirmDialog, PageHeader } from "@/app/components/ui";
 
 type Paso =
@@ -62,6 +64,10 @@ function Contenido() {
 
   const porTipo = new Map<string, CanalOut>();
   for (const c of canales.data ?? []) porTipo.set(c.channel_type, c);
+
+  // Estable: RetornoInstagram lo llama desde un efecto al confirmarse el alta.
+  const recargarCanales = canales.recargar;
+  const alVincularInstagram = useCallback(() => void recargarCanales(true), [recargarCanales]);
 
   // ---- Flujo Meta ----------------------------------------------------
   const cargarPaginas = async () => {
@@ -154,19 +160,23 @@ function Contenido() {
           {canales.error && <Aviso tipo="error">{canales.error}</Aviso>}
           {errorFlujo && <Aviso tipo="error">{errorFlujo}</Aviso>}
           {aviso && <Aviso tipo="exito">{aviso}</Aviso>}
+          <RetornoInstagram onVinculado={alVincularInstagram} />
           {(!META_APP_ID || !META_REDIRECT_URI) && (
             <Aviso tipo="info">
               Falta{" "}
               <code>
                 {!META_APP_ID ? "NEXT_PUBLIC_META_APP_ID" : "NEXT_PUBLIC_META_REDIRECT_URI"}
               </code>{" "}
-              en el entorno del portal; la conexión con Facebook e Instagram no va a funcionar
-              hasta definirlo.
+              en el entorno del portal; la conexión con Facebook no va a funcionar hasta
+              definirlo.
             </Aviso>
           )}
 
           {/* WhatsApp: varios números, cada uno con su agente (spec 005a) */}
           <NumerosWhatsApp />
+
+          {/* Acceso del equipo de plataforma a las conversaciones (solo dueño del número) */}
+          <VistaGerenciaPanel />
 
           {/* Estado de Instagram y Facebook */}
           <section className="overflow-hidden rounded-md border border-bg-700 bg-bg-900">
@@ -226,12 +236,15 @@ function Contenido() {
                       >
                         Desconectar
                       </Boton>
+                    ) : tipo === "instagram" ? (
+                      // Instagram se vincula por NeuroAPI (proveedor principal
+                      // mientras Meta no lo reemplace).
+                      <BotonVincularInstagram onError={setErrorFlujo} />
                     ) : (
-                      // Instagram y Facebook pausados a propósito: la
-                      // conexión por Meta sigue sin terminar de probarse.
-                      // Las líneas que ya estaban conectadas antes de este
-                      // cambio no se tocan (ver la rama `conectado` arriba);
-                      // esto solo bloquea dar de alta una nueva.
+                      // Facebook pausado a propósito: la conexión por Meta
+                      // sigue sin terminar de probarse. Las líneas que ya
+                      // estaban conectadas no se tocan (ver la rama
+                      // `conectado` arriba); esto solo bloquea dar de alta una nueva.
                       <Boton variante="secundario" disabled title="Disponible próximamente">
                         Próximamente
                       </Boton>

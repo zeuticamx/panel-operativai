@@ -26,6 +26,7 @@ const TABS = [
   { href: "/gerencia", label: "Resumen", exacto: true },
   { href: "/gerencia/salud", label: "Salud", exacto: false },
   { href: "/gerencia/tenants", label: "Negocios", exacto: false },
+  { href: "/gerencia/conversaciones", label: "Conversaciones", exacto: false },
   { href: "/gerencia/planes", label: "Planes", exacto: false },
   { href: "/gerencia/consumo", label: "Consumo", exacto: false },
   { href: "/gerencia/cohortes", label: "Retención", exacto: false },

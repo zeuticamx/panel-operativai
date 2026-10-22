@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, EyeOff, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, EyeOff } from "lucide-react";
 import { useApi, useDebounce } from "@/lib/use-api";
 import type { ConversacionOut, ListaNumeros } from "@/lib/types";
 import { CANALES, etiquetaCanal } from "@/lib/formato";
 import { nombreNumero } from "@/lib/numeros";
+import { FiltrosConversaciones } from "@/app/components/filtros-conversaciones";
 import { ConversationRow } from "@/app/components/conversation-row";
 import { esGerencia } from "@/app/components/modulo-vendedores";
 import { useUsuario } from "@/app/components/usuario-context";
-import { Aviso, Boton, PageHeader, claseBoton, selectClass } from "@/app/components/ui";
+import { Aviso, Boton, PageHeader, claseBoton } from "@/app/components/ui";
 
 const LIMITE = 25;
 
@@ -129,108 +130,46 @@ export default function ConversacionesPage() {
         }
       />
 
-      {/* Filtros */}
-      <div data-tour="conversaciones.filtros" className="flex flex-wrap items-center gap-2 border-b border-bg-700 bg-bg-900 px-4 py-2">
-        <div className="relative min-w-0 flex-1 basis-56">
-          <Search
-            size={13}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-600"
-            aria-hidden
-          />
-          <label htmlFor="buscar" className="sr-only">
-            Buscar por nombre o número
-          </label>
-          <input
-            id="buscar"
-            type="search"
-            value={buscar}
-            onChange={(e) => cambiarBuscar(e.target.value)}
-            placeholder="Buscar por nombre o número…"
-            maxLength={100}
-            className="w-full rounded-md border border-bg-700 bg-bg-950 py-1.5 pr-3 pl-8 text-xs text-text-100 placeholder:text-text-600 focus:border-bg-600 focus:outline-none"
-          />
-        </div>
-
-        <label htmlFor="canal" className="sr-only">
-          Canal
-        </label>
-        <select
-          id="canal"
-          value={canal}
-          onChange={(e) => cambiarCanal(e.target.value)}
-          className={`${selectClass} w-auto py-1.5 text-xs`}
-        >
-          <option value="">Todos los canales</option>
-          {CANALES.map((c) => (
-            <option key={c} value={c}>
-              {etiquetaCanal(c)}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="estado" className="sr-only">
-          Estado
-        </label>
-        <select
-          id="estado"
-          value={estado}
-          onChange={(e) => cambiarEstado(e.target.value)}
-          className={`${selectClass} w-auto py-1.5 text-xs`}
-        >
-          <option value="">Cualquier estado</option>
-          {ESTADOS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="asignada" className="sr-only">
-          Asignación
-        </label>
-        <select
-          id="asignada"
-          value={asignada}
-          onChange={(e) => cambiarAsignada(e.target.value)}
-          className={`${selectClass} w-auto py-1.5 text-xs`}
-        >
-          <option value="">Todas las asignaciones</option>
-          {ASIGNACIONES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-
-        {veNumeros && listaNumeros.length > 1 && (
-          <>
-            <label htmlFor="numero" className="sr-only">
-              Número de WhatsApp
-            </label>
-            <select
-              id="numero"
-              value={numeroId}
-              onChange={(e) => cambiarNumero(e.target.value)}
-              className={`${selectClass} w-auto max-w-full py-1.5 text-xs`}
-            >
-              <option value="">Todos los números</option>
-              {listaNumeros.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {nombreNumero(n)}
-                  {n.es_linea_avisos ? " (línea de avisos)" : ""}
-                  {n.estado === "pausado" ? " (pausado)" : ""}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-
-        {hayFiltros && (
-          <Boton variante="fantasma" onClick={limpiar} className="min-h-8 px-2">
-            <X size={13} aria-hidden />
-            Limpiar
-          </Boton>
-        )}
+      <div data-tour="conversaciones.filtros">
+      <FiltrosConversaciones
+        buscar={buscar}
+        onBuscar={cambiarBuscar}
+        onLimpiar={limpiar}
+        campos={[
+          {
+            id: "canal",
+            label: "Canal",
+            todas: "Todos los canales",
+            value: canal,
+            onChange: cambiarCanal,
+            opciones: CANALES.map((c) => ({ value: c, label: etiquetaCanal(c) })),
+          },
+          { id: "estado", label: "Estado", todas: "Cualquier estado", value: estado, onChange: cambiarEstado, opciones: ESTADOS },
+          {
+            id: "asignada",
+            label: "Asignación",
+            todas: "Todas las asignaciones",
+            value: asignada,
+            onChange: cambiarAsignada,
+            opciones: ASIGNACIONES,
+          },
+          ...(veNumeros && listaNumeros.length > 1
+            ? [
+                {
+                  id: "numero",
+                  label: "Número de WhatsApp",
+                  todas: "Todos los números",
+                  value: numeroId,
+                  onChange: cambiarNumero,
+                  opciones: listaNumeros.map((n) => ({
+                    value: n.id,
+                    label: `${nombreNumero(n)}${n.es_linea_avisos ? " (línea de avisos)" : ""}${n.estado === "pausado" ? " (pausado)" : ""}`,
+                  })),
+                },
+              ]
+            : []),
+        ]}
+      />
       </div>
 
       {/* Lista */}

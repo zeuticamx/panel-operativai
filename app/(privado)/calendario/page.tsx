@@ -15,6 +15,7 @@ import type {
   ReservaOut,
   ServicioOut,
 } from "@/lib/types";
+import { AvisosCitaPanel } from "@/app/components/avisos-cita-panel";
 import { CalendarioGrid } from "@/app/components/calendario-grid";
 import { useDatosEnVivo } from "@/lib/use-websocket-alertas";
 import { CalendarioTabs, ModuloCalendarioApagado } from "@/app/components/modulo-calendario";
@@ -342,6 +343,8 @@ function Contenido() {
                 onReservaClick={setReservaVista}
                 soloTardias={soloTardias}
               />
+
+              {!proveedor && <AvisosCitaPanel />}
             </>
           )}
         </div>

@@ -15,6 +15,8 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, CircleHelp, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ofertaAvisosRetieneRecorrido } from "@/lib/avisos-cita";
+import { ofertaAvisosYaMostrada, useOfertaAvisosAbierta } from "@/lib/oferta-avisos-estado";
 import {
   RUTAS_PUBLICAS,
   esRutaGerencia,
@@ -362,10 +364,13 @@ function PastillaPausa({ onReanudar, onCerrar }: { onReanudar: () => void; onCer
 // Botones de ayuda
 // ------------------------------------------------------------
 /** Primera visita de esta persona a esta vista: abre el recorrido solo, una vez. */
-function useAutoInicio(recorrido: Recorrido | null, usuarioClave: string | null) {
+function useAutoInicio(recorrido: Recorrido | null, usuarioClave: string | null, retenido = false) {
   const { iniciar } = useRecorrido();
   const clave = recorrido?.clave;
   useEffect(() => {
+    // Retenido (oferta de avisos de cita abierta o por abrir): ni arranca ni se marca como visto;
+    // al liberarse, `retenido` cambia y el efecto se reprograma con el retraso habitual.
+    if (retenido) return;
     if (!recorrido || !usuarioClave || recorridoVisto(usuarioClave, recorrido.clave)) return;
     // Se marca al arrancar, no antes: si PageHeader se desmonta durante el
     // retraso (cargando → página), la siguiente instancia lo reprograma.
@@ -375,7 +380,7 @@ function useAutoInicio(recorrido: Recorrido | null, usuarioClave: string | null)
     }, RETRASO_AUTO_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `recorrido` es estable por clave
-  }, [clave, usuarioClave, iniciar]);
+  }, [clave, usuarioClave, iniciar, retenido]);
 }
 
 const CLASE_BOTON_HEADER =
@@ -393,7 +398,11 @@ export function BotonAyuda() {
   const recorrido = pathname && !esRutaGerencia(pathname) ? recorridoParaRuta(pathname) : null;
   const usuarioClave = usuario && !usuario.impersonado_por ? usuario.id : null;
 
-  useAutoInicio(recorrido, usuarioClave);
+  // La oferta de avisos de cita va primero (spec 007, RF-12): el modal publica su estado y acá solo se lee.
+  const ofertaAbierta = useOfertaAvisosAbierta();
+  const retenido = ofertaAvisosRetieneRecorrido(usuario, ofertaAvisosYaMostrada(), ofertaAbierta);
+
+  useAutoInicio(recorrido, usuarioClave, retenido);
 
   if (!recorrido) return null;
   return (

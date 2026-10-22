@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { RotateCcw, Sparkles } from "lucide-react";
+import { FlaskConical, RotateCcw, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/auth";
 import { mensajeErrorNumero } from "@/lib/numeros";
 import { useApi } from "@/lib/use-api";
@@ -10,6 +10,7 @@ import type { AgenteConfig, LimitesAgente, ModelosOut, NumeroConfig, NumeroConfi
 import { fmtInt } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
+import { PanelProbarAgente } from "./panel-probar-agente";
 import { Aviso, Boton, Campo, Cargando, PageHeader, claseBoton, inputClass, selectClass } from "./ui";
 
 // Límites espejo de AgenteConfigIn en el backend. La validación real la
@@ -119,6 +120,7 @@ export function EditorAgente({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  const [probando, setProbando] = useState(false);
   const exitoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const original: Remoto | null = guardado ?? (remoto.data ? aRemoto(remoto.data) : null);
@@ -250,6 +252,10 @@ export function EditorAgente({
                 <Sparkles size={13} aria-hidden />
                 Configuración guiada
               </Link>
+              <Boton variante="secundario" onClick={() => setProbando(true)} aria-haspopup="dialog">
+                <FlaskConical size={13} aria-hidden />
+                Probar agente
+              </Boton>
               <Boton variante="fantasma" onClick={descartar} disabled={!sucio || guardando}>
                 <RotateCcw size={13} aria-hidden />
                 Descartar
@@ -491,6 +497,23 @@ export function EditorAgente({
           </div>
         </form>
       </div>
+
+      {!soloLectura && (
+        <PanelProbarAgente
+          abierto={probando}
+          onCerrar={() => setProbando(false)}
+          borrador={{
+            agent_name: form.agent_name,
+            system_prompt: form.system_prompt,
+            model: form.model || null,
+            temperature: form.temperature,
+            history_window: form.history_window,
+          }}
+          numeroId={destino.tipo === "numero" ? destino.id : null}
+          sucio={sucio}
+          incompleto={!form.agent_name.trim() || !form.system_prompt.trim()}
+        />
+      )}
     </>
   );
 }

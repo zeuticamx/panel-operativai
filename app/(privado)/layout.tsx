@@ -12,6 +12,7 @@ import { Sidebar } from "@/app/components/sidebar";
 import { ChatWidget } from "@/app/components/chat-widget";
 import { GuardaPlan, PlanProvider } from "@/app/components/plan-context";
 import { GuardaRol } from "@/app/components/guarda-rol";
+import { ModalOfertaAvisosCita } from "@/app/components/modal-oferta-avisos-cita";
 import { RedireccionBienvenida } from "@/app/components/redireccion-bienvenida";
 import { UsuarioProvider } from "@/app/components/usuario-context";
 
@@ -59,6 +60,7 @@ export default function PrivadoLayout({ children }: { children: ReactNode }) {
           <BannerVerComo />
           <AccesoSoporteDueno />
           <RedireccionBienvenida />
+          <ModalOfertaAvisosCita />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
             <Sidebar />
             {/* pb-16: deja libre la barra inferior móvil del Sidebar. */}

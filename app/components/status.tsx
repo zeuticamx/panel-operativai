@@ -1,5 +1,7 @@
 import type { SVGProps } from "react";
+import { infoEstadoPlantilla, type TonoEstadoAviso } from "@/lib/avisos-cita";
 import { etiquetaCanal } from "@/lib/formato";
+import type { EstadoPlantillaAviso } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // ------------------------------------------------------------
@@ -127,6 +129,31 @@ export function CanalBadge({ tipo, className }: { tipo: string; className?: stri
     >
       <CanalIcon tipo={tipo} size={12} />
       {etiquetaCanal(tipo)}
+    </span>
+  );
+}
+
+// ------------------------------------------------------------
+// Estado de una plantilla de aviso de cita ante Meta (spec 007).
+// PENDING es espera normal (ámbar), no error.
+// ------------------------------------------------------------
+const TONO_PLANTILLA: Record<TonoEstadoAviso, string> = {
+  neutro: "border-bg-700 text-text-400",
+  espera: "border-warning/40 bg-warning/10 text-warning",
+  ok: "border-success/40 bg-success-bg text-success",
+  error: "border-danger/40 bg-danger/10 text-danger",
+};
+
+export function EstadoPlantillaBadge({ estado }: { estado: EstadoPlantillaAviso }) {
+  const info = infoEstadoPlantilla(estado);
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[10px]",
+        TONO_PLANTILLA[info.tono],
+      )}
+    >
+      {info.etiqueta}
     </span>
   );
 }

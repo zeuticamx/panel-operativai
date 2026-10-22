@@ -9,7 +9,15 @@ import { useApi } from "@/lib/use-api";
 import { useConversacionLive } from "@/lib/use-conversacion-live";
 import { esProveedor } from "@/lib/roles";
 import type { ContactoOut, ConversacionDetalleOut } from "@/lib/types";
-import { aUtc, estadoVentanaMeta, etiquetaIdentificador, formatoFechaHora, iniciales } from "@/lib/formato";
+import {
+  aUtc,
+  estadoVentanaHumana,
+  estadoVentanaMeta,
+  etiquetaIdentificador,
+  formatoFechaHora,
+  iniciales,
+} from "@/lib/formato";
+import { etiquetaNumeroConversacion } from "@/lib/numeros";
 import { CentroNotificaciones } from "@/app/components/centro-notificaciones";
 import { ThreadViewer } from "@/app/components/thread-viewer";
 import { MensajeComposer } from "@/app/components/mensaje-composer";
@@ -57,6 +65,10 @@ export default function ConversacionDetallePage() {
 
   const nombre = data?.usuario_nombre?.trim() || data?.usuario_handle || "Sin nombre";
   const ventana = data ? estadoVentanaMeta(data.minutos_restantes_ventana) : null;
+  const ventanaHumana = data
+    ? estadoVentanaHumana(data.minutos_restantes_ventana_humana, data.minutos_restantes_ventana)
+    : null;
+  const numero = data ? etiquetaNumeroConversacion(data) : null;
 
   // WhatsApp queda fuera: no tiene API de perfil, el nombre llega en el
   // propio mensaje. Solo tiene sentido ofrecerlo si aÃºn no hay nombre. El
@@ -112,9 +124,19 @@ export default function ConversacionDetallePage() {
                     {ventana.textoCorto}
                   </Badge>
                 )}
+                {ventanaHumana && (
+                  <Badge tone={ventanaHumana.tono} title={ventanaHumana.texto} className="shrink-0">
+                    {ventanaHumana.textoCorto}
+                  </Badge>
+                )}
               </div>
               <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-text-600">
                 <CanalBadge tipo={data.channel_type} />
+                {numero && (
+                  <Badge tone="neutral" title={numero.title} className="max-w-40 truncate">
+                    {numero.texto}
+                  </Badge>
+                )}
                 {data.usuario_handle && (
                   <span className="flex min-w-0 items-center gap-0.5">
                     <span className="truncate">

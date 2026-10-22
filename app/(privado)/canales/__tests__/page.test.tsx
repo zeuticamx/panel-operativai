@@ -252,6 +252,19 @@ test("al volver de Meta con la cuenta vinculada se confirma con su usuario", asy
   expect(await screen.findByText(/instagram vinculado \(@mi_tienda_oficial\)/i)).toBeInTheDocument();
 });
 
+test("si el retorno trae session_id, se consulta esa sesión", async () => {
+  searchParams = new URLSearchParams("instagram_neuroapi=retorno&status=success&session_id=sess_abc");
+  mockInstagram({ session_id: "sess_abc", estado: "pendiente", resultado: null, codigo: null, username: null });
+
+  render(<CanalesPage />);
+
+  await screen.findByText(/terminando de vincular tu instagram/i);
+  expect(global.fetch).toHaveBeenCalledWith(
+    expect.stringContaining("/api/canales/instagram/neuroapi/estado?session_id=sess_abc"),
+    expect.anything(),
+  );
+});
+
 test("una cuenta que no se pudo vincular no dice de quién es", async () => {
   searchParams = new URLSearchParams("instagram_neuroapi=retorno&status=success");
   mockInstagram({

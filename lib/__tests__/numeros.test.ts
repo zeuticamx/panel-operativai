@@ -83,7 +83,7 @@ describe("mensajeErrorNumero", () => {
     expect(m).not.toMatch(/undefined|null/);
   });
 
-  it("403 de la línea de avisos explica que la gestiona la plataforma", () => {
+  it("403 de la línea de avisos explica que no puede ser la principal", () => {
     expect(mensajeErrorNumero(error(403, "linea_avisos_gestionada_por_plataforma"), "x")).toMatch(
       /línea de avisos.*plataforma/i,
     );
@@ -120,6 +120,7 @@ describe("accionesDeNumero", () => {
       reactivar: false,
       desvincular: true,
       elegirPrincipal: true,
+      elegirAvisos: false,
     });
   });
 
@@ -136,14 +137,16 @@ describe("accionesDeNumero", () => {
     expect(accionesDeNumero(numero({ configuracion_incompleta: true }), false).elegirPrincipal).toBe(false);
   });
 
-  it("la línea de avisos de la plataforma no se pausa, desvincula ni elige principal, pero sí se edita", () => {
+  it("la línea de avisos de la plataforma se edita, pausa y desvincula, pero no se elige principal", () => {
     expect(accionesDeNumero(numero({ es_linea_avisos: true }), false)).toEqual({
       editar: true,
-      pausar: false,
+      pausar: true,
       reactivar: false,
-      desvincular: false,
+      desvincular: true,
       elegirPrincipal: false,
+      elegirAvisos: false,
     });
+    expect(accionesDeNumero(numero({ es_linea_avisos: true, estado: "pausado" }), false).reactivar).toBe(true);
   });
 
   it("en solo lectura (member) no hay ninguna acción", () => {
@@ -153,7 +156,16 @@ describe("accionesDeNumero", () => {
       reactivar: false,
       desvincular: false,
       elegirPrincipal: false,
+      elegirAvisos: false,
     });
+  });
+
+  it("'Usar para avisos' solo en el negocio que aloja los avisos, sobre un número activo que aún no lo es", () => {
+    expect(accionesDeNumero(numero(), false).elegirAvisos).toBe(false);
+    expect(accionesDeNumero(numero(), false, true).elegirAvisos).toBe(true);
+    expect(accionesDeNumero(numero({ estado: "pausado" }), false, true).elegirAvisos).toBe(false);
+    expect(accionesDeNumero(numero({ es_linea_avisos: true }), false, true).elegirAvisos).toBe(false);
+    expect(accionesDeNumero(numero(), true, true).elegirAvisos).toBe(false);
   });
 });
 
@@ -168,6 +180,10 @@ describe("esUltimoActivo", () => {
 
   it("la línea de avisos no cuenta como número activo (D5, P18)", () => {
     expect(esUltimoActivo([numero({ id: "a" }), numero({ id: "av", es_linea_avisos: true })], "a")).toBe(true);
+  });
+
+  it("pausar la propia línea de avisos nunca deja al negocio sin número", () => {
+    expect(esUltimoActivo([numero({ id: "av", es_linea_avisos: true })], "av")).toBe(false);
   });
 });
 

@@ -44,13 +44,15 @@ export interface ListaDeNumerosProps {
   onReactivar?: (n: NumeroWhatsApp) => void;
   onDesvincular?: (n: NumeroWhatsApp) => void;
   onPrincipal?: (n: NumeroWhatsApp) => void;
+  onAvisos?: (n: NumeroWhatsApp) => void;
 }
 
 /**
  * Números de WhatsApp vinculados al negocio (spec 005a, RF-1 de pantalla):
  * estado, principal, línea de avisos, plazas usadas y libres, y las acciones
- * que cada rol puede hacer. La línea de avisos de la plataforma nunca ofrece
- * pausar ni desvincular (RF-14, RF-15).
+ * que cada rol puede hacer. La línea de avisos de la plataforma se gestiona como
+ * cualquier otra (editar, probar, pausar, desvincular), salvo que no puede ser la
+ * principal ni cuenta para el cupo.
  */
 export function ListaDeNumeros({
   lista,
@@ -60,6 +62,7 @@ export function ListaDeNumeros({
   onReactivar,
   onDesvincular,
   onPrincipal,
+  onAvisos,
 }: ListaDeNumerosProps) {
   return (
     <div className="flex flex-col">
@@ -77,7 +80,7 @@ export function ListaDeNumeros({
       ) : (
         <ul>
           {lista.numeros.map((n, i) => {
-            const acciones = accionesDeNumero(n, soloLectura);
+            const acciones = accionesDeNumero(n, soloLectura, lista.puede_elegir_avisos);
             const trabajando = ocupado === n.id;
             return (
               <li
@@ -126,7 +129,7 @@ export function ListaDeNumeros({
 
                   {n.es_linea_avisos && (
                     <span className="text-xs text-text-400">
-                      La gestiona la plataforma: no se puede pausar ni desvincular. Sí puedes editar su agente.
+                      Línea de avisos de la plataforma: no cuenta para el cupo ni puede ser la principal. Puedes cambiarla a otro de tus números.
                     </span>
                   )}
                   {n.configuracion_incompleta && (
@@ -150,6 +153,11 @@ export function ListaDeNumeros({
                   {acciones.elegirPrincipal && (
                     <Boton variante="fantasma" onClick={() => onPrincipal?.(n)} disabled={trabajando}>
                       Hacer principal
+                    </Boton>
+                  )}
+                  {acciones.elegirAvisos && (
+                    <Boton variante="fantasma" onClick={() => onAvisos?.(n)} disabled={trabajando}>
+                      Usar para avisos
                     </Boton>
                   )}
                   {acciones.pausar && (
@@ -256,6 +264,19 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
         return `${nombreNumero(n)} reactivado.`;
       },
       "No se pudo reactivar el número.",
+    );
+
+  const usarParaAvisos = (n: NumeroWhatsApp) =>
+    ejecutar(
+      n.id,
+      async () => {
+        await apiFetch<NumeroWhatsApp>("/api/canales/whatsapp/avisos", {
+          method: "PUT",
+          json: { numero_id: n.id },
+        });
+        return `${nombreNumero(n)} es ahora la línea de avisos de la plataforma.`;
+      },
+      "No se pudo cambiar la línea de avisos.",
     );
 
   const hacerPrincipal = (n: NumeroWhatsApp) =>
@@ -407,6 +428,7 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
             onReactivar={reactivar}
             onDesvincular={setADesvincular}
             onPrincipal={hacerPrincipal}
+            onAvisos={usarParaAvisos}
           />
         ) : (
           <p className="px-4 py-6 text-center font-mono text-xs text-text-600">

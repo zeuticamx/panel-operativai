@@ -87,11 +87,11 @@ describe("ListaDeNumeros", () => {
     expect(within(fila("+52 9")).getByText("línea de avisos de plataforma")).toBeInTheDocument();
   });
 
-  it("la línea de avisos no tiene Pausar ni Desvincular, pero sí Configurar", () => {
+  it("la línea de avisos ofrece Pausar, Desvincular y Configurar, pero no Hacer principal", () => {
     render(<ListaDeNumeros lista={LISTA_VARIOS} />);
     const avisos = within(fila("+52 9"));
-    expect(avisos.queryByRole("button", { name: "Pausar" })).not.toBeInTheDocument();
-    expect(avisos.queryByRole("button", { name: "Desvincular" })).not.toBeInTheDocument();
+    expect(avisos.getByRole("button", { name: "Pausar" })).toBeInTheDocument();
+    expect(avisos.getByRole("button", { name: "Desvincular" })).toBeInTheDocument();
     expect(avisos.queryByRole("button", { name: "Hacer principal" })).not.toBeInTheDocument();
     expect(avisos.getByRole("link", { name: /Configurar/ })).toBeInTheDocument();
   });
@@ -107,6 +107,21 @@ describe("ListaDeNumeros", () => {
     expect(activo.getByRole("button", { name: "Desvincular" })).toBeInTheDocument();
     expect(activo.getByRole("button", { name: "Hacer principal" })).toBeInTheDocument();
     expect(within(fila("+52 2")).getByRole("button", { name: "Reactivar" })).toBeInTheDocument();
+  });
+
+  it("el negocio que aloja los avisos puede usar otro número activo como línea de avisos", async () => {
+    const onAvisos = jest.fn();
+    render(<ListaDeNumeros lista={{ ...LISTA_VARIOS, puede_elegir_avisos: true }} onAvisos={onAvisos} />);
+    // Solo en números activos que aún no son la línea: no en el pausado ni en la propia línea.
+    expect(within(fila("+52 2")).queryByRole("button", { name: "Usar para avisos" })).not.toBeInTheDocument();
+    expect(within(fila("+52 9")).queryByRole("button", { name: "Usar para avisos" })).not.toBeInTheDocument();
+    await userEvent.click(within(fila("+52 1")).getByRole("button", { name: "Usar para avisos" }));
+    expect(onAvisos).toHaveBeenCalledWith(expect.objectContaining({ id: "a" }));
+  });
+
+  it("en un negocio que no aloja los avisos no se ofrece cambiar la línea de avisos", () => {
+    render(<ListaDeNumeros lista={LISTA_VARIOS} />);
+    expect(screen.queryByRole("button", { name: "Usar para avisos" })).not.toBeInTheDocument();
   });
 
   it("para el member (solo lectura) no hay ningún botón ni enlace de edición", () => {

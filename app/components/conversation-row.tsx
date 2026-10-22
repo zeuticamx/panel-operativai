@@ -1,4 +1,6 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
+import { Bot } from "lucide-react";
 import type { ConversacionOut } from "@/lib/types";
 import { aUtc, estadoVentanaMeta, etiquetaIdentificador, formatoCorto, iniciales } from "@/lib/formato";
 import { etiquetaNumeroConversacion } from "@/lib/numeros";
@@ -21,6 +23,13 @@ interface ConversationRowProps {
   hrefQuery?: string;
 }
 
+/** Tono estable (0-359) derivado del identificador del agente; luminosidad media para verse en claro y oscuro. */
+function colorAgente(clave: string): string {
+  let h = 0;
+  for (let i = 0; i < clave.length; i++) h = (h * 31 + clave.charCodeAt(i)) >>> 0;
+  return `hsl(${h % 360} 65% 55%)`;
+}
+
 export function ConversationRow({
   conversacion: c,
   now,
@@ -40,12 +49,18 @@ export function ConversationRow({
   const ventana = !compact ? estadoVentanaMeta(c.minutos_restantes_ventana) : null;
   const numero = !compact ? etiquetaNumeroConversacion(c) : null;
 
+  // Color propio por agente: la misma conversación siempre cae en el mismo
+  // tono, así que de un vistazo se agrupan las del mismo número.
+  const tono = numero ? colorAgente(c.agente_canal_id ?? numero.texto) : null;
+
   return (
     <Link
       href={`${hrefBase}/${c.id}${hrefQuery}`}
+      style={tono ? ({ "--agente": tono } as CSSProperties) : undefined}
       className={cn(
         "flex w-full items-center gap-3 border-b border-bg-800 px-3 text-left hover:bg-hover focus:outline-none focus-visible:bg-bg-800",
         compact ? "py-2" : "py-2.5",
+        tono && "border-l-[3px] border-l-[var(--agente)] pl-[9px]",
         active && "bg-bg-800",
       )}
     >
@@ -55,7 +70,18 @@ export function ConversationRow({
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-text-100">{nombre}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-medium text-text-100">{nombre}</span>
+            {numero && (
+              <span
+                title={numero.title}
+                className="inline-flex min-w-0 max-w-48 shrink items-center gap-1 rounded-full border border-[var(--agente)] bg-[color-mix(in_srgb,var(--agente)_14%,transparent)] px-2 py-0.5 text-[11px] font-medium leading-none text-text-100"
+              >
+                <Bot className="h-3 w-3 shrink-0 text-[var(--agente)]" aria-hidden />
+                <span className="truncate">{numero.texto}</span>
+              </span>
+            )}
+          </span>
           <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-600">
             {formatoCorto(aUtc(c.last_message_at), now)}
           </span>
@@ -86,11 +112,6 @@ export function ConversationRow({
               {ventana && (
                 <Badge tone={ventana.tono} title={ventana.texto}>
                   {ventana.textoCorto}
-                </Badge>
-              )}
-              {numero && (
-                <Badge tone="neutral" title={numero.title} className="max-w-32 truncate">
-                  {numero.texto}
                 </Badge>
               )}
               {c.asignado_nombre ? (

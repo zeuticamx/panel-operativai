@@ -32,6 +32,8 @@ export const RUTAS_SIN_RECORRIDO = [
   "/login",
   "/acceso-soporte",
   "/bienvenida",
+  "/plantillas",
+  "/plantillas/nueva",
 ];
 
 /** Pantallas sin sesión con recorrido: el botón flota porque no tienen PageHeader. */

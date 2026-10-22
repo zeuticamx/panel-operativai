@@ -20,12 +20,13 @@ const TEXTO_POR_CODIGO: Record<string, string> = {
     "Tu plan no incluye el modo coexistencia. Mejora tu plan o conecta el número en modo exclusivo API.",
   // 403
   linea_avisos_gestionada_por_plataforma:
-    "Esta es la línea de avisos de la plataforma: la gestiona la plataforma, no se puede pausar ni desvincular.",
+    "La línea de avisos de la plataforma no puede ser el número principal.",
   // 404: igual para un número ajeno, uno inexistente o uno que no se puede vincular (RF-3, RF-4).
   numero_no_encontrado: "Número no encontrado.",
   // 409
   numero_ya_vinculado: "Ese número ya está vinculado a tu negocio. Si está pausado, reactívalo.",
   numero_no_activo: "El número está pausado. Reactívalo para continuar.",
+  linea_avisos_sin_credencial: "Este negocio no tiene conectada la cuenta de WhatsApp de avisos.",
   configuracion_incompleta:
     "El número tiene la configuración incompleta: falta el nombre del agente o sus instrucciones.",
   numero_desvinculado: "El número ya no pertenece al negocio: esta conversación es de solo lectura.",
@@ -78,25 +79,40 @@ export interface AccionesNumero {
   reactivar: boolean;
   desvincular: boolean;
   elegirPrincipal: boolean;
+  /** Hacer de este número la línea de avisos (solo en el negocio que aloja los avisos). */
+  elegirAvisos: boolean;
 }
 
 /**
  * Qué botones ofrece un número. `soloLectura` = member (RF-18): ve todo y no
- * toca nada. La línea de avisos de la plataforma se edita pero no se pausa,
- * desvincula ni elige como principal (RF-14, RF-15). Espejo de lo que el
- * servidor permite: él vuelve a decidir en cada petición.
+ * toca nada. La línea de avisos de la plataforma es un agente más: se edita, se
+ * prueba, se pausa y se desvincula; lo único que no puede es ser el principal
+ * (CHECK de sql/56) ni contar para el cupo. Se puede mover la marca a otro número
+ * activo (`elegirAvisos`), solo desde el negocio que aloja los avisos. Espejo de lo que el servidor
+ * permite: él vuelve a decidir en cada petición.
  */
-export function accionesDeNumero(n: NumeroWhatsApp, soloLectura: boolean): AccionesNumero {
+export function accionesDeNumero(
+  n: NumeroWhatsApp,
+  soloLectura: boolean,
+  puedeElegirAvisos = false,
+): AccionesNumero {
   if (soloLectura) {
-    return { editar: false, pausar: false, reactivar: false, desvincular: false, elegirPrincipal: false };
+    return {
+      editar: false,
+      pausar: false,
+      reactivar: false,
+      desvincular: false,
+      elegirPrincipal: false,
+      elegirAvisos: false,
+    };
   }
-  const gestionable = !n.es_linea_avisos;
   return {
     editar: true,
-    pausar: gestionable && n.estado === "activo",
-    reactivar: gestionable && n.estado === "pausado",
-    desvincular: gestionable,
-    elegirPrincipal: gestionable && n.estado === "activo" && !n.es_principal && !n.configuracion_incompleta,
+    pausar: n.estado === "activo",
+    reactivar: n.estado === "pausado",
+    desvincular: true,
+    elegirPrincipal: !n.es_linea_avisos && n.estado === "activo" && !n.es_principal && !n.configuracion_incompleta,
+    elegirAvisos: puedeElegirAvisos && !n.es_linea_avisos && n.estado === "activo",
   };
 }
 
@@ -105,6 +121,8 @@ export function accionesDeNumero(n: NumeroWhatsApp, soloLectura: boolean): Accio
  * confirmación lo advierte. La línea de avisos no cuenta como activo (P18).
  */
 export function esUltimoActivo(numeros: NumeroWhatsApp[], numeroId: string): boolean {
+  // Pausar la línea de avisos no deja al negocio sin número: ella no cuenta como activo.
+  if (numeros.find((n) => n.id === numeroId)?.es_linea_avisos) return false;
   return !numeros.some((n) => n.id !== numeroId && n.estado === "activo" && !n.es_linea_avisos);
 }
 

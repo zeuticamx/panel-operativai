@@ -298,7 +298,8 @@ export function EditorAgente({
           )}
           {numero?.es_linea_avisos && (
             <Aviso tipo="info">
-              Es la línea de avisos de la plataforma: no cuenta para el cupo ni puede ser el número principal.
+              Línea de avisos de la plataforma: no cuenta para el cupo ni puede ser el número principal. Por lo demás
+              es un agente como cualquier otro: lo puedes configurar, probar, pausar o cambiar.
             </Aviso>
           )}
           {soloLectura && <Aviso tipo="info">Puedes ver esta configuración, pero solo la gerencia puede editarla.</Aviso>}

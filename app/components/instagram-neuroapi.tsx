@@ -62,8 +62,12 @@ export function RetornoInstagram({ onVinculado }: { onVinculado: () => void }) {
   const statusRetorno = params.get("status");
   const cancelado = retorno && statusRetorno !== null && statusRetorno !== "success";
 
+  // Con el session_id del retorno se consulta esa sesión; sin él, la última.
+  const sessionId = params.get("session_id");
   const sesion = useApi<EstadoInstagramNeuroApiOut>(
-    retorno && !cancelado ? "/api/canales/instagram/neuroapi/estado" : null,
+    retorno && !cancelado
+      ? `/api/canales/instagram/neuroapi/estado${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`
+      : null,
   );
   const [esperaAgotada, setEsperaAgotada] = useState(false);
   const pendiente = !sesion.data || sesion.data.estado === "pendiente";

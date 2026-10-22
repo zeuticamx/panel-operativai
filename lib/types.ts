@@ -2040,7 +2040,7 @@ export interface NumeroWhatsApp {
   connection_mode: ModoConexionWhatsApp;
   estado: EstadoNumero;
   es_principal: boolean;
-  /** Línea de avisos de la plataforma: la gestiona la plataforma (RF-14, RF-15). */
+  /** Línea de avisos de la plataforma: no cuenta para el cupo ni puede ser la principal. */
   es_linea_avisos: boolean;
   vinculado_en: string | null;
   pausado_en: string | null;
@@ -2064,6 +2064,8 @@ export interface ListaNumeros {
   plazas_libres: number | null;
   /** El plan vigente incluye el modo coexistencia. */
   coexistencia_permitida: boolean;
+  /** Este negocio aloja la línea de avisos de la plataforma: puede elegir cuál de sus números lo es. */
+  puede_elegir_avisos?: boolean;
 }
 
 /** POST /api/canales/whatsapp/numeros/{id}/pausar. */

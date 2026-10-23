@@ -75,7 +75,7 @@ export function ConversationRow({
             {numero && (
               <span
                 title={numero.title}
-                className="inline-flex min-w-0 max-w-48 shrink items-center gap-1 rounded-full border border-[var(--agente)] bg-[color-mix(in_srgb,var(--agente)_14%,transparent)] px-2 py-0.5 text-[11px] font-medium leading-none text-text-100"
+                className="inline-flex min-w-0 max-w-[45vw] shrink sm:max-w-48 items-center gap-1 rounded-full border border-[var(--agente)] bg-[color-mix(in_srgb,var(--agente)_14%,transparent)] px-2 py-0.5 text-[11px] font-medium leading-none text-text-100"
               >
                 <Bot className="h-3 w-3 shrink-0 text-[var(--agente)]" aria-hidden />
                 <span className="truncate">{numero.texto}</span>
@@ -93,8 +93,8 @@ export function ConversationRow({
           </span>
         )}
 
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-text-600">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <span className="flex min-w-0 max-w-full items-center gap-2 font-mono text-[11px] text-text-600">
             <CanalBadge tipo={c.channel_type} />
             {c.usuario_handle && !compact && (
               <span className="min-w-0 truncate">
@@ -108,7 +108,7 @@ export function ConversationRow({
               {c.total_mensajes} msjs
             </span>
           ) : (
-            <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            <span className="ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-1.5">
               {ventana && (
                 <Badge tone={ventana.tono} title={ventana.texto}>
                   {ventana.textoCorto}

@@ -4,7 +4,7 @@ import { Suspense, useCallback, useState } from "react";
 import { Check, ExternalLink, RefreshCw, X } from "lucide-react";
 import { apiFetch, mensajeDeError } from "@/lib/auth";
 import { useApi } from "@/lib/use-api";
-import { META_APP_ID, META_REDIRECT_URI } from "@/lib/meta-oauth";
+import { META_APP_ID, META_REDIRECT_URI, loginConCode } from "@/lib/meta-oauth";
 import type {
   ActivarOut,
   ActivarResultado,
@@ -70,6 +70,26 @@ function Contenido() {
   const alVincularInstagram = useCallback(() => void recargarCanales(true), [recargarCanales]);
 
   // ---- Flujo Meta ----------------------------------------------------
+  const conectarFacebook = async () => {
+    setErrorFlujo(null);
+    setPaso({ etapa: "conectando" });
+    try {
+      const resultado = await loginConCode();
+      if (!resultado) {
+        setPaso({ etapa: "inactivo" });
+        return;
+      }
+      await apiFetch("/api/canales/meta/conectar", {
+        method: "POST",
+        json: { code: resultado.code, redirect_uri: resultado.redirectUri },
+      });
+      await cargarPaginas();
+    } catch (e) {
+      setErrorFlujo(mensajeDeError(e, "No se pudo conectar con Facebook."));
+      setPaso({ etapa: "inactivo" });
+    }
+  };
+
   const cargarPaginas = async () => {
     setErrorFlujo(null);
     setPaso({ etapa: "cargando_paginas" });
@@ -241,12 +261,13 @@ function Contenido() {
                       // mientras Meta no lo reemplace).
                       <BotonVincularInstagram onError={setErrorFlujo} />
                     ) : (
-                      // Facebook pausado a propósito: la conexión por Meta
-                      // sigue sin terminar de probarse. Las líneas que ya
-                      // estaban conectadas no se tocan (ver la rama
-                      // `conectado` arriba); esto solo bloquea dar de alta una nueva.
-                      <Boton variante="secundario" disabled title="Disponible próximamente">
-                        Próximamente
+                      <Boton
+                        variante="secundario"
+                        onClick={conectarFacebook}
+                        loading={paso.etapa === "conectando" || paso.etapa === "cargando_paginas"}
+                        disabled={!META_APP_ID || !META_REDIRECT_URI}
+                      >
+                        Conectar con Facebook
                       </Boton>
                     )}
                   </div>

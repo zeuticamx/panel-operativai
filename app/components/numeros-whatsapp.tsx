@@ -13,6 +13,7 @@ import {
   nombreNumero,
   textoPlazas,
 } from "@/lib/numeros";
+import { META_APP_ID, META_WA_CONFIG_ID, conectarWhatsAppEmbeddedSignup } from "@/lib/meta-wa-embedded-signup";
 import { formatoFechaHora } from "@/lib/formato";
 import type {
   IniciarNeuroApiConnectIn,
@@ -205,6 +206,7 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
   const [linea, setLinea] = useState("");
   const [conectandoManual, setConectandoManual] = useState(false);
   const [conectandoNeuroApi, setConectandoNeuroApi] = useState(false);
+  const [conectandoMeta, setConectandoMeta] = useState(false);
   const [elegirModo, setElegirModo] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
@@ -368,6 +370,31 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
     }
   };
 
+  // Conexión directa con Meta (Embedded Signup vía config_id): se mantiene en
+  // paralelo a NeuroAPI (arriba) hasta que Meta apruebe Acceso Avanzado de
+  // whatsapp_business_management/whatsapp_business_messaging.
+  const conectarMeta = async () => {
+    reiniciarMensajes();
+    setConectandoMeta(true);
+    try {
+      const resultado = await conectarWhatsAppEmbeddedSignup();
+      if (!resultado) {
+        setConectandoMeta(false);
+        return;
+      }
+      await apiFetch("/api/canales/whatsapp/meta/activar", {
+        method: "POST",
+        json: { waba_id: resultado.wabaId, phone_number_id: resultado.phoneNumberId },
+      });
+      setAviso("Número de WhatsApp vinculado con Meta. Configura su agente para que empiece a responder.");
+      await recargar(true);
+    } catch (e) {
+      setError(mensajeErrorNumero(e, "No se pudo conectar WhatsApp con Meta."));
+    } finally {
+      setConectandoMeta(false);
+    }
+  };
+
   return (
     <section data-tour="canales.lista" className="flex flex-col gap-3">
       <header className="flex flex-wrap items-center justify-between gap-2">
@@ -400,6 +427,19 @@ export function NumerosWhatsApp({ soloLectura = false }: { soloLectura?: boolean
               disabled={formManual || conectandoNeuroApi}
             >
               Conectar manualmente
+            </Boton>
+            <Boton
+              variante="fantasma"
+              onClick={conectarMeta}
+              loading={conectandoMeta}
+              disabled={formManual || conectandoNeuroApi || !META_APP_ID || !META_WA_CONFIG_ID}
+              title={
+                !META_APP_ID || !META_WA_CONFIG_ID
+                  ? "Falta NEXT_PUBLIC_META_WA_CONFIG_ID en el entorno del portal"
+                  : undefined
+              }
+            >
+              Conectar WhatsApp con Meta
             </Boton>
           </div>
         )}

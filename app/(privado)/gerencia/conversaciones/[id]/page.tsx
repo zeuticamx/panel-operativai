@@ -19,6 +19,7 @@ import { etiquetaNumeroConversacion } from "@/lib/numeros";
 import { ThreadViewer } from "@/app/components/thread-viewer";
 import { MensajeComposer } from "@/app/components/mensaje-composer";
 import { Badge } from "@/app/components/badge";
+import { BadgeAgente } from "@/app/components/badge-agente";
 import { CanalBadge, StatusBadge } from "@/app/components/status";
 import { CopyButton } from "@/app/components/copy-button";
 import { Aviso, Boton, Cargando } from "@/app/components/ui";
@@ -103,11 +104,7 @@ export default function ConversacionDetalleGerenciaPage() {
               </div>
               <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-text-600">
                 <CanalBadge tipo={data.channel_type} />
-                {numero && (
-                  <Badge tone="neutral" title={numero.title} className="max-w-40 truncate">
-                    {numero.texto}
-                  </Badge>
-                )}
+                {numero && <BadgeAgente texto={numero.texto} title={numero.title} color={numero.color} />}
                 {data.usuario_handle && (
                   <span className="flex min-w-0 items-center gap-0.5">
                     <span className="truncate">

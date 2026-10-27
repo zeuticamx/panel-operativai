@@ -26,6 +26,7 @@ import { PanelAsignacion } from "@/app/components/panel-asignacion";
 import { LimpiarContextoAgente } from "@/app/components/limpiar-contexto-agente";
 import { HistorialCitasCliente } from "@/app/components/historial-citas-cliente";
 import { Badge } from "@/app/components/badge";
+import { BadgeAgente } from "@/app/components/badge-agente";
 import { CanalBadge, StatusBadge } from "@/app/components/status";
 import { CopyButton } from "@/app/components/copy-button";
 import { BotonAyuda } from "@/app/components/recorrido";
@@ -132,11 +133,7 @@ export default function ConversacionDetallePage() {
               </div>
               <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] text-text-600">
                 <CanalBadge tipo={data.channel_type} />
-                {numero && (
-                  <Badge tone="neutral" title={numero.title} className="max-w-40 truncate">
-                    {numero.texto}
-                  </Badge>
-                )}
+                {numero && <BadgeAgente texto={numero.texto} title={numero.title} color={numero.color} />}
                 {data.usuario_handle && (
                   <span className="flex min-w-0 items-center gap-0.5">
                     <span className="truncate">

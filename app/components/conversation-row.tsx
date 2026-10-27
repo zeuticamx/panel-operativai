@@ -1,11 +1,11 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Bot } from "lucide-react";
 import type { ConversacionOut } from "@/lib/types";
 import { aUtc, estadoVentanaMeta, etiquetaIdentificador, formatoCorto, iniciales } from "@/lib/formato";
 import { etiquetaNumeroConversacion } from "@/lib/numeros";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
+import { BadgeAgente } from "./badge-agente";
 import { CanalBadge, StatusBadge } from "./status";
 
 interface ConversationRowProps {
@@ -21,13 +21,6 @@ interface ConversationRowProps {
   /** Query string (con el "?") que se agrega después del id — así el
    * tenant_id viaja a la vista de detalle sin volver a pedirlo. */
   hrefQuery?: string;
-}
-
-/** Tono estable (0-359) derivado del identificador del agente; luminosidad media para verse en claro y oscuro. */
-function colorAgente(clave: string): string {
-  let h = 0;
-  for (let i = 0; i < clave.length; i++) h = (h * 31 + clave.charCodeAt(i)) >>> 0;
-  return `hsl(${h % 360} 65% 55%)`;
 }
 
 export function ConversationRow({
@@ -51,7 +44,8 @@ export function ConversationRow({
 
   // Color propio por agente: la misma conversación siempre cae en el mismo
   // tono, así que de un vistazo se agrupan las del mismo número.
-  const tono = numero ? colorAgente(c.agente_canal_id ?? numero.texto) : null;
+  // Instagram/Facebook usan el color institucional de su canal.
+  const tono = numero ? numero.color : null;
 
   return (
     <Link
@@ -72,15 +66,7 @@ export function ConversationRow({
         <div className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm font-medium text-text-100">{nombre}</span>
-            {numero && (
-              <span
-                title={numero.title}
-                className="inline-flex min-w-0 max-w-[45vw] shrink sm:max-w-48 items-center gap-1 rounded-full border border-[var(--agente)] bg-[color-mix(in_srgb,var(--agente)_14%,transparent)] px-2 py-0.5 text-[11px] font-medium leading-none text-text-100"
-              >
-                <Bot className="h-3 w-3 shrink-0 text-[var(--agente)]" aria-hidden />
-                <span className="truncate">{numero.texto}</span>
-              </span>
-            )}
+            {numero && <BadgeAgente texto={numero.texto} title={numero.title} color={numero.color} />}
           </span>
           <span className="shrink-0 font-mono text-[11px] tabular-nums text-text-600">
             {formatoCorto(aUtc(c.last_message_at), now)}

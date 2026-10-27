@@ -131,6 +131,19 @@ export function nombreNumero(n: Pick<NumeroWhatsApp, "telefono_visible" | "phone
   return n.telefono_visible?.trim() || n.phone_number_id;
 }
 
+/** Tono estable (0-359) derivado del identificador del agente; luminosidad media para verse en claro y oscuro. */
+function colorAgente(clave: string): string {
+  let h = 0;
+  for (let i = 0; i < clave.length; i++) h = (h * 31 + clave.charCodeAt(i)) >>> 0;
+  return `hsl(${h % 360} 65% 55%)`;
+}
+
+/** Color institucional de los canales sociales (un solo agente compartido por canal). */
+const COLOR_CANAL_SOCIAL: Record<string, { nombre: string; color: string }> = {
+  instagram: { nombre: "Instagram", color: "#E1306C" },
+  facebook: { nombre: "Facebook", color: "#1877F2" },
+};
+
 /**
  * Etiqueta para distinguir de qué número/agente es una conversación, cuando
  * el negocio tiene más de uno (con uno solo no hace falta: null). Mismo
@@ -139,14 +152,23 @@ export function nombreNumero(n: Pick<NumeroWhatsApp, "telefono_visible" | "phone
  * cuando es la línea que gestiona la plataforma.
  */
 export function etiquetaNumeroConversacion(
-  c: NumeroDeConversacion,
-): { texto: string; title: string } | null {
+  c: NumeroDeConversacion & { channel_type?: string },
+): { texto: string; title: string; color: string } | null {
+  // Instagram y Facebook comparten un único agente: siempre se muestra cuál
+  // atiende, con el color institucional del canal.
+  const social = c.channel_type ? COLOR_CANAL_SOCIAL[c.channel_type] : undefined;
+  if (social) {
+    const agente = c.numero_agent_name?.trim();
+    if (!agente) return null;
+    return { texto: agente, title: `Agente de ${social.nombre}`, color: social.color };
+  }
   if (!c.agente_canal_id || !c.tiene_varios_numeros) return null;
   const telefono = c.numero_telefono_visible?.trim() || c.numero_phone_number_id || "";
   const nombre = c.numero_agent_name?.trim() || telefono;
   const texto = c.numero_es_linea_avisos ? `${nombre} (línea de avisos)` : nombre;
   return {
     texto,
+    color: colorAgente(c.agente_canal_id ?? texto),
     title: telefono ? `Agente de ${telefono}` : "Agente de este número",
   };
 }

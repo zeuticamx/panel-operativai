@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Condiciones del servicio — OperativAI",
+  title: "Condiciones del servicio — Orvia",
   description:
-    "Condiciones del servicio del portal OperativAI: uso de la cuenta, de los canales y del agente de IA.",
+    "Condiciones del servicio del portal Orvia: uso de la cuenta, de los canales y del agente de IA.",
 };
 
 export default function CondicionesPage() {
@@ -20,13 +20,13 @@ export default function CondicionesPage() {
         <p className="mt-2 text-sm text-text-400">Última actualización: 23 de septiembre de 2026</p>
 
         <p className="mt-8 text-sm leading-7 text-text-400">
-          Estas condiciones regulan el uso del portal de OperativAI, donde administras el agente de IA
+          Estas condiciones regulan el uso del portal de Orvia, donde administras el agente de IA
           de tu negocio. El texto vigente para el sitio público está en{" "}
           <a
-            href="https://www.operativai.com.mx/condiciones"
+            href="https://www.orvia.tech/condiciones"
             className="text-text-100 underline underline-offset-2"
           >
-            operativai.com.mx/condiciones
+            orvia.tech/condiciones
           </a>
           . Si no estás de acuerdo, no uses el portal.
         </p>
@@ -72,7 +72,7 @@ export default function CondicionesPage() {
           competentes los tribunales de Guadalajara, Jalisco.
         </p>
 
-        <p className="mt-12 text-xs text-text-600">© 2026 OperativAI. Guadalajara, México.</p>
+        <p className="mt-12 text-xs text-text-600">© 2026 Orvia. Zapopan, Jalisco, México.</p>
       </div>
     </main>
   );

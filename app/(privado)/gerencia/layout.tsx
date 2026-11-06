@@ -35,7 +35,7 @@ export default function GerenciaLayout({ children }: { children: ReactNode }) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
         <ShieldAlert size={22} className="text-text-600" aria-hidden />
-        <p className="text-sm text-text-100">Esta sección es del equipo de OperativAI</p>
+        <p className="text-sm text-text-100">Esta sección es del equipo de Orvia</p>
         <p className="max-w-sm text-xs leading-relaxed text-text-400">
           Tu cuenta administra tu negocio, no la plataforma. Te llevamos de vuelta al
           panel.

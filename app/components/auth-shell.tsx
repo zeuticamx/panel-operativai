@@ -27,8 +27,8 @@ export function AuthShell({
 
       <div className="relative z-10 my-auto w-full max-w-sm rounded-2xl border border-bg-700 bg-bg-900/90 p-8 shadow-xl backdrop-blur-md">
         <Image
-          src="/imagenes/LOGO_OPERATIVAI.png"
-          alt="OperativAI"
+          src="/imagenes/LOGO%20NUBE%20GRIS.png"
+          alt="Orvia"
           width={240}
           height={64}
           className="h-auto w-36"

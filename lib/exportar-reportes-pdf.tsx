@@ -10,7 +10,7 @@ import { fmtInt, formatoMes, formatoMonto, formatoPorcentaje, infoEstadoPipeline
 import { cssEtapa } from "./colores-etapa";
 import { descargarArchivo, fechaArchivo } from "./descargar-archivo";
 
-const LOGO = "/imagenes/LOGO_OPERATIVAI.png";
+const LOGO = "/imagenes/LOGO%20NUBE%20GRIS.png";
 const AZUL = "#3987E5";
 const NARANJA = "#D95926";
 const TEXTO = "#0F172A";
@@ -106,7 +106,7 @@ function construirDocumento(
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {/* eslint-disable-next-line jsx-a11y/alt-text -- Image de react-pdf: dibuja en el PDF, no hay `alt` en su API */}
           <Image src={LOGO} style={s.headerLogo} />
-          <Text style={s.headerTexto}>OperativAI · Reportes del embudo</Text>
+          <Text style={s.headerTexto}>Orvia · Reportes del embudo</Text>
         </View>
         <Text style={s.headerTexto}>{fechaLarga()}</Text>
       </View>
@@ -116,7 +116,7 @@ function construirDocumento(
   function Pie() {
     return (
       <View style={s.footerFixed} fixed>
-        <Text style={s.footerTexto}>Generado por OperativAI</Text>
+        <Text style={s.footerTexto}>Generado por Orvia</Text>
         <Text style={s.footerTexto} render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
       </View>
     );
@@ -133,7 +133,7 @@ function construirDocumento(
   const maxEmbudo = Math.max(1, ...metricas.etapas.map((e) => e.total));
 
   return (
-    <Document title={`Reportes — ${fechaLarga()}`} author="OperativAI">
+    <Document title={`Reportes — ${fechaLarga()}`} author="Orvia">
       {/* Portada */}
       <Page size="A4" style={[s.page, { paddingTop: 0, paddingBottom: 0 }]}>
         <View style={s.portada}>

@@ -140,7 +140,7 @@ export async function exportarReportesExcel(
 ): Promise<void> {
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
-  wb.creator = "OperativAI";
+  wb.creator = "Orvia";
   wb.created = new Date();
 
   hojaEmbudo(wb, metricas);

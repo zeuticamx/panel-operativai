@@ -22,7 +22,7 @@ export interface FiltrosReporte {
   fechaFin?: string;
 }
 
-const LOGO = "/imagenes/LOGO_OPERATIVAI.png";
+const LOGO = "/imagenes/LOGO%20NUBE%20GRIS.png";
 const AZUL = "#3987E5";
 const TEXTO = "#0F172A";
 const TEXTO_SUAVE = "#64748B";
@@ -183,7 +183,7 @@ function construirDocumento(
     thTendencia: { fontSize: 8, fontFamily: "Helvetica-Bold", color: TEXTO_SUAVE },
   });
 
-  const HEADER_TITLE = "OperativAI · Reporte del Embudo";
+  const HEADER_TITLE = "Orvia · Reporte del Embudo";
 
   function Encabezado() {
     return (
@@ -201,7 +201,7 @@ function construirDocumento(
   function Pie() {
     return (
       <View style={s.footerFixed} fixed>
-        <Text style={s.footerTexto}>Generado por OperativAI</Text>
+        <Text style={s.footerTexto}>Generado por Orvia</Text>
         <Text
           style={s.footerTexto}
           render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
@@ -251,10 +251,10 @@ function construirDocumento(
       ? `Del ${new Date(`${filtros.fechaInicio}T00:00:00`).toLocaleDateString("es-MX")} al ${new Date(
           `${filtros.fechaFin}T00:00:00`,
         ).toLocaleDateString("es-MX")}`
-      : "Vendedores · CRM de OperativAI";
+      : "Vendedores · CRM de Orvia";
 
   return (
-    <Document title={`Reporte del embudo — ${fechaLarga()}`} author="OperativAI">
+    <Document title={`Reporte del embudo — ${fechaLarga()}`} author="Orvia">
       {/* Portada */}
       <Page size="A4" style={[s.page, { paddingTop: 0, paddingBottom: 0 }]}>
         <View style={s.portada}>

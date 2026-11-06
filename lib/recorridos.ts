@@ -236,7 +236,7 @@ const REGISTRO: Record<string, PasoRecorrido[]> = {
     AYUDA,
   ],
   "/cobros": [
-    intro("Cobros", "Cobra directo a tus clientes con links de pago de Stripe — distinto de Suscripción, que es lo que tú le pagas a OperativAI."),
+    intro("Cobros", "Cobra directo a tus clientes con links de pago de Stripe — distinto de Suscripción, que es lo que tú le pagas a Orvia."),
     { ancla: "cobros.conectar", titulo: "Conecta tu cuenta", texto: "Antes de cobrar, conecta tu propia cuenta de Stripe: el dinero llega directo a ti." },
     { ancla: "cobros.generar", titulo: "Genera un link", texto: "Escribe el concepto y el monto, y comparte el link con tu cliente." },
     { ancla: "cobros.historial", titulo: "Cobros generados", texto: "Todos los links que generaste, incluidos los que tu agente de IA manda solo durante una conversación." },

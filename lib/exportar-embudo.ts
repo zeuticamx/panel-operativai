@@ -204,7 +204,7 @@ export async function exportarEmbudoExcel(
 ): Promise<void> {
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
-  wb.creator = "OperativAI";
+  wb.creator = "Orvia";
   wb.created = new Date();
 
   hojaLeads(wb, leads);

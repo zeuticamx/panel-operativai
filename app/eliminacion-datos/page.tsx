@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Eliminación de datos — OperativAI",
+  title: "Eliminación de datos — Orvia",
   description:
-    "Instrucciones para solicitar la eliminación de los datos que OperativAI conserva a través de tu cuenta de Meta (Facebook, Instagram o WhatsApp).",
+    "Instrucciones para solicitar la eliminación de los datos que Orvia conserva a través de tu cuenta de Meta (Facebook, Instagram o WhatsApp).",
 };
 
 export default function EliminacionDatosPage() {
@@ -20,16 +20,16 @@ export default function EliminacionDatosPage() {
         <p className="mt-2 text-sm text-text-400">Última actualización: 23 de octubre de 2026</p>
 
         <p className="mt-8 text-sm leading-7 text-text-400">
-          Esta página explica cómo pedir que eliminemos los datos que OperativAI conserva a través de
+          Esta página explica cómo pedir que eliminemos los datos que Orvia conserva a través de
           tu cuenta de Meta (Facebook, Instagram o WhatsApp), ya sea porque conectaste un canal como
-          dueño de un negocio o porque escribiste a un negocio que usa OperativAI. Revocar el acceso
+          dueño de un negocio o porque escribiste a un negocio que usa Orvia. Revocar el acceso
           de la app desde tu configuración de Facebook detiene el envío de mensajes, pero no borra por
           sí solo lo ya guardado: para eso, sigue los pasos de abajo.
         </p>
 
         <h2 className="mt-10 text-lg font-medium">1. Si eres dueño de un negocio</h2>
         <p className="mt-3 text-sm leading-7 text-text-400">
-          Al conectar Facebook, Instagram o WhatsApp a tu cuenta de OperativAI guardamos el
+          Al conectar Facebook, Instagram o WhatsApp a tu cuenta de Orvia guardamos el
           identificador de esa conexión, el token de acceso y, mientras el canal esté activo, las
           conversaciones de tus clientes. Puedes desconectar un canal tú mismo desde{" "}
           <span className="font-mono text-text-100">Canales</span> en el portal; eso desactiva el
@@ -41,10 +41,10 @@ export default function EliminacionDatosPage() {
           quieres borrar los datos.
         </p>
 
-        <h2 className="mt-10 text-lg font-medium">2. Si eres cliente de un negocio que usa OperativAI</h2>
+        <h2 className="mt-10 text-lg font-medium">2. Si eres cliente de un negocio que usa Orvia</h2>
         <p className="mt-3 text-sm leading-7 text-text-400">
           Si le escribiste a un negocio por WhatsApp, Messenger o Instagram y ese negocio usa
-          OperativAI, guardamos los mensajes de esa conversación para que el negocio y su agente de IA
+          Orvia, guardamos los mensajes de esa conversación para que el negocio y su agente de IA
           puedan atenderte. Revocar el acceso de la app desde tu cuenta de Meta no borra esa
           conversación: escríbenos directamente (ver sección 3) indicando el número o cuenta desde la
           que escribiste y el negocio al que le escribiste, para localizar y eliminar tus datos.
@@ -54,13 +54,12 @@ export default function EliminacionDatosPage() {
         <p className="mt-3 text-sm leading-7 text-text-400">
           Envía tu solicitud por el formulario de contacto de{" "}
           <a
-            href="https://www.operativai.com.mx/#demo"
+            href="https://www.orvia.tech/#demo"
             className="text-text-100 underline underline-offset-2"
           >
-            operativai.com.mx
+            orvia.tech
           </a>{" "}
-          o por escrito al domicilio del responsable (Fernando Ramón Parra Villanueva, Calle 8 de
-          Julio número 462, colonia Guadalajara Centro, C.P. 44100, Guadalajara, Jalisco, México),
+          o por escrito al domicilio del responsable (Felipe Osvaldo Ruvalcaba Ayala, Calle Blvd de los Charros número 1629, colonia Belenes Norte, C.P. 45145, Zapopan, Jalisco, México),
           indicando qué datos quieres eliminar y un medio para responderte. Atendemos la solicitud
           dentro de 20 días hábiles, el mismo plazo que aplica a los demás derechos ARCO descritos en
           nuestro{" "}
@@ -70,7 +69,7 @@ export default function EliminacionDatosPage() {
           .
         </p>
 
-        <p className="mt-12 text-xs text-text-600">© 2026 OperativAI. Guadalajara, México.</p>
+        <p className="mt-12 text-xs text-text-600">© 2026 Orvia. Zapopan, Jalisco, México.</p>
       </div>
     </main>
   );

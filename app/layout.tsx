@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OperativAI — Portal",
+  title: "Orvia — Portal",
   description: "Panel de tu agente de IA: conversaciones, canales y configuración",
   icons: {
-    icon: "/operativai.ico",
+    icon: "/orvia-icon.ico",
   },
 };
 

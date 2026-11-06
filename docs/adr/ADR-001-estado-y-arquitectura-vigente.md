@@ -1,4 +1,4 @@
-# ADR-001 — Estado y arquitectura vigente del Portal de OperativAI
+# ADR-001 — Estado y arquitectura vigente del Portal de Orvia
 
 - **Fecha:** 2026-10-14
 - **Estado:** Aceptado como foto del estado. Se revisa cuando cambie la arquitectura.
@@ -75,7 +75,7 @@ Las que el `README.md` declara explícitamente:
 - **El remote está en otra organización** (`zeuticamx`), distinta de los demás repos del dueño
   (`JcLimonero`). *Confirmar que el acceso y la propiedad son los deseados.*
 - Tokens en `localStorage` (no en cookie `HttpOnly`) en un portal multitenant.
-- Hay dos repos de OperativAI con nombre parecido: este y `landig_opertaivai` (la landing).
+- Hay dos repos de Orvia con nombre parecido: este y `landig_opertaivai` (la landing).
 
 ## Lo que sigue
 

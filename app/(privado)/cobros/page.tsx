@@ -24,7 +24,7 @@ const ESTADO_INFO: Record<EstadoCobroConnect, { label: string; clase: string }> 
 /**
  * Cobros propios del negocio (Stripe Connect): conectar la cuenta y generar
  * links de pago para los propios clientes del negocio. Distinto de
- * /suscripcion, que es lo que el negocio le paga a OperativAI.
+ * /suscripcion, que es lo que el negocio le paga a Orvia.
  *
  * El mismo link lo puede generar el agente de IA dentro de una conversación
  * (columna "Origen" de la tabla) — esta pantalla es solo la vía manual.
@@ -119,7 +119,7 @@ export default function CobrosPage() {
                 <h2 className="text-sm font-medium text-text-100">Conectar con Stripe</h2>
                 <p className="font-mono text-[11px] text-text-600">
                   cobra directo a tus clientes con links de pago — el dinero llega a tu propia cuenta
-                  de Stripe, no pasa por OperativAI
+                  de Stripe, no pasa por Orvia
                 </p>
               </header>
               {e?.conectado && e.requisitos_pendientes.length > 0 && (

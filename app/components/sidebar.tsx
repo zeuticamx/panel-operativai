@@ -74,10 +74,10 @@ const NAV_GRUPOS: { titulo: string; items: Item[] }[] = [
 const NAV_SUSCRIPCION: Item = { icon: CreditCard, label: "Suscripción", href: "/suscripcion" };
 // Cobros propios del negocio (Stripe Connect): junto a Suscripción porque es
 // la otra pantalla de dinero, pero es un flujo totalmente distinto (lo que
-// el negocio le cobra a SUS clientes, no lo que paga a OperativAI).
+// el negocio le cobra a SUS clientes, no lo que paga a Orvia).
 const NAV_COBROS: Item = { icon: Wallet, label: "Cobros", href: "/cobros" };
 
-// Sección del equipo de OperativAI, no del negocio. Va aparte y al final
+// Sección del equipo de Orvia, no del negocio. Va aparte y al final
 // para que se lea como lo que es: otro nivel, no una pantalla más del
 // portal del cliente.
 const NAV_PLATAFORMA: Item = { icon: ShieldCheck, label: "Plataforma", href: "/gerencia" };
@@ -234,11 +234,11 @@ export function Sidebar() {
       <aside className="hidden w-24 shrink-0 flex-col border-r border-bg-700 bg-bg-900 px-1.5 py-3 md:flex">
         <Link
           href={inicio}
-          aria-label="OperativAI, ir al inicio"
+          aria-label="Orvia, ir al inicio"
           className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- .ico local, next/image no aporta */}
-          <img src="/operativai.ico" alt="" width={32} height={32} />
+          <img src="/orvia-icon.ico" alt="" width={32} height={32} />
         </Link>
 
         {/* overflow-x-hidden: ningún título o etiqueta puede abrir un scroll

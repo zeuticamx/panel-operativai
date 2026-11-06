@@ -200,7 +200,7 @@ export function textosBloqueo(bloqueo: BloqueoPlanDetalle): Textos {
     return {
       titulo: "Tu cuenta está en pausa",
       descripcion:
-        "Por ahora las herramientas del portal no están disponibles. Tu información sigue guardada; comunícate con el equipo de OperativAI para reactivarla.",
+        "Por ahora las herramientas del portal no están disponibles. Tu información sigue guardada; comunícate con el equipo de Orvia para reactivarla.",
       cta: null,
     };
   }
@@ -223,7 +223,7 @@ export function textosBloqueo(bloqueo: BloqueoPlanDetalle): Textos {
       : `${info.nombre} no está en tu plan`,
     descripcion: plan
       ? `Tu plan actual${actual} no incluye esta herramienta. Mejóralo y úsala al momento.`
-      : "Ningún plan disponible la incluye por ahora. Comunícate con el equipo de OperativAI y lo vemos contigo.",
+      : "Ningún plan disponible la incluye por ahora. Comunícate con el equipo de Orvia y lo vemos contigo.",
     cta: plan ? { etiqueta: `Ver plan ${capitalizar(plan)}`, href } : null,
   };
 }

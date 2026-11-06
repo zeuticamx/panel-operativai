@@ -2,7 +2,7 @@
  * Tests de lib/exportar-embudo-pdf.tsx: exportarEmbudoPDF (ya existía).
  *
  * @react-pdf/renderer se mockea por completo: construye el PDF real
- * (rasteriza texto, carga /imagenes/LOGO_OPERATIVAI.png) y no hay servidor
+ * (rasteriza texto, carga /imagenes/LOGO%20NUBE%20GRIS.png) y no hay servidor
  * ni sistema de archivos con esa ruta en el entorno de test, así que
  * intentarlo de verdad sería lento y frágil sin aportar nada — la lógica
  * que vale la pena probar es la de construirDocumento() (qué datos entran

@@ -12,7 +12,7 @@ import { selectClass } from "./ui";
  *
  * No confundir con `esGerencia` de modulo-vendedores.tsx: aquella pregunta
  * si el usuario manda dentro de SU negocio (role owner/superadmin); esta,
- * si es del equipo de OperativAI y ve todos los negocios. Son dos niveles
+ * si es del equipo de Orvia y ve todos los negocios. Son dos niveles
  * distintos y un owner cualquiera no pasa esta.
  */
 export function esGerenciaPlataforma(usuario: UsuarioOut | null): boolean {

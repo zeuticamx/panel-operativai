@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Aviso de privacidad — OperativAI",
+  title: "Aviso de privacidad — Orvia",
   description:
-    "Aviso de privacidad del portal OperativAI: qué datos recabamos al crear tu cuenta, al entrar con Google y al usar el agente, y cómo ejercer tus derechos ARCO.",
+    "Aviso de privacidad del portal Orvia: qué datos recabamos al crear tu cuenta, al entrar con Google y al usar el agente, y cómo ejercer tus derechos ARCO.",
 };
 
 export default function PrivacidadPage() {
@@ -17,20 +17,18 @@ export default function PrivacidadPage() {
 
         <p className="mt-8 font-mono text-xs tracking-widest text-text-600 uppercase">Legal</p>
         <h1 className="mt-3 text-3xl font-medium">Aviso de privacidad</h1>
-        <p className="mt-2 text-sm text-text-400">Última actualización: 8 de octubre de 2026</p>
+        <p className="mt-2 text-sm text-text-400">Última actualización: 6 de Noviembre de 2026</p>
 
         <p className="mt-8 text-sm leading-7 text-text-400">
-          OperativAI es el portal donde administras el agente de IA de tu negocio: conversaciones,
+          Orvia es el portal donde administras el agente de IA de tu negocio: conversaciones,
           canales conectados (WhatsApp, Facebook e Instagram) y la configuración del agente. Este
           aviso describe los datos personales que recabamos en este portal.
         </p>
 
         <h2 className="mt-10 text-lg font-medium">Responsable del tratamiento</h2>
         <p className="mt-3 text-sm leading-7 text-text-400">
-          El responsable es Fernando Ramón Parra Villanueva, quien opera bajo el nombre comercial
-          OperativAI. RFC PAVF881210AY1. Domicilio: Calle 8 de Julio, número 462, colonia Guadalajara
-          Centro, C.P. 44100, Guadalajara, Jalisco, México, entre las calles Leandro Valle y Nueva
-          Galicia.
+          El responsable es Felipe Osvaldo Ruvalcaba Ayala, quien opera bajo el nombre comercial
+          Orvia. RFC RUAF8906235w8. Domicilio: Calle Blvd de los Charros, número 1629, colonia Belenes Norte, C.P. 45145, Zapopan, Jalisco, México.
         </p>
 
         <h2 className="mt-10 text-lg font-medium">1. Datos personales que recabamos</h2>
@@ -85,10 +83,10 @@ export default function PrivacidadPage() {
           Puedes acceder, rectificar, cancelar u oponerte al uso de tus datos, y revocar tu
           consentimiento. Envía tu solicitud por el formulario de contacto de{" "}
           <a
-            href="https://www.operativai.com.mx/#demo"
+            href="https://www.orvia.tech/#demo"
             className="text-text-100 underline underline-offset-2"
           >
-            operativai.com.mx
+            orvia.tech
           </a>{" "}
           o por escrito al domicilio del responsable, indicando tu nombre, el derecho que quieres
           ejercer y un medio para responderte. El plazo de respuesta es de 20 días hábiles.
@@ -121,7 +119,7 @@ export default function PrivacidadPage() {
           .
         </p>
 
-        <p className="mt-12 text-xs text-text-600">© 2026 OperativAI. Guadalajara, México.</p>
+        <p className="mt-12 text-xs text-text-600">© 2026 Orvia. Zapopan, Jalisco, México.</p>
       </div>
     </main>
   );

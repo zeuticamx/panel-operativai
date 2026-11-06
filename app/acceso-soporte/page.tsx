@@ -114,7 +114,7 @@ export default function AccesoSoportePage() {
     >
       <div className="space-y-4">
         <p className="text-sm text-text-100">
-          <strong>{info.gerente_email}</strong> (soporte de OperativAI) pide permiso para{" "}
+          <strong>{info.gerente_email}</strong> (soporte de Orvia) pide permiso para{" "}
           <strong>editar</strong> tu cuenta, no solo verla.
         </p>
         <p className="rounded-md border border-bg-700 px-3 py-2 font-mono text-xs text-text-400">

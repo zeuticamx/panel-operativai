@@ -8,7 +8,7 @@ import { Aviso, Boton, ConfirmDialog } from "./ui";
 import { useUsuario } from "./usuario-context";
 
 /**
- * Acceso del equipo de OperativAI a las conversaciones del número de WhatsApp de este
+ * Acceso del equipo de Orvia a las conversaciones del número de WhatsApp de este
  * negocio. Solo aparece en el negocio dueño de ese número (`aplica`) y solo para
  * owner/superadmin con sesión propia; el backend repite las dos comprobaciones.
  */
@@ -46,7 +46,7 @@ export function VistaGerenciaPanel() {
       className="rounded-md border border-bg-700 bg-bg-900 p-4"
     >
       <h2 id="vista-gerencia-titulo" className="text-sm font-medium text-text-100">
-        Acceso del equipo de OperativAI
+        Acceso del equipo de Orvia
       </h2>
       <p className="mt-1 text-xs leading-relaxed text-text-400">
         {revocada
